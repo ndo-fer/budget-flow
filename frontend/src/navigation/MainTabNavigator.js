@@ -1,14 +1,16 @@
-// src/navigation/MainTabNavigator.js  
+// src/navigation/MainTabNavigator.js (UPDATED)  
 import React from 'react';  
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';  
 import HomeScreen from '../screens/HomeScreen';  
 import AnalyticsScreen from '../screens/AnalyticsScreen';  
 import ExpenseHistoryScreen from '../screens/ExpenseHistoryScreen';  
+import SettingsScreen from '../screens/SettingsScreen';  
 
 const TAB_ICONS = {  
   home: '🏠',  
   analytics: '📊',  
   history: '📋',  
+  settings: '⚙️',  
 };  
 
 export default function MainTabNavigator() {  
@@ -20,6 +22,7 @@ export default function MainTabNavigator() {
       {activeTab === 'home' && <HomeScreen />}  
       {activeTab === 'analytics' && <AnalyticsScreen />}  
       {activeTab === 'history' && <ExpenseHistoryScreen />}  
+      {activeTab === 'settings' && <SettingsScreen />}  
 
       {/* Tab Bar */}  
       <View style={styles.tabBar}>  
@@ -38,7 +41,9 @@ export default function MainTabNavigator() {
           onPress={() => setActiveTab('analytics')}  
         >  
           <Text style={styles.tabIcon}>{TAB_ICONS.analytics}</Text>  
-          <Text style={[styles.tabLabel, activeTab === 'analytics' && styles.activeLabel]}>  
+          <Text  
+            style={[styles.tabLabel, activeTab === 'analytics' && styles.activeLabel]}  
+          >  
             Analytics  
           </Text>  
         </TouchableOpacity>  
@@ -50,6 +55,18 @@ export default function MainTabNavigator() {
           <Text style={styles.tabIcon}>{TAB_ICONS.history}</Text>  
           <Text style={[styles.tabLabel, activeTab === 'history' && styles.activeLabel]}>  
             History  
+          </Text>  
+        </TouchableOpacity>  
+
+        <TouchableOpacity  
+          style={[styles.tab, activeTab === 'settings' && styles.activeTab]}  
+          onPress={() => setActiveTab('settings')}  
+        >  
+          <Text style={styles.tabIcon}>{TAB_ICONS.settings}</Text>  
+          <Text  
+            style={[styles.tabLabel, activeTab === 'settings' && styles.activeLabel]}  
+          >  
+            Settings  
           </Text>  
         </TouchableOpacity>  
       </View>  
@@ -79,15 +96,16 @@ const styles = StyleSheet.create({
     borderTopColor: '#1976d2',  
   },  
   tabIcon: {  
-    fontSize: 24,  
+    fontSize: 20,  
     marginBottom: 4,  
   },  
   tabLabel: {  
-    fontSize: 11,  
+    fontSize: 9,  
     color: '#999',  
     fontWeight: '500',  
   },  
   activeLabel: {  
     color: '#1976d2',  
+    fontWeight: '600',  
   },  
 });
