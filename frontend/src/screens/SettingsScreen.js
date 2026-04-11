@@ -288,6 +288,25 @@ export default function SettingsScreen() {
           </View>  
         </View>  
 
+        {/* Recurring Expenses Section */}  
+        <View style={styles.section}>  
+          <Text style={styles.sectionTitle}>🔄 Recurring</Text>  
+        
+          <View style={styles.card}>  
+            <TouchableOpacity  
+              style={styles.settingRow}  
+              onPress={() => {  
+                // Navigation ke RecurringExpensesScreen  
+                // Untuk sekarang, just show alert  
+                Alert.alert('Recurring Expenses', 'View from separate tab');  
+              }}  
+            >  
+              <Text style={styles.settingLabel}>Manage Recurring Expenses</Text>  
+              <Text style={styles.settingIcon}>→</Text>  
+            </TouchableOpacity>  
+          </View>  
+        </View>  
+
         {/* About Section */}  
         <View style={styles.section}>  
           <Text style={styles.sectionTitle}>ℹ️ About</Text>  

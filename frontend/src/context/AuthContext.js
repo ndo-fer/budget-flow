@@ -18,7 +18,7 @@ export const AuthProvider = ({ children }) => {
 
         // If user exists, setup categories (won't duplicate if already exist)  
         if (session?.user) {  
-          await setupDefaultCategories();  
+          await setupDefaultCategories(session.user.id);  
         }  
       } catch (err) {  
         setError(err.message);  
@@ -33,23 +33,23 @@ export const AuthProvider = ({ children }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {  
       setUser(session?.user ?? null);  
       if (session?.user && event === 'SIGNED_IN') {  
-        setupDefaultCategories();  
+        setupDefaultCategories(session.user.id);  
       }  
     });  
 
     return () => subscription?.unsubscribe();  
   }, []);  
 
-  const setupDefaultCategories = async () => {  
+  const setupDefaultCategories = async (userId) => {  
     const DEFAULT_CATEGORIES = [  
-      { name: 'Makan', budget_amount: 300000, color: '#FF6B6B', priority: 5 },  
-      { name: 'Transport', budget_amount: 200000, color: '#4ECDC4', priority: 5 },  
-      { name: 'Entertainment', budget_amount: 150000, color: '#95E1D3', priority: 3 },  
-      { name: 'Shopping', budget_amount: 200000, color: '#F38181', priority: 3 },  
-      { name: 'Utilities', budget_amount: 100000, color: '#AA96DA', priority: 4 },  
-      { name: 'Health', budget_amount: 150000, color: '#FCBAD3', priority: 4 },  
-      { name: 'Education', budget_amount: 100000, color: '#A8D8EA', priority: 3 },  
-      { name: 'Other', budget_amount: 100000, color: '#C7CEEA', priority: 1 },  
+      { user_id: userId, name: 'Makan', budget_amount: 300000, color: '#FF6B6B' },  
+      { user_id: userId, name: 'Transport', budget_amount: 200000, color: '#4ECDC4' },  
+      { user_id: userId, name: 'Entertainment', budget_amount: 150000, color: '#95E1D3' },  
+      { user_id: userId, name: 'Shopping', budget_amount: 200000, color: '#F38181' },  
+      { user_id: userId, name: 'Utilities', budget_amount: 100000, color: '#AA96DA' },  
+      { user_id: userId, name: 'Health', budget_amount: 150000, color: '#FCBAD3' },  
+      { user_id: userId, name: 'Education', budget_amount: 100000, color: '#A8D8EA' },  
+      { user_id: userId, name: 'Other', budget_amount: 100000, color: '#C7CEEA' },  
     ];  
 
     try {  

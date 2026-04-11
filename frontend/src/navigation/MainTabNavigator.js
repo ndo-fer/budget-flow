@@ -1,15 +1,20 @@
-// src/navigation/MainTabNavigator.js (UPDATED)  
+// src/navigation/MainTabNavigator.js (FINAL UPDATED WITH NEW SCREENS)  
 import React from 'react';  
 import { View, TouchableOpacity, Text, StyleSheet } from 'react-native';  
 import HomeScreen from '../screens/HomeScreen';  
 import AnalyticsScreen from '../screens/AnalyticsScreen';  
 import ExpenseHistoryScreen from '../screens/ExpenseHistoryScreen';  
+import BudgetVsActualScreen from '../screens/BudgetVsActualScreen';  
+import IncomeTrackingScreen from '../screens/IncomeTrackingScreen';  
+import RecurringExpensesScreen from '../screens/RecurringExpensesScreen';  
 import SettingsScreen from '../screens/SettingsScreen';  
 
 const TAB_ICONS = {  
   home: '🏠',  
-  analytics: '📊',  
+  budget: '📊',  
+  income: '💰',  
   history: '📋',  
+  recurring: '🔄',  
   settings: '⚙️',  
 };  
 
@@ -20,11 +25,13 @@ export default function MainTabNavigator() {
     <View style={styles.container}>  
       {/* Active Screen */}  
       {activeTab === 'home' && <HomeScreen />}  
-      {activeTab === 'analytics' && <AnalyticsScreen />}  
+      {activeTab === 'budget' && <BudgetVsActualScreen />}  
+      {activeTab === 'income' && <IncomeTrackingScreen />}  
       {activeTab === 'history' && <ExpenseHistoryScreen />}  
+      {activeTab === 'recurring' && <RecurringExpensesScreen />}  
       {activeTab === 'settings' && <SettingsScreen />}  
 
-      {/* Tab Bar */}  
+      {/* Tab Bar - Horizontal Scroll */}  
       <View style={styles.tabBar}>  
         <TouchableOpacity  
           style={[styles.tab, activeTab === 'home' && styles.activeTab]}  
@@ -37,14 +44,22 @@ export default function MainTabNavigator() {
         </TouchableOpacity>  
 
         <TouchableOpacity  
-          style={[styles.tab, activeTab === 'analytics' && styles.activeTab]}  
-          onPress={() => setActiveTab('analytics')}  
+          style={[styles.tab, activeTab === 'budget' && styles.activeTab]}  
+          onPress={() => setActiveTab('budget')}  
         >  
-          <Text style={styles.tabIcon}>{TAB_ICONS.analytics}</Text>  
-          <Text  
-            style={[styles.tabLabel, activeTab === 'analytics' && styles.activeLabel]}  
-          >  
-            Analytics  
+          <Text style={styles.tabIcon}>{TAB_ICONS.budget}</Text>  
+          <Text style={[styles.tabLabel, activeTab === 'budget' && styles.activeLabel]}>  
+            Budget  
+          </Text>  
+        </TouchableOpacity>  
+
+        <TouchableOpacity  
+          style={[styles.tab, activeTab === 'income' && styles.activeTab]}  
+          onPress={() => setActiveTab('income')}  
+        >  
+          <Text style={styles.tabIcon}>{TAB_ICONS.income}</Text>  
+          <Text style={[styles.tabLabel, activeTab === 'income' && styles.activeLabel]}>  
+            Income  
           </Text>  
         </TouchableOpacity>  
 
@@ -59,13 +74,21 @@ export default function MainTabNavigator() {
         </TouchableOpacity>  
 
         <TouchableOpacity  
+          style={[styles.tab, activeTab === 'recurring' && styles.activeTab]}  
+          onPress={() => setActiveTab('recurring')}  
+        >  
+          <Text style={styles.tabIcon}>{TAB_ICONS.recurring}</Text>  
+          <Text style={[styles.tabLabel, activeTab === 'recurring' && styles.activeLabel]}>  
+            Recurring  
+          </Text>  
+        </TouchableOpacity>  
+
+        <TouchableOpacity  
           style={[styles.tab, activeTab === 'settings' && styles.activeTab]}  
           onPress={() => setActiveTab('settings')}  
         >  
           <Text style={styles.tabIcon}>{TAB_ICONS.settings}</Text>  
-          <Text  
-            style={[styles.tabLabel, activeTab === 'settings' && styles.activeLabel]}  
-          >  
+          <Text style={[styles.tabLabel, activeTab === 'settings' && styles.activeLabel]}>  
             Settings  
           </Text>  
         </TouchableOpacity>  
@@ -85,6 +108,7 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,  
     borderTopColor: '#eee',  
     backgroundColor: 'white',  
+    paddingBottom: 5,  
   },  
   tab: {  
     flex: 1,  
@@ -96,11 +120,11 @@ const styles = StyleSheet.create({
     borderTopColor: '#1976d2',  
   },  
   tabIcon: {  
-    fontSize: 20,  
-    marginBottom: 4,  
+    fontSize: 18,  
+    marginBottom: 2,  
   },  
   tabLabel: {  
-    fontSize: 9,  
+    fontSize: 8,  
     color: '#999',  
     fontWeight: '500',  
   },  

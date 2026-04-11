@@ -9,12 +9,20 @@ import {
   TouchableOpacity,  
   RefreshControl,  
   FlatList,  
+  Platform,
 } from 'react-native';  
 import { useAuth } from '../context/AuthContext';  
 import ExpenseInputModal from '../components/ExpenseInputModal';  
 import MonthlyPlanModal from '../components/MonthlyPlanModal';  
 import { getExpensesByDate } from '../api/expenseService';  
 import { getCurrentPlan } from '../api/planService';  
+import BudgetAlertBanner from '../components/BudgetAlertBanner';  
+import {  
+  checkBudgetStatus,  
+  checkDailyBudget,  
+  getAllCategoriesBudgetStatus,  
+} from '../api/alertService';
+import { getIncomeSummary } from '../api/incomeService';
 
 export default function HomeScreen() {  
   const { user, isLoading: authLoading, signOut } = useAuth();  
@@ -28,6 +36,20 @@ export default function HomeScreen() {
   const [selectedDate, setSelectedDate] = useState(  
     new Date().toISOString().split('T')[0]  
   );  
+  const [monthlyAlertStatus, setMonthlyAlertStatus] = useState(null);  
+  const [dailyAlertStatus, setDailyAlertStatus] = useState(null);  
+  const [categoryAlerts, setCategoryAlerts] = useState([]);
+  const [incomeSummary, setIncomeSummary] = useState(null);
+
+  const loadIncomeSummary = async () => {  
+    try {  
+      const month = new Date().toISOString().substring(0, 7);  
+      const summary = await getIncomeSummary(month);  
+      setIncomeSummary(summary);  
+    } catch (err) {  
+      console.error('Error loading income:', err);  
+    }  
+  };
 
   useEffect(() => {  
     if (user) {  
@@ -50,6 +72,8 @@ export default function HomeScreen() {
 
       setTodayExpenses(expensesData || []);  
       setCurrentPlan(planData);  
+      await loadAlerts(today);
+      await loadIncomeSummary();
     } catch (err) {  
       setError(err.message);  
       console.error('Error loading data:', err);  
@@ -57,6 +81,27 @@ export default function HomeScreen() {
       setIsLoading(false);  
     }  
   };  
+
+  const loadAlerts = async (today) => {  
+    try {  
+      const currentMonth = today.substring(0, 7);  
+
+      // Check monthly budget  
+      const monthlyStatus = await checkBudgetStatus(currentMonth);  
+      setMonthlyAlertStatus(monthlyStatus);  
+
+      // Check daily budget  
+      const dailyStatus = await checkDailyBudget(today);  
+      setDailyAlertStatus(dailyStatus);  
+
+      // Check category budgets  
+      const catStatuses = await getAllCategoriesBudgetStatus(currentMonth);  
+      const warnings = catStatuses.filter((s) => s.alertLevel !== 'safe');  
+      setCategoryAlerts(warnings);  
+    } catch (err) {  
+      console.error('Error loading alerts:', err);  
+    }  
+  };
 
   const onRefresh = async () => {  
     setRefreshing(true);  
@@ -129,6 +174,29 @@ export default function HomeScreen() {
         style={styles.content}  
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}  
       >  
+        {/* Income Card */}
+        {incomeSummary && (  
+          <View style={styles.incomeCard}>  
+            <Text style={styles.incomeLabel}>This Month</Text>  
+            <View style={styles.incomeRow}>  
+              <View>  
+                <Text style={styles.incomeValue}>  
+                  Rp {incomeSummary.totalIncome.toLocaleString('id-ID')}  
+                </Text>  
+                <Text style={styles.incomeDetail}>Income</Text>  
+              </View>  
+              <View style={styles.incomeStats}>  
+                <Text style={styles.incomeSavings}>  
+                  Saved: Rp {incomeSummary.savings.toLocaleString('id-ID')}  
+                </Text>  
+                <Text style={styles.incomeSavingsRate}>  
+                  {Math.round(incomeSummary.savingsRate)}% savings rate  
+                </Text>  
+              </View>  
+            </View>  
+          </View>  
+        )}
+
         {/* Monthly Plan Info Card */}  
         {currentPlan && (  
           <TouchableOpacity   
@@ -155,6 +223,20 @@ export default function HomeScreen() {
               Set your income to track budget accurately  
             </Text>  
           </TouchableOpacity>  
+        )}  
+
+        {/* Budget Alerts */}  
+        <BudgetAlertBanner alertStatus={monthlyAlertStatus} onPress={() => {}} />  
+        <BudgetAlertBanner alertStatus={dailyAlertStatus} onPress={() => {}} />  
+
+        {/* Category Alerts */}  
+        {categoryAlerts.length > 0 && (  
+          <View style={styles.categoryAlertsSection}>  
+            <Text style={styles.alertsTitle}>⚠️ Category Alerts</Text>  
+            {categoryAlerts.map((alert, idx) => (  
+              <BudgetAlertBanner key={idx} alertStatus={alert} onPress={() => {}} />  
+            ))}  
+          </View>  
         )}  
 
         {/* Dashboard Cards */}  
@@ -355,11 +437,15 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',  
     padding: 14,  
     borderRadius: 12,  
-    shadowColor: '#000',  
-    shadowOffset: { width: 0, height: 2 },  
-    shadowOpacity: 0.1,  
-    shadowRadius: 4,  
-    elevation: 3,  
+    ...(Platform.OS === 'web' ? {  
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',  
+    } : {  
+      shadowColor: '#000',  
+      shadowOffset: { width: 0, height: 2 },  
+      shadowOpacity: 0.1,  
+      shadowRadius: 4,  
+      elevation: 3,  
+    })
   },  
   cardLabel: {  
     fontSize: 12,  
@@ -461,15 +547,69 @@ const styles = StyleSheet.create({
     paddingVertical: 12,  
     paddingHorizontal: 20,  
     borderRadius: 50,  
-    shadowColor: '#000',  
-    shadowOffset: { width: 0, height: 4 },  
-    shadowOpacity: 0.3,  
-    shadowRadius: 8,  
-    elevation: 8,  
+    ...(Platform.OS === 'web' ? {  
+      boxShadow: '0 4px 12px rgba(0,0,0,0.3)',  
+    } : {  
+      shadowColor: '#000',  
+      shadowOffset: { width: 0, height: 4 },  
+      shadowOpacity: 0.3,  
+      shadowRadius: 8,  
+      elevation: 8,  
+    })
   },  
   fabText: {  
     color: 'white',  
     fontSize: 13,  
     fontWeight: '600',  
   },  
+  incomeCard: {  
+    backgroundColor: 'white',  
+    borderRadius: 12,  
+    padding: 14,  
+    marginBottom: 16,  
+    borderLeftWidth: 4,  
+    borderLeftColor: '#4caf50',  
+  },  
+  incomeLabel: {  
+    fontSize: 11,  
+    color: '#999',  
+    marginBottom: 8,  
+  },  
+  incomeRow: {  
+    flexDirection: 'row',  
+    justifyContent: 'space-between',  
+    alignItems: 'center',  
+  },  
+  incomeValue: {  
+    fontSize: 18,  
+    fontWeight: 'bold',  
+    color: '#4caf50',  
+  },  
+  incomeDetail: {  
+    fontSize: 11,  
+    color: '#999',  
+    marginTop: 4,  
+  },  
+  incomeStats: {  
+    alignItems: 'flex-end',  
+  },  
+  incomeSavings: {  
+    fontSize: 12,  
+    fontWeight: '600',  
+    color: '#333',  
+  },  
+  incomeSavingsRate: {  
+    fontSize: 11,  
+    color: '#999',  
+    marginTop: 2,  
+  },
+  categoryAlertsSection: {
+    marginBottom: 16,
+  },
+  alertsTitle: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#d32f2f',
+  },
 });

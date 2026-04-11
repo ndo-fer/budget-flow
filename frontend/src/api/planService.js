@@ -7,10 +7,10 @@ export const getCurrentPlan = async (monthStr) => {
     const { data, error } = await supabase
       .from('monthly_plans')
       .select('*')
-      .eq('month', monthStr)
-      .single();
+      .eq('month', String(monthStr))
+      .maybeSingle();
 
-    if (error && error.code !== 'PGRST116') throw error; // 116 = no rows
+    if (error) throw error; 
     return data ?? null;
   } catch (err) {
     console.error('Error fetching plan:', err);

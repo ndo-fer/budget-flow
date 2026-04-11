@@ -1,5 +1,5 @@
-// src/api/expenseService.js
 import supabase from './supabase';
+import { getMonthDateRange } from '../utils/dateUtils';
 
 // Get user's expenses for specific date
 export const getExpensesByDate = async (date) => {
@@ -32,6 +32,7 @@ export const getExpensesByDate = async (date) => {
 // Get all expenses for a month
 export const getExpensesByMonth = async (month) => {
   try {
+    const { startDate, endDate } = getMonthDateRange(month);
     const { data, error } = await supabase
       .from('daily_expenses')
       .select(`
@@ -46,8 +47,8 @@ export const getExpensesByMonth = async (month) => {
           color
         )
       `)
-      .gte('date', `${month}-01`)
-      .lt('date', `${month.substring(0, 7)}-32`)
+      .gte('date', startDate)
+      .lte('date', endDate)
       .order('date', { ascending: false });
 
     if (error) throw error;
