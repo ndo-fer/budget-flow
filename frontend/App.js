@@ -1,15 +1,24 @@
 // App.js
 import React from 'react';
 import { View, StyleSheet } from 'react-native';
-import { AuthProvider } from './src/context/AuthContext';
+import { AuthProvider, useAuth } from './src/context/AuthContext';
 import HomeScreen from './src/screens/HomeScreen';
+import AuthScreen from './src/screens/AuthScreen';
+
+function RootNavigator() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) {
+    return <View style={styles.container} />;
+  }
+
+  return user ? <HomeScreen /> : <AuthScreen />;
+}
 
 export default function App() {
   return (
     <AuthProvider>
-      <View style={styles.container}>
-        <HomeScreen />
-      </View>
+      <RootNavigator />
     </AuthProvider>
   );
 }
