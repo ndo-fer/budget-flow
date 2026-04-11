@@ -1,5 +1,5 @@
-// src/screens/HomeScreen.js  
-import React, { useState, useEffect, useCallback } from 'react';  
+// src/screens/HomeScreen.js (COMPLETE)  
+import React, { useState, useEffect } from 'react';  
 import {  
   View,  
   Text,  
@@ -11,8 +11,8 @@ import {
   FlatList,  
 } from 'react-native';  
 import { useAuth } from '../context/AuthContext';  
-import { useFocusEffect } from '@react-navigation/native';  
 import ExpenseInputModal from '../components/ExpenseInputModal';  
+import MonthlyPlanModal from '../components/MonthlyPlanModal';  
 import { getExpensesByDate } from '../api/expenseService';  
 import { getCurrentPlan } from '../api/planService';  
 
@@ -24,18 +24,16 @@ export default function HomeScreen() {
   const [currentPlan, setCurrentPlan] = useState(null);  
   const [error, setError] = useState(null);  
   const [modalVisible, setModalVisible] = useState(false);  
+  const [monthlyPlanVisible, setMonthlyPlanVisible] = useState(false);  
   const [selectedDate, setSelectedDate] = useState(  
     new Date().toISOString().split('T')[0]  
   );  
 
-  // Load data when screen comes to focus  
-  useFocusEffect(  
-    useCallback(() => {  
-      if (user) {  
-        loadData();  
-      }  
-    }, [user])  
-  );  
+  useEffect(() => {  
+    if (user) {  
+      loadData();  
+    }  
+  }, [user]);  
 
   const loadData = async () => {  
     try {  
@@ -45,7 +43,6 @@ export default function HomeScreen() {
       const today = new Date().toISOString().split('T')[0];  
       setSelectedDate(today);  
 
-      // Load expenses & plan  
       const [expensesData, planData] = await Promise.all([  
         getExpensesByDate(today),  
         getCurrentPlan(today.substring(0, 7)),  
@@ -68,7 +65,6 @@ export default function HomeScreen() {
   };  
 
   const handleExpenseAdded = (newExpense) => {  
-    // Add new expense to list  
     setTodayExpenses([newExpense, ...todayExpenses]);  
   };  
 
@@ -113,15 +109,54 @@ export default function HomeScreen() {
           <Text style={styles.title}>Budget Flow</Text>  
           <Text style={styles.subtitle}>{selectedDate}</Text>  
         </View>  
-        <TouchableOpacity onPress={signOut}>  
-          <Text style={styles.logout}>Logout</Text>  
-        </TouchableOpacity>  
+        <View style={styles.headerActions}>  
+          <TouchableOpacity   
+            style={styles.headerBtn}  
+            onPress={() => setMonthlyPlanVisible(true)}  
+          >  
+            <Text style={styles.headerBtnText}>📅</Text>  
+          </TouchableOpacity>  
+          <TouchableOpacity   
+            style={styles.headerBtn}  
+            onPress={signOut}  
+          >  
+            <Text style={styles.headerBtnText}>🚪</Text>  
+          </TouchableOpacity>  
+        </View>  
       </View>  
 
       <ScrollView  
         style={styles.content}  
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}  
       >  
+        {/* Monthly Plan Info Card */}  
+        {currentPlan && (  
+          <TouchableOpacity   
+            style={styles.planCard}  
+            onPress={() => setMonthlyPlanVisible(true)}  
+          >  
+            <View>  
+              <Text style={styles.planCardLabel}>Monthly Plan</Text>  
+              <Text style={styles.planCardValue}>  
+                Rp {currentPlan.income.toLocaleString('id-ID')}  
+              </Text>  
+            </View>  
+            <Text style={styles.planCardEdit}>✏️</Text>  
+          </TouchableOpacity>  
+        )}  
+
+        {!currentPlan && (  
+          <TouchableOpacity   
+            style={styles.setupCard}  
+            onPress={() => setMonthlyPlanVisible(true)}  
+          >  
+            <Text style={styles.setupCardTitle}>⚡ Setup Monthly Plan</Text>  
+            <Text style={styles.setupCardText}>  
+              Set your income to track budget accurately  
+            </Text>  
+          </TouchableOpacity>  
+        )}  
+
         {/* Dashboard Cards */}  
         <View style={styles.cardsContainer}>  
           <View style={styles.card}>  
@@ -204,12 +239,19 @@ export default function HomeScreen() {
         <Text style={styles.fabText}>+ Add Expense</Text>  
       </TouchableOpacity>  
 
-      {/* Expense Input Modal */}  
+      {/* Modals */}  
       <ExpenseInputModal  
         visible={modalVisible}  
         onClose={() => setModalVisible(false)}  
         onExpenseAdded={handleExpenseAdded}  
         initialDate={selectedDate}  
+      />  
+
+      <MonthlyPlanModal  
+        visible={monthlyPlanVisible}  
+        onClose={() => setMonthlyPlanVisible(false)}  
+        onPlanUpdated={loadData}  
+        month={selectedDate.substring(0, 7)}  
       />  
     </View>  
   );  
@@ -226,7 +268,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',  
     alignItems: 'center',  
     paddingHorizontal: 20,  
-    paddingBottom: 20,  
+    paddingBottom: 16,  
     borderBottomWidth: 1,  
     borderBottomColor: '#eee',  
     backgroundColor: 'white',  
@@ -241,25 +283,77 @@ const styles = StyleSheet.create({
     color: '#999',  
     marginTop: 4,  
   },  
-  logout: {  
-    color: '#1976d2',  
-    fontSize: 13,  
-    fontWeight: '600',  
+  headerActions: {  
+    flexDirection: 'row',  
+    gap: 8,  
+  },  
+  headerBtn: {  
+    width: 40,  
+    height: 40,  
+    borderRadius: 8,  
+    backgroundColor: '#f0f0f0',  
+    justifyContent: 'center',  
+    alignItems: 'center',  
+  },  
+  headerBtnText: {  
+    fontSize: 18,  
   },  
   content: {  
     flex: 1,  
-    paddingHorizontal: 20,  
-    paddingTop: 16,  
+    paddingHorizontal: 16,  
+    paddingTop: 12,  
+  },  
+  planCard: {  
+    flexDirection: 'row',  
+    justifyContent: 'space-between',  
+    alignItems: 'center',  
+    backgroundColor: 'white',  
+    padding: 16,  
+    borderRadius: 12,  
+    marginBottom: 12,  
+    borderLeftWidth: 4,  
+    borderLeftColor: '#1976d2',  
+  },  
+  planCardLabel: {  
+    fontSize: 11,  
+    color: '#999',  
+    marginBottom: 4,  
+  },  
+  planCardValue: {  
+    fontSize: 18,  
+    fontWeight: 'bold',  
+    color: '#333',  
+  },  
+  planCardEdit: {  
+    fontSize: 16,  
+  },  
+  setupCard: {  
+    backgroundColor: '#fff3cd',  
+    padding: 14,  
+    borderRadius: 12,  
+    marginBottom: 12,  
+    borderLeftWidth: 4,  
+    borderLeftColor: '#ffc107',  
+  },  
+  setupCardTitle: {  
+    fontSize: 14,  
+    fontWeight: '600',  
+    color: '#856404',  
+    marginBottom: 4,  
+  },  
+  setupCardText: {  
+    fontSize: 12,  
+    color: '#856404',  
   },  
   cardsContainer: {  
     flexDirection: 'row',  
-    gap: 12,  
-    marginBottom: 20,  
+    gap: 10,  
+    marginBottom: 16,  
   },  
   card: {  
     flex: 1,  
     backgroundColor: 'white',  
-    padding: 16,  
+    padding: 14,  
     borderRadius: 12,  
     shadowColor: '#000',  
     shadowOffset: { width: 0, height: 2 },  
@@ -270,18 +364,18 @@ const styles = StyleSheet.create({
   cardLabel: {  
     fontSize: 12,  
     color: '#999',  
-    marginBottom: 8,  
+    marginBottom: 6,  
   },  
   cardValue: {  
-    fontSize: 18,  
+    fontSize: 16,  
     fontWeight: 'bold',  
     color: '#333',  
   },  
   progressSection: {  
     backgroundColor: 'white',  
-    padding: 16,  
+    padding: 14,  
     borderRadius: 12,  
-    marginBottom: 20,  
+    marginBottom: 16,  
   },  
   progressHeader: {  
     flexDirection: 'row',  
@@ -312,7 +406,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#ffebee',  
     padding: 12,  
     borderRadius: 8,  
-    marginBottom: 16,  
+    marginBottom: 12,  
   },  
   error: {  
     color: '#c62828',  
@@ -322,16 +416,16 @@ const styles = StyleSheet.create({
     marginBottom: 100,  
   },  
   sectionTitle: {  
-    fontSize: 16,  
+    fontSize: 15,  
     fontWeight: '600',  
-    marginBottom: 12,  
+    marginBottom: 10,  
     color: '#333',  
   },  
   expenseItem: {  
     flexDirection: 'row',  
     justifyContent: 'space-between',  
     backgroundColor: 'white',  
-    padding: 14,  
+    padding: 12,  
     borderRadius: 8,  
     marginBottom: 8,  
   },  
@@ -346,7 +440,7 @@ const styles = StyleSheet.create({
   expenseNote: {  
     fontSize: 12,  
     color: '#999',  
-    marginTop: 4,  
+    marginTop: 3,  
   },  
   expenseAmount: {  
     fontSize: 14,  
@@ -364,8 +458,8 @@ const styles = StyleSheet.create({
     bottom: 30,  
     right: 20,  
     backgroundColor: '#1976d2',  
-    paddingVertical: 14,  
-    paddingHorizontal: 24,  
+    paddingVertical: 12,  
+    paddingHorizontal: 20,  
     borderRadius: 50,  
     shadowColor: '#000',  
     shadowOffset: { width: 0, height: 4 },  
@@ -375,7 +469,7 @@ const styles = StyleSheet.create({
   },  
   fabText: {  
     color: 'white',  
-    fontSize: 14,  
+    fontSize: 13,  
     fontWeight: '600',  
   },  
 });
