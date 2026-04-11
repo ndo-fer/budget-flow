@@ -95,3 +95,74 @@ export const deleteExpense = async (expenseId) => {
     throw err;
   }
 };
+
+/**  
+ * Get expenses by date range  
+ */  
+export const getExpensesByDateRange = async (startDate, endDate) => {  
+  const { data, error } = await supabase  
+    .from('daily_expenses')  
+    .select(`  
+      *,  
+      budget_categories (  
+        id,  
+        name,  
+        color,  
+        budget_amount  
+      )  
+    `)  
+    .gte('date', startDate)  
+    .lte('date', endDate)  
+    .order('date', { ascending: false });  
+
+  if (error) throw error;  
+  return data || [];  
+};  
+
+/**  
+ * Get expenses by category ID and date range  
+ */  
+export const getExpensesByCategory = async (categoryId, startDate, endDate) => {  
+  const { data, error } = await supabase  
+    .from('daily_expenses')  
+    .select(`  
+      *,  
+      budget_categories (  
+        id,  
+        name,  
+        color,  
+        budget_amount  
+      )  
+    `)  
+    .eq('category_id', categoryId)  
+    .gte('date', startDate)  
+    .lte('date', endDate)  
+    .order('date', { ascending: false });  
+
+  if (error) throw error;  
+  return data || [];  
+};  
+
+/**  
+ * Search expenses by note  
+ */  
+export const searchExpenses = async (searchTerm, startDate, endDate) => {  
+  const { data, error } = await supabase  
+    .from('daily_expenses')  
+    .select(`  
+      *,  
+      budget_categories (  
+        id,  
+        name,  
+        color,  
+        budget_amount  
+      )  
+    `)  
+    .gte('date', startDate)  
+    .lte('date', endDate)  
+    .ilike('note', `%${searchTerm}%`)  
+    .order('date', { ascending: false });  
+
+  if (error) throw error;  
+  return data || [];  
+};
