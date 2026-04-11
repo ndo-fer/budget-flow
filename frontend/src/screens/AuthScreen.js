@@ -26,6 +26,11 @@ export default function AuthScreen() {
       return;
     }
 
+    if (password.length < 6) {
+      Alert.alert('Error', 'Password must be at least 6 characters long');
+      return;
+    }
+
     if (isSignUp && password !== confirmPassword) {
       Alert.alert('Error', 'Passwords do not match');
       return;
@@ -34,7 +39,11 @@ export default function AuthScreen() {
     try {
       if (isSignUp) {
         await signUp(email, password);
-        Alert.alert('Success', 'Account created! Please check your email to verify.');
+        Alert.alert(
+          'Verification Required',
+          'We have sent a confirmation link to your email. Please check your inbox (or spam) and click the link to verify your account.',
+          [{ text: 'OK', onPress: () => setIsSignUp(false) }] // Auto-switch view to login
+        );
       } else {
         await signIn(email, password);
         Alert.alert('Success', 'Logged in successfully!');

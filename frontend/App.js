@@ -1,31 +1,37 @@
-// App.js
-import React from 'react';
-import { View, StyleSheet } from 'react-native';
-import { AuthProvider, useAuth } from './src/context/AuthContext';
-import HomeScreen from './src/screens/HomeScreen';
-import AuthScreen from './src/screens/AuthScreen';
+// src/App.js (UPDATED)  
+import React from 'react';  
+import { View, StyleSheet, ActivityIndicator } from 'react-native';  
+import { AuthProvider, useAuth } from './src/context/AuthContext';  
+import AuthScreen from './src/screens/AuthScreen';  
+import MainTabNavigator from './src/navigation/MainTabNavigator';  
 
-function RootNavigator() {
-  const { user, isLoading } = useAuth();
+function RootNavigator() {  
+  const { user, isLoading } = useAuth();  
 
-  if (isLoading) {
-    return <View style={styles.container} />;
-  }
+  if (isLoading) {  
+    return (  
+      <View style={styles.loadingContainer}>  
+        <ActivityIndicator size="large" color="#0000ff" />  
+      </View>  
+    );  
+  }  
 
-  return user ? <HomeScreen /> : <AuthScreen />;
-}
+  return user ? <MainTabNavigator /> : <AuthScreen />;  
+}  
 
-export default function App() {
-  return (
-    <AuthProvider>
-      <RootNavigator />
-    </AuthProvider>
-  );
-}
+export default function App() {  
+  return (  
+    <AuthProvider>  
+      <RootNavigator />  
+    </AuthProvider>  
+  );  
+}  
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-  },
+const styles = StyleSheet.create({  
+  loadingContainer: {  
+    flex: 1,  
+    justifyContent: 'center',  
+    alignItems: 'center',  
+    backgroundColor: '#fff',  
+  },  
 });
