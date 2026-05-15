@@ -1,10 +1,14 @@
 // src/api/analyticsService.js  
 import supabase from './supabase';  
+import { getMonthDateRange, getDaysInMonth } from '../utils/dateUtils';
+import { getCurrentUserId } from './queryUtils';
 
 /**  
  * Get all expenses untuk bulan tertentu  
  */  
 export const getMonthlyExpenses = async (month) => {  
+  const userId = await getCurrentUserId();
+  const { startDate, endDate } = getMonthDateRange(month);
   const { data, error } = await supabase  
     .from('daily_expenses')  
     .select(`  
@@ -16,8 +20,9 @@ export const getMonthlyExpenses = async (month) => {
         budget_amount  
       )  
     `)  
-    .gte('date', `${month}-01`)  
-    .lt('date', `${month}-32`)  
+    .eq('user_id', userId)
+    .gte('date', startDate)  
+    .lte('date', endDate)  
     .order('date', { ascending: false });  
 
   if (error) throw error;  
@@ -29,12 +34,14 @@ export const getMonthlyExpenses = async (month) => {
  */  
 export const calculateMonthlySummary = async (month) => {  
   try {  
+    const userId = await getCurrentUserId();
     const expenses = await getMonthlyExpenses(month);  
     const { data: planData } = await supabase  
       .from('monthly_plans')  
       .select('*')  
+      .eq('user_id', userId)
       .eq('month', month)  
-      .single();  
+      .maybeSingle();  
 
     const totalSpending = expenses.reduce((sum, exp) => sum + exp.amount, 0);  
     const income = planData?.income || 0;  
@@ -96,7 +103,7 @@ export const getDailySpendingTrend = async (month) => {
     const dailyData = {};  
 
     // Initialize all days of month with 0  
-    const daysInMonth = new Date(month.substring(0, 4), parseInt(month.substring(5)) + 1, 0).getDate();  
+    const daysInMonth = getDaysInMonth(month);  
     for (let i = 1; i <= daysInMonth; i++) {  
       const date = `${month}-${String(i).padStart(2, '0')}`;  
       dailyData[date] = 0;  
@@ -142,7 +149,8 @@ export const getTopCategories = async (month, limit = 5) => {
 export const getDailyAverage = async (month) => {  
   try {  
     const summary = await calculateMonthlySummary(month);  
-    return summary.expenseCount > 0 ? Math.round(summary.totalSpending / summary.expenseCount) : 0;  
+    const daysInMonth = getDaysInMonth(month);
+    return daysInMonth > 0 ? Math.round(summary.totalSpending / daysInMonth) : 0;  
   } catch (err) {  
     console.error('Error getting daily average:', err);  
     throw err;  

@@ -1,4 +1,3 @@
-// src/screens/AuthScreen.js
 import React, { useState } from 'react';
 import {
   View,
@@ -8,9 +7,13 @@ import {
   TouchableOpacity,
   ScrollView,
   ActivityIndicator,
-  Alert,
+  Image,
+  Platform,
 } from 'react-native';
 import { useAuth } from '../context/AuthContext';
+import { borderRadius, shadows, spacing } from '../constants/spacing';
+import { colors } from '../constants/colors';
+import { brandAssets } from '../constants/assets';
 
 export default function AuthScreen() {
   const { signUp, signIn, isLoading } = useAuth();
@@ -18,105 +21,205 @@ export default function AuthScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
+
+  const clearMessages = () => {
+    setErrorMessage('');
+    setSuccessMessage('');
+  };
 
   const handleAuth = async () => {
-    // Validation
+    clearMessages();
+
     if (!email || !password) {
-      Alert.alert('Error', 'Email and password are required');
+      setErrorMessage('Email dan password wajib diisi.');
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      setErrorMessage('Password minimal 6 karakter.');
       return;
     }
 
     if (isSignUp && password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      setErrorMessage('Konfirmasi password belum cocok.');
       return;
     }
 
     try {
+      setIsSubmitting(true);
+
       if (isSignUp) {
         await signUp(email, password);
-        Alert.alert(
-          'Verification Required',
-          'We have sent a confirmation link to your email. Please check your inbox (or spam) and click the link to verify your account.',
-          [{ text: 'OK', onPress: () => setIsSignUp(false) }] // Auto-switch view to login
-        );
+        setSuccessMessage('Akun berhasil dibuat. Cek email untuk verifikasi lalu lanjut login.');
+        setIsSignUp(false);
+        setPassword('');
+        setConfirmPassword('');
       } else {
         await signIn(email, password);
-        Alert.alert('Success', 'Logged in successfully!');
+        setSuccessMessage('Login berhasil.');
       }
     } catch (err) {
-      Alert.alert('Error', err.message);
+      setErrorMessage(err.message || 'Autentikasi gagal. Coba lagi ya.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const isBusy = isLoading || isSubmitting;
+
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.content}>
-        <Text style={styles.title}>Budget Flow</Text>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.scrollContent}
+      keyboardShouldPersistTaps="handled"
+    >
+      <View style={styles.heroWrap}>
+        <View style={styles.heroGlowCoral} />
+        <View style={styles.heroGlowSky} />
+
+        <Image source={brandAssets.logoHorizontal} style={styles.logo} resizeMode="contain" />
+        <Text style={styles.eyebrow}>Budget Flow</Text>
+        <Text style={styles.title}>Atur uang harianmu tanpa bikin kepala penuh.</Text>
         <Text style={styles.subtitle}>
-          {isSignUp ? 'Create Account' : 'Login'}
+          Catat pengeluaran, lihat sisa budget, dan bangun kebiasaan finansial yang lebih ringan.
         </Text>
 
-        {/* Email Input */}
+        <View style={styles.pillsRow}>
+          <View style={[styles.pill, styles.pillCoral]}>
+            <Text style={styles.pillText}>Quick daily tracking</Text>
+          </View>
+          <View style={[styles.pill, styles.pillTeal]}>
+            <Text style={styles.pillText}>Friendly budget alerts</Text>
+          </View>
+        </View>
+      </View>
+
+      <View style={styles.card}>
+        <View style={styles.modeSwitch}>
+          <TouchableOpacity
+            style={[styles.modeButton, !isSignUp && styles.modeButtonActive]}
+            onPress={() => {
+              clearMessages();
+              setPassword('');
+              setConfirmPassword('');
+              setIsSignUp(false);
+            }}
+            disabled={isBusy}
+          >
+            <Text style={[styles.modeButtonText, !isSignUp && styles.modeButtonTextActive]}>
+              Login
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.modeButton, isSignUp && styles.modeButtonActive]}
+            onPress={() => {
+              clearMessages();
+              setPassword('');
+              setConfirmPassword('');
+              setIsSignUp(true);
+            }}
+            disabled={isBusy}
+          >
+            <Text style={[styles.modeButtonText, isSignUp && styles.modeButtonTextActive]}>
+              Daftar
+            </Text>
+          </TouchableOpacity>
+        </View>
+
+        <Text style={styles.formTitle}>
+          {isSignUp ? 'Bikin akun baru' : 'Masuk dan lanjutkan pencatatanmu'}
+        </Text>
+        <Text style={styles.formSubtitle}>
+          {isSignUp
+            ? 'Mulai dengan akun yang sederhana, lalu app akan bantu pandu langkah awalmu.'
+            : 'Semua progress dan tutorialmu akan tetap mengikuti akun ini.'}
+        </Text>
+
+        {errorMessage ? (
+          <View style={[styles.messageBox, styles.errorBox]}>
+            <Text style={styles.errorText}>{errorMessage}</Text>
+          </View>
+        ) : null}
+
+        {successMessage ? (
+          <View style={[styles.messageBox, styles.successBox]}>
+            <Text style={styles.successText}>{successMessage}</Text>
+          </View>
+        ) : null}
+
+        <Text style={styles.inputLabel}>Email</Text>
         <TextInput
           style={styles.input}
-          placeholder="Email"
+          placeholder="nama@email.com"
+          placeholderTextColor={colors.textTertiary}
           value={email}
-          onChangeText={setEmail}
-          editable={!isLoading}
+          onChangeText={(value) => {
+            setEmail(value);
+            if (errorMessage || successMessage) {
+              clearMessages();
+            }
+          }}
+          editable={!isBusy}
           keyboardType="email-address"
           autoCapitalize="none"
         />
 
-        {/* Password Input */}
+        <Text style={styles.inputLabel}>Password</Text>
         <TextInput
           style={styles.input}
-          placeholder="Password"
+          placeholder="Minimal 6 karakter"
+          placeholderTextColor={colors.textTertiary}
           value={password}
-          onChangeText={setPassword}
-          editable={!isLoading}
+          onChangeText={(value) => {
+            setPassword(value);
+            if (errorMessage || successMessage) {
+              clearMessages();
+            }
+          }}
+          editable={!isBusy}
           secureTextEntry
         />
 
-        {/* Confirm Password (Sign Up Only) */}
         {isSignUp && (
-          <TextInput
-            style={styles.input}
-            placeholder="Confirm Password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            editable={!isLoading}
-            secureTextEntry
-          />
+          <>
+            <Text style={styles.inputLabel}>Konfirmasi Password</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="Ulangi password"
+              placeholderTextColor={colors.textTertiary}
+              value={confirmPassword}
+              onChangeText={(value) => {
+                setConfirmPassword(value);
+                if (errorMessage || successMessage) {
+                  clearMessages();
+                }
+              }}
+              editable={!isBusy}
+              secureTextEntry
+            />
+          </>
         )}
 
-        {/* Auth Button */}
         <TouchableOpacity
-          style={[styles.button, isLoading && { opacity: 0.6 }]}
+          style={[styles.button, isBusy && styles.buttonDisabled]}
           onPress={handleAuth}
-          disabled={isLoading}
+          disabled={isBusy}
         >
-          {isLoading ? (
-            <ActivityIndicator color="white" />
+          {isBusy ? (
+            <ActivityIndicator color={colors.surface} />
           ) : (
-            <Text style={styles.buttonText}>
-              {isSignUp ? 'Sign Up' : 'Login'}
-            </Text>
+            <Text style={styles.buttonText}>{isSignUp ? 'Buat Akun' : 'Masuk Sekarang'}</Text>
           )}
         </TouchableOpacity>
 
-        {/* Toggle Sign Up / Login */}
-        <TouchableOpacity onPress={() => setIsSignUp(!isSignUp)}>
-          <Text style={styles.toggleText}>
-            {isSignUp
-              ? 'Already have account? Login'
-              : "Don't have account? Sign Up"}
-          </Text>
-        </TouchableOpacity>
+        <Text style={styles.helperText}>
+          {isSignUp
+            ? 'Sesudah daftar, kamu akan dapat email verifikasi sebelum mulai.'
+            : 'Belum punya akun? Pindah ke tab Daftar di atas.'}
+        </Text>
       </View>
     </ScrollView>
   );
@@ -125,53 +228,194 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 40,
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing['3xl'],
+    paddingBottom: spacing['3xl'],
+  },
+  heroWrap: {
+    position: 'relative',
+    paddingTop: spacing.lg,
+    marginBottom: spacing.xl,
+  },
+  logo: {
+    width: 188,
+    height: 56,
+    marginBottom: spacing.md,
+  },
+  heroGlowCoral: {
+    position: 'absolute',
+    top: 0,
+    right: 24,
+    width: 110,
+    height: 110,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.primarySoft,
+  },
+  heroGlowSky: {
+    position: 'absolute',
+    top: 34,
+    right: 96,
+    width: 72,
+    height: 72,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.skySoft,
+  },
+  eyebrow: {
+    color: colors.primary,
+    fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: spacing.sm,
   },
   title: {
-    fontSize: 32,
-    fontWeight: 'bold',
-    textAlign: 'center',
-    marginBottom: 10,
+    color: colors.text,
+    fontSize: 34,
+    lineHeight: 40,
+    fontWeight: '800',
+    maxWidth: 320,
   },
   subtitle: {
-    fontSize: 18,
-    textAlign: 'center',
-    color: '#666',
-    marginBottom: 30,
+    marginTop: spacing.md,
+    color: colors.textSecondary,
+    fontSize: 15,
+    lineHeight: 23,
+    maxWidth: 340,
+  },
+  pillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.sm,
+    marginTop: spacing.lg,
+  },
+  pill: {
+    borderRadius: borderRadius.full,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  pillCoral: {
+    backgroundColor: colors.primarySoft,
+  },
+  pillTeal: {
+    backgroundColor: colors.tealSoft,
+  },
+  pillText: {
+    color: colors.text,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  card: {
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.xxl,
+    padding: spacing.xl,
+    borderWidth: 1,
+    borderColor: colors.border,
+    ...(Platform.OS === 'web' ? { boxShadow: '0 18px 38px rgba(201,111,87,0.10)' } : shadows.card),
+  },
+  modeSwitch: {
+    flexDirection: 'row',
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: borderRadius.full,
+    padding: 4,
+    marginBottom: spacing.lg,
+  },
+  modeButton: {
+    flex: 1,
+    minHeight: 44,
+    borderRadius: borderRadius.full,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modeButtonActive: {
+    backgroundColor: colors.surface,
+  },
+  modeButtonText: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  modeButtonTextActive: {
+    color: colors.primary,
+  },
+  formTitle: {
+    color: colors.text,
+    fontSize: 24,
+    lineHeight: 30,
+    fontWeight: '800',
+  },
+  formSubtitle: {
+    color: colors.textSecondary,
+    fontSize: 14,
+    lineHeight: 21,
+    marginTop: spacing.xs,
+    marginBottom: spacing.lg,
+  },
+  messageBox: {
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
+    borderWidth: 1,
+  },
+  errorBox: {
+    backgroundColor: colors.errorSoft,
+    borderColor: '#F5C7C0',
+  },
+  successBox: {
+    backgroundColor: colors.successSoft,
+    borderColor: '#BEE8E4',
+  },
+  errorText: {
+    color: colors.error,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  successText: {
+    color: colors.teal,
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  inputLabel: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700',
+    marginBottom: spacing.sm,
   },
   input: {
-    backgroundColor: 'white',
-    borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 12,
-    fontSize: 16,
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: borderRadius.lg,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    marginBottom: spacing.md,
+    fontSize: 15,
+    color: colors.text,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
   },
   button: {
-    backgroundColor: '#1976d2',
-    borderRadius: 8,
-    paddingVertical: 14,
-    marginTop: 20,
-    marginBottom: 20,
+    minHeight: 56,
+    borderRadius: borderRadius.xl,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: spacing.md,
+  },
+  buttonDisabled: {
+    opacity: 0.7,
   },
   buttonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: '600',
-    textAlign: 'center',
+    color: colors.surface,
+    fontSize: 15,
+    fontWeight: '800',
   },
-  toggleText: {
-    color: '#1976d2',
+  helperText: {
+    marginTop: spacing.lg,
+    color: colors.textSecondary,
+    fontSize: 12,
+    lineHeight: 19,
     textAlign: 'center',
-    fontSize: 14,
-    fontWeight: '600',
   },
 });

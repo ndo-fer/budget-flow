@@ -1,10 +1,13 @@
 // src/api/recurringService.js  
 import supabase from './supabase';  
+import { getMonthDateRange } from '../utils/dateUtils';
+import { getCurrentUserId } from './queryUtils';
 
 /**  
  * Get all recurring expenses  
  */  
 export const getRecurringExpenses = async () => {  
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase  
     .from('recurring_expenses')  
     .select(`  
@@ -16,6 +19,7 @@ export const getRecurringExpenses = async () => {
         budget_amount  
       )  
     `)  
+    .eq('user_id', userId)
     .eq('is_active', true)  
     .order('created_at', { ascending: false });  
 
@@ -27,9 +31,10 @@ export const getRecurringExpenses = async () => {
  * Create recurring expense  
  */  
 export const createRecurringExpense = async (expenseData) => {  
+  const userId = await getCurrentUserId();
   const { error } = await supabase  
     .from('recurring_expenses')  
-    .insert([expenseData]);  
+    .insert([{...expenseData, user_id: userId}]);  
 
   if (error) throw error;  
   return true;  
@@ -39,12 +44,14 @@ export const createRecurringExpense = async (expenseData) => {
  * Update recurring expense  
  */  
 export const updateRecurringExpense = async (id, expenseData) => {  
+  const userId = await getCurrentUserId();
   const { error } = await supabase  
     .from('recurring_expenses')  
     .update({  
       ...expenseData,  
       updated_at: new Date().toISOString(),  
     })  
+    .eq('user_id', userId)
     .eq('id', id);  
 
   if (error) throw error;  
@@ -55,9 +62,11 @@ export const updateRecurringExpense = async (id, expenseData) => {
  * Delete recurring expense  
  */  
 export const deleteRecurringExpense = async (id) => {  
+  const userId = await getCurrentUserId();
   const { error } = await supabase  
     .from('recurring_expenses')  
     .update({ is_active: false })  
+    .eq('user_id', userId)
     .eq('id', id);  
 
   if (error) throw error;  
@@ -69,11 +78,14 @@ export const deleteRecurringExpense = async (id) => {
  */  
 export const generateMonthlyRecurringExpenses = async (month) => {  
   try {  
+    const userId = await getCurrentUserId();
+    const { endDate } = getMonthDateRange(month);
     const { data: recurringExpenses, error } = await supabase  
       .from('recurring_expenses')  
       .select('*')  
+      .eq('user_id', userId)
       .eq('is_active', true)  
-      .lte('start_date', `${month}-31`)  
+      .lte('start_date', endDate)  
       .or(`end_date.is.null,end_date.gte.${month}-01`);  
 
     if (error) throw error;  
@@ -159,9 +171,11 @@ export const isRecurringExpenseGenerated = async (
   recurringId,  
   date  
 ) => {  
+  const userId = await getCurrentUserId();
   const { data, error } = await supabase  
     .from('daily_expenses')  
     .select('id')  
+    .eq('user_id', userId)
     .eq('recurring_expense_id', recurringId)  
     .eq('date', date)  
     .limit(1);  
@@ -175,6 +189,7 @@ export const isRecurringExpenseGenerated = async (
  */  
 export const syncRecurringExpensesForMonth = async (month) => {  
   try {  
+    const userId = await getCurrentUserId();
     const generated = await generateMonthlyRecurringExpenses(month);  
     let count = 0;
 
@@ -189,6 +204,7 @@ export const syncRecurringExpensesForMonth = async (month) => {
         const { error } = await supabase  
           .from('daily_expenses')  
           .insert([{  
+            user_id: userId,
             date: exp.date,  
             category_id: exp.category_id,  
             amount: exp.amount,  

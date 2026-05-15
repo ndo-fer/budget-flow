@@ -57,6 +57,7 @@ export const AuthProvider = ({ children }) => {
       const { data: existingCategories } = await supabase  
         .from('budget_categories')  
         .select('id')  
+        .eq('user_id', userId)
         .limit(1);  
 
       if (existingCategories && existingCategories.length > 0) {  

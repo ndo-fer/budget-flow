@@ -2,18 +2,21 @@
 import supabase from './supabase';  
 import * as Notifications from 'expo-notifications';  
 import { getMonthDateRange } from '../utils/dateUtils';
+import { getCurrentUserId } from './queryUtils';
 
 /**  
  * Check if user exceeded budget  
  */  
 export const checkBudgetStatus = async (month) => {  
   try {  
+    const userId = await getCurrentUserId();
     const { startDate, endDate } = getMonthDateRange(month);
 
     // Get monthly plan  
     const { data: planData } = await supabase  
       .from('monthly_plans')  
       .select('*')  
+      .eq('user_id', userId)
       .eq('month', month)  
       .maybeSingle();  
 
@@ -25,6 +28,7 @@ export const checkBudgetStatus = async (month) => {
     const { data: expenses } = await supabase  
       .from('daily_expenses')  
       .select('*')  
+      .eq('user_id', userId)
       .gte('date', startDate)  
       .lte('date', endDate);  
 
@@ -61,6 +65,7 @@ export const getAlertLevel = (percentUsed) => {
  */  
 export const checkDailyBudget = async (date) => {  
   try {  
+    const userId = await getCurrentUserId();
     const month = date.substring(0, 7);  
     const daysInMonth = new Date(month.substring(0, 4), parseInt(month.substring(5)), 0).getDate();  
 
@@ -68,6 +73,7 @@ export const checkDailyBudget = async (date) => {
     const { data: planData } = await supabase  
       .from('monthly_plans')  
       .select('*')  
+      .eq('user_id', userId)
       .eq('month', month)  
       .maybeSingle();  
 
@@ -80,6 +86,7 @@ export const checkDailyBudget = async (date) => {
     const { data: todayExpenses } = await supabase  
       .from('daily_expenses')  
       .select('*')  
+      .eq('user_id', userId)
       .eq('date', date);  
 
     const todaySpending = todayExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;  
@@ -105,10 +112,12 @@ export const checkDailyBudget = async (date) => {
  */  
 export const checkCategoryBudget = async (categoryId, month) => {  
   try {  
+    const userId = await getCurrentUserId();
     // Get category  
     const { data: categoryData } = await supabase  
       .from('budget_categories')  
       .select('*')  
+      .eq('user_id', userId)
       .eq('id', categoryId)  
       .maybeSingle();  
 
@@ -120,6 +129,7 @@ export const checkCategoryBudget = async (categoryId, month) => {
     const { data: expenses } = await supabase  
       .from('daily_expenses')  
       .select('*')  
+      .eq('user_id', userId)
       .eq('category_id', categoryId)  
       .gte('date', startDate)  
       .lte('date', endDate);  
@@ -150,9 +160,12 @@ export const checkCategoryBudget = async (categoryId, month) => {
  */  
 export const getAllCategoriesBudgetStatus = async (month) => {  
   try {  
+    const userId = await getCurrentUserId();
     const { data: categories } = await supabase  
       .from('budget_categories')  
-      .select('*');  
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true);  
 
     if (!categories) return [];  
 

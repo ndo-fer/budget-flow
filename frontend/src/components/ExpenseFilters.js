@@ -10,6 +10,8 @@ import {
   ActivityIndicator,  
 } from 'react-native';  
 import { getCategories } from '../api/categoryService'; // FIX: import from categoryService 
+import { colors } from '../constants/colors';
+import { borderRadius, spacing } from '../constants/spacing';
 
 export default function ExpenseFilters({  
   selectedCategory,  
@@ -45,6 +47,7 @@ export default function ExpenseFilters({
         <TextInput  
           style={styles.searchInput}  
           placeholder="Search by note..."  
+          placeholderTextColor={colors.textTertiary}
           value={searchQuery}  
           onChangeText={onSearchChange}  
         />  
@@ -118,32 +121,34 @@ export default function ExpenseFilters({
 
 const styles = StyleSheet.create({  
   container: {  
-    backgroundColor: 'white',  
-    borderRadius: 12,  
-    padding: 12,  
-    marginBottom: 16,  
+    backgroundColor: colors.surface,  
+    borderRadius: borderRadius.xl,  
+    padding: spacing.md,  
+    marginBottom: spacing.lg,  
   },  
   searchBox: {  
     flexDirection: 'row',  
     alignItems: 'center',  
     borderWidth: 1,  
-    borderColor: '#ddd',  
-    borderRadius: 8,  
-    paddingHorizontal: 10,  
-    marginBottom: 12,  
+    borderColor: colors.border,  
+    backgroundColor: colors.surfaceMuted,
+    borderRadius: borderRadius.lg,  
+    paddingHorizontal: spacing.md,  
+    marginBottom: spacing.md,  
   },  
   searchIcon: {  
     fontSize: 16,  
-    marginRight: 8,  
+    marginRight: spacing.sm,  
   },  
   searchInput: {  
     flex: 1,  
-    paddingVertical: 10,  
+    color: colors.text,
+    paddingVertical: spacing.md,  
     fontSize: 14,  
   },  
   clearBtn: {  
     fontSize: 16,  
-    color: '#999',  
+    color: colors.textSecondary,  
   },  
   loadingContainer: {  
     paddingVertical: 16,  
@@ -151,45 +156,46 @@ const styles = StyleSheet.create({
     alignItems: 'center',  
   },  
   categoryFilter: {  
-    marginBottom: 12,  
+    marginBottom: spacing.md,  
   },  
   categoryTag: {  
     flexDirection: 'row',  
     alignItems: 'center',  
-    paddingHorizontal: 12,  
-    paddingVertical: 8,  
-    borderRadius: 20,  
-    backgroundColor: '#f0f0f0',  
-    marginRight: 8,  
+    paddingHorizontal: spacing.md,  
+    paddingVertical: spacing.sm,  
+    borderRadius: borderRadius.full,  
+    backgroundColor: colors.surfaceMuted,  
+    marginRight: spacing.sm,  
   },  
   categoryTagActive: {  
-    backgroundColor: '#1976d2',  
+    backgroundColor: colors.primarySoft,  
   },  
   categoryDot: {  
     width: 8,  
     height: 8,  
     borderRadius: 4,  
-    marginRight: 6,  
+    marginRight: spacing.xs,  
   },  
   categoryTagText: {  
     fontSize: 12,  
-    color: '#666',  
-    fontWeight: '500',  
+    color: colors.textSecondary,  
+    fontWeight: '700',  
   },  
   categoryTagTextActive: {  
-    color: 'white',  
+    color: colors.primary,  
   },  
   resetBtn: {  
-    paddingVertical: 8,  
-    paddingHorizontal: 12,  
-    borderRadius: 6,  
+    paddingVertical: spacing.sm,  
+    paddingHorizontal: spacing.md,  
+    borderRadius: borderRadius.lg,  
     borderWidth: 1,  
-    borderColor: '#d32f2f',  
+    borderColor: colors.primary,  
+    backgroundColor: colors.errorSoft,
   },  
   resetBtnText: {  
-    color: '#d32f2f',  
+    color: colors.primary,  
     fontSize: 12,  
-    fontWeight: '600',  
+    fontWeight: '800',  
     textAlign: 'center',  
   },  
 });

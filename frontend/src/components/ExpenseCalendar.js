@@ -21,6 +21,12 @@ export default function ExpenseCalendar({
 }) {  
   const [currentDate, setCurrentDate] = React.useState(new Date(selectedDate));  
 
+  React.useEffect(() => {
+    if (selectedDate) {
+      setCurrentDate(new Date(`${selectedDate}T00:00:00`));
+    }
+  }, [selectedDate]);
+
   const year = currentDate.getFullYear();  
   const month = currentDate.getMonth();  
 
@@ -55,7 +61,7 @@ export default function ExpenseCalendar({
       String(selected.getMonth() + 1).padStart(2, '0'),
       String(selected.getDate()).padStart(2, '0')
     ].join('-');
-    onDateSelect(dateStr);  
+    onDateSelect(dateStr === selectedDate ? null : dateStr);  
   };  
 
   const getDateString = (day) => {  

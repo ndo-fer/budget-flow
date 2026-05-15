@@ -23,3 +23,7 @@ export const getMonthDateRange = (monthStr) => {
     lastDay: endDate.getDate(),  
   };  
 };
+
+export const getDaysInMonth = (monthStr) => {
+  return getMonthDateRange(monthStr).lastDay || 0;
+};

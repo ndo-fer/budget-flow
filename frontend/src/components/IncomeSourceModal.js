@@ -17,6 +17,9 @@ import {
   updateIncomeSource,  
   deleteIncomeSource,  
 } from '../api/incomeService';  
+import { validateAmount, validateDate, validateRequired } from '../utils/validation';
+import { colors } from '../constants/colors';
+import { borderRadius, spacing } from '../constants/spacing';
 
 export default function IncomeSourceModal({  
   visible,  
@@ -63,15 +66,20 @@ export default function IncomeSourceModal({
   };  
 
   const handleSave = async () => {  
-    if (!sourceName.trim()) {  
+    if (!validateRequired(sourceName)) {  
       setError('Source name required');  
       return;  
     }  
 
-    if (!amount || isNaN(parseFloat(amount))) {  
+    if (!validateAmount(amount)) {  
       setError('Valid amount required');  
       return;  
     }  
+
+    if (!validateDate(incomeDate)) {
+      setError('Valid date required');
+      return;
+    }
 
     try {  
       setIsLoading(true);  
@@ -141,11 +149,14 @@ export default function IncomeSourceModal({
         <View style={styles.modalContent}>  
           {/* Header */}  
           <View style={styles.header}>  
-            <Text style={styles.headerTitle}>  
-              {incomeSource ? 'Edit Income Source' : 'New Income Source'}  
-            </Text>  
-            <TouchableOpacity onPress={onClose}>  
-              <Text style={styles.closeBtn}>✕</Text>  
+            <View>
+              <Text style={styles.headerEyebrow}>Income source</Text>
+              <Text style={styles.headerTitle}>  
+                {incomeSource ? 'Edit Income Source' : 'New Income Source'}  
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>  
+              <Text style={styles.closeBtn}>x</Text>  
             </TouchableOpacity>  
           </View>  
 
@@ -163,6 +174,7 @@ export default function IncomeSourceModal({
               <TextInput  
                 style={styles.input}  
                 placeholder="e.g., Salary, Freelance"  
+                placeholderTextColor={colors.textTertiary}
                 value={sourceName}  
                 onChangeText={setSourceName}  
                 editable={!isLoading}  
@@ -175,6 +187,7 @@ export default function IncomeSourceModal({
               <TextInput  
                 style={styles.input}  
                 placeholder="e.g., 5000000"  
+                placeholderTextColor={colors.textTertiary}
                 value={amount}  
                 onChangeText={setAmount}  
                 keyboardType="decimal-pad"  
@@ -208,6 +221,7 @@ export default function IncomeSourceModal({
               <TextInput  
                 style={styles.input}  
                 placeholder="YYYY-MM-DD"  
+                placeholderTextColor={colors.textTertiary}
                 value={incomeDate}  
                 onChangeText={setIncomeDate}  
                 editable={!isLoading}  
@@ -220,6 +234,7 @@ export default function IncomeSourceModal({
               <TextInput  
                 style={styles.input}  
                 placeholder="e.g., Monthly salary"  
+                placeholderTextColor={colors.textTertiary}
                 value={notes}  
                 onChangeText={setNotes}  
                 multiline  
@@ -272,104 +287,124 @@ export default function IncomeSourceModal({
 const styles = StyleSheet.create({  
   overlay: {  
     flex: 1,  
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',  
+    backgroundColor: 'rgba(31, 41, 55, 0.32)',  
     justifyContent: 'flex-end',  
   },  
   modalContent: {  
-    backgroundColor: 'white',  
-    borderTopLeftRadius: 20,  
-    borderTopRightRadius: 20,  
-    paddingTop: 20,  
-    paddingHorizontal: 20,  
-    paddingBottom: 30,  
+    backgroundColor: colors.surface,  
+    borderTopLeftRadius: borderRadius.xxl,  
+    borderTopRightRadius: borderRadius.xxl,  
+    paddingTop: spacing.xl,  
+    paddingHorizontal: spacing.xl,  
+    paddingBottom: spacing['2xl'],  
     maxHeight: '90%',  
   },  
   header: {  
     flexDirection: 'row',  
     justifyContent: 'space-between',  
     alignItems: 'center',  
-    marginBottom: 20,  
-    paddingBottom: 15,  
+    marginBottom: spacing.xl,  
+    paddingBottom: spacing.lg,  
     borderBottomWidth: 1,  
-    borderBottomColor: '#eee',  
+    borderBottomColor: colors.border,  
+  },  
+  headerEyebrow: {
+    color: colors.teal,
+    fontSize: 11,
+    fontWeight: '800',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: spacing.xs,
   },  
   headerTitle: {  
-    fontSize: 18,  
-    fontWeight: 'bold',  
+    fontSize: 22,  
+    fontWeight: '800',
+    color: colors.text,  
+  },  
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.surfaceMuted,
+    alignItems: 'center',
+    justifyContent: 'center',
   },  
   closeBtn: {  
-    fontSize: 24,  
-    color: '#999',  
+    fontSize: 20,  
+    color: colors.textSecondary,  
   },  
   form: {  
-    marginBottom: 20,  
+    marginBottom: spacing.xl,  
   },  
   section: {  
-    marginBottom: 16,  
+    marginBottom: spacing.lg,  
   },  
   label: {  
     fontSize: 13,  
-    fontWeight: '600',  
-    marginBottom: 8,  
-    color: '#333',  
+    fontWeight: '700',  
+    marginBottom: spacing.sm,  
+    color: colors.text,  
   },  
   input: {  
     borderWidth: 1,  
-    borderColor: '#ddd',  
-    borderRadius: 8,  
-    paddingHorizontal: 12,  
-    paddingVertical: 10,  
+    borderColor: colors.border,  
+    backgroundColor: colors.surfaceMuted,
+    color: colors.text,
+    borderRadius: borderRadius.lg,  
+    paddingHorizontal: spacing.md,  
+    paddingVertical: spacing.md,  
     fontSize: 14,  
   },  
   pickerContainer: {  
     borderWidth: 1,  
-    borderColor: '#ddd',  
-    borderRadius: 8,  
+    borderColor: colors.border,  
+    borderRadius: borderRadius.lg,  
+    backgroundColor: colors.surfaceMuted,
     overflow: 'hidden',  
   },  
   errorBox: {  
-    backgroundColor: '#ffebee',  
-    borderRadius: 8,  
-    padding: 10,  
-    marginBottom: 16,  
+    backgroundColor: colors.errorSoft,  
+    borderRadius: borderRadius.lg,  
+    padding: spacing.md,  
+    marginBottom: spacing.lg,  
   },  
   errorText: {  
-    color: '#c62828',  
+    color: colors.error,  
     fontSize: 12,  
   },  
   buttons: {  
     flexDirection: 'row',  
-    gap: 10,  
+    gap: spacing.md,  
   },  
   button: {  
     flex: 1,  
-    paddingVertical: 12,  
-    borderRadius: 8,  
+    minHeight: 52,  
+    borderRadius: borderRadius.xl,  
     justifyContent: 'center',  
     alignItems: 'center',  
   },  
   cancelButton: {  
-    backgroundColor: '#f0f0f0',  
+    backgroundColor: colors.surfaceMuted,  
   },  
   submitButton: {  
-    backgroundColor: '#1976d2',  
+    backgroundColor: colors.primary,  
   },  
   deleteButton: {  
-    backgroundColor: '#d32f2f',  
+    backgroundColor: colors.error,  
   },  
   buttonText: {  
     fontSize: 13,  
-    fontWeight: '600',  
-    color: '#333',  
+    fontWeight: '700',  
+    color: colors.textSecondary,  
   },
   submitButtonText: {  
     fontSize: 13,  
-    fontWeight: '600',  
-    color: 'white',  
+    fontWeight: '800',  
+    color: colors.surface,  
   },  
   deleteButtonText: {  
     fontSize: 13,  
-    fontWeight: '600',  
-    color: 'white',  
+    fontWeight: '800',  
+    color: colors.surface,  
   },  
 });

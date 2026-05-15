@@ -4,11 +4,11 @@
     "slug": "budget-flow",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/brand/icon.png",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/brand/splash-icon.png",
       "resizeMode": "contain",
       "backgroundColor": "#1976d2"
     },
@@ -18,14 +18,14 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/brand/adaptive-icon.png",
         "backgroundColor": "#1976d2"
       },
       "edgeToEdgeEnabled": true,
       "package": "com.budgetflow.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/brand/favicon.png"
     },
     "extra": {
       "eas": {

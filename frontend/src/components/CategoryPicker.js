@@ -8,7 +8,9 @@ import {
   TouchableOpacity,  
   ActivityIndicator,  
 } from 'react-native';  
-import { getCategories } from '../api/expenseService';  
+import { getCategories } from '../api/categoryService';  
+import { colors } from '../constants/colors';
+import { borderRadius, spacing } from '../constants/spacing';
 
 export default function CategoryPicker({ selectedId, onSelect }) {  
   const [categories, setCategories] = useState([]);  
@@ -56,14 +58,14 @@ export default function CategoryPicker({ selectedId, onSelect }) {
           style={[  
             styles.categoryBtn,  
             {  
-              backgroundColor: category.color,  
-              opacity: selectedId === category.id ? 1 : 0.6,  
-              borderWidth: selectedId === category.id ? 3 : 0,  
-              borderColor: '#000',  
+              backgroundColor: selectedId === category.id ? `${category.color}22` : colors.surfaceMuted,  
+              borderWidth: 1,  
+              borderColor: selectedId === category.id ? category.color : colors.border,  
             },  
           ]}  
           onPress={() => onSelect(category.id)}  
         >  
+          <View style={[styles.categoryDot, { backgroundColor: category.color }]} />
           <Text style={styles.categoryText}>{category.name}</Text>  
           <Text style={styles.categoryBudget}>  
             Rp {category.budget_amount.toLocaleString('id-ID')}  
@@ -77,26 +79,32 @@ export default function CategoryPicker({ selectedId, onSelect }) {
 const styles = StyleSheet.create({  
   container: {  
     flexDirection: 'row',  
-    marginVertical: 12,  
+    marginVertical: spacing.sm,  
   },  
   categoryBtn: {  
-    paddingHorizontal: 12,  
-    paddingVertical: 8,  
-    borderRadius: 8,  
-    marginRight: 8,  
-    minWidth: 100,  
+    paddingHorizontal: spacing.md,  
+    paddingVertical: spacing.md,  
+    borderRadius: borderRadius.xl,  
+    marginRight: spacing.sm,  
+    minWidth: 120,  
     justifyContent: 'center',  
-    alignItems: 'center',  
+    alignItems: 'flex-start',  
   },  
+  categoryDot: {
+    width: 10,
+    height: 10,
+    borderRadius: borderRadius.full,
+    marginBottom: spacing.sm,
+  },
   categoryText: {  
     fontSize: 13,  
-    fontWeight: '600',  
-    color: 'white',  
+    fontWeight: '700',  
+    color: colors.text,  
   },  
   categoryBudget: {  
-    fontSize: 10,  
-    color: 'white',  
-    marginTop: 4,  
+    fontSize: 11,  
+    color: colors.textSecondary,  
+    marginTop: spacing.xs,  
   },  
   loadingContainer: {  
     justifyContent: 'center',  
@@ -104,7 +112,7 @@ const styles = StyleSheet.create({
     paddingVertical: 20,  
   },  
   error: {  
-    color: 'red',  
+    color: colors.error,  
     textAlign: 'center',  
     paddingVertical: 10,  
   },  

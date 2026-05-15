@@ -1,15 +1,19 @@
 import supabase from './supabase';  
 import { getMonthDateRange } from '../utils/dateUtils';
+import { getCurrentUserId } from './queryUtils';
 
 /**  
  * Get budget vs actual for all categories in a month  
  */  
 export const getBudgetVsActual = async (month) => {  
   try {  
+    const userId = await getCurrentUserId();
     // Get all categories with budget  
     const { data: categories } = await supabase  
       .from('budget_categories')  
       .select('*')  
+      .eq('user_id', userId)
+      .eq('is_active', true)
       .order('name');  
 
     if (!categories) return [];  
@@ -20,6 +24,7 @@ export const getBudgetVsActual = async (month) => {
     const { data: expenses } = await supabase  
       .from('daily_expenses')  
       .select('*')  
+      .eq('user_id', userId)
       .gte('date', startDate)  
       .lte('date', endDate);  
 

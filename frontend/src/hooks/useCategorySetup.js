@@ -1,6 +1,7 @@
 // src/hooks/useCategorySetup.js  
 import { useState } from 'react';  
 import supabase from '../api/supabase';  
+import { getCurrentUserId } from '../api/queryUtils';
 
 const DEFAULT_CATEGORIES = [  
   { name: 'Makan', budget_amount: 300000, color: '#FF6B6B', priority: 5 },  
@@ -19,6 +20,7 @@ export const useCategorySetup = () => {
 
   const setupDefaultCategories = async () => {  
     try {  
+      const userId = await getCurrentUserId();
       setIsLoading(true);  
       setError(null);  
 
@@ -26,6 +28,7 @@ export const useCategorySetup = () => {
       const { data: existingCategories, error: fetchError } = await supabase  
         .from('budget_categories')  
         .select('id')  
+        .eq('user_id', userId)
         .limit(1);  
 
       if (fetchError) throw fetchError;  
@@ -39,7 +42,13 @@ export const useCategorySetup = () => {
       // Insert default categories  
       const { data, error: insertError } = await supabase  
         .from('budget_categories')  
-        .insert(DEFAULT_CATEGORIES)  
+        .insert(
+          DEFAULT_CATEGORIES.map((category) => ({
+            ...category,
+            user_id: userId,
+            is_active: true,
+          }))
+        )  
         .select();  
 
       if (insertError) throw insertError;  
