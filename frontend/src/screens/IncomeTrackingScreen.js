@@ -204,7 +204,7 @@ export default function IncomeTrackingScreen() {
               </View>
               <View style={styles.summaryCard}>
                 <Text style={styles.cardEyebrow}>Total expenses</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary }]}>
+                <Text style={[styles.summaryValue, { color: colors.expense }]}>
                   Rp {summary.totalExpenses.toLocaleString('id-ID')}
                 </Text>
               </View>
@@ -212,7 +212,7 @@ export default function IncomeTrackingScreen() {
 
             <View style={styles.sectionCard}>
               <Text style={styles.cardEyebrow}>Savings snapshot</Text>
-              <Text style={[styles.savingsValue, { color: summary.savings >= 0 ? colors.teal : colors.primary }]}>
+              <Text style={[styles.savingsValue, { color: summary.savings >= 0 ? colors.teal : colors.expense }]}>
                 Rp {summary.savings.toLocaleString('id-ID')}
               </Text>
               <View style={styles.progressTrack}>
@@ -221,7 +221,7 @@ export default function IncomeTrackingScreen() {
                     styles.progressFill,
                     {
                       width: `${Math.max(0, Math.min(summary.savingsRate, 100))}%`,
-                      backgroundColor: summary.savings >= 0 ? colors.teal : colors.primary,
+                      backgroundColor: summary.savings >= 0 ? colors.teal : colors.expense,
                     },
                   ]}
                 />

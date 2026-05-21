@@ -269,6 +269,6 @@ const styles = StyleSheet.create({
   recurringDetails: { color: colors.textSecondary, fontSize: 12, marginTop: spacing.xs },
   recurringNote: { color: colors.textTertiary, fontSize: 12, marginTop: spacing.xs },
   recurringRight: { alignItems: 'flex-end' },
-  recurringAmount: { color: colors.primary, fontSize: 14, fontWeight: '800' },
+  recurringAmount: { color: colors.expense, fontSize: 14, fontWeight: '800' },
   recurringEndDate: { color: colors.textTertiary, fontSize: 11, marginTop: spacing.xs },
 });

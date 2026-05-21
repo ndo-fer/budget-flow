@@ -64,7 +64,7 @@ export default function MainTabNavigator({ onOpenTutorial }) {
   };
 
   const financialStatus = activeTab === 'budget' || activeTab === 'history' ? 'Watch' : 'Healthy';
-  const financialStatusColor = financialStatus === 'Healthy' ? colors.teal : financialStatus === 'Watch' ? colors.mango : colors.primary;
+  const financialStatusColor = financialStatus === 'Healthy' ? colors.teal : financialStatus === 'Watch' ? colors.mango : colors.expense;
   const financialStatusAsset = financialStatus === 'Healthy' ? statusAssets.healthy : financialStatus === 'Watch' ? statusAssets.watch : statusAssets.alert;
   const profileLabel = user?.email || 'Profile';
 
@@ -234,7 +234,7 @@ const styles = StyleSheet.create({
   },
   activeTab: {
     backgroundColor: colors.surfaceSoft,
-    borderColor: colors.borderStrong,
+    borderColor: colors.primarySoft,
   },
   tabBadge: {
     width: 34,
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     marginBottom: spacing.sm,
   },
   brandEyebrow: {
-    color: colors.primary,
+    color: colors.teal,
     fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -456,7 +456,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   logoutText: {
-    color: colors.primary,
+    color: colors.expense,
   },
   webContent: {
     flex: 1,

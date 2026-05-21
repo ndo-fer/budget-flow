@@ -252,7 +252,7 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.coralSoft,
   },
   heroGlowSky: {
     position: 'absolute',
@@ -261,10 +261,10 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.skySoft,
+    backgroundColor: colors.mangoSoft,
   },
   eyebrow: {
-    color: colors.primary,
+    color: colors.coral,
     fontSize: 13,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -297,7 +297,7 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.sm,
   },
   pillCoral: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.coralSoft,
   },
   pillTeal: {
     backgroundColor: colors.tealSoft,
@@ -313,7 +313,7 @@ const styles = StyleSheet.create({
     padding: spacing.xl,
     borderWidth: 1,
     borderColor: colors.border,
-    ...(Platform.OS === 'web' ? { boxShadow: '0 18px 38px rgba(201,111,87,0.10)' } : shadows.card),
+    ...(Platform.OS === 'web' ? { boxShadow: '0 22px 44px rgba(92,174,196,0.14)' } : shadows.card),
   },
   modeSwitch: {
     flexDirection: 'row',
@@ -338,7 +338,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   modeButtonTextActive: {
-    color: colors.primary,
+    color: colors.coral,
   },
   formTitle: {
     color: colors.text,
@@ -362,7 +362,7 @@ const styles = StyleSheet.create({
   },
   errorBox: {
     backgroundColor: colors.errorSoft,
-    borderColor: '#F5C7C0',
+    borderColor: '#F3C8BE',
   },
   successBox: {
     backgroundColor: colors.successSoft,

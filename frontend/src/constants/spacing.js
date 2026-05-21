@@ -21,17 +21,17 @@ export const borderRadius = {
 
 export const shadows = {
   card: {
-    shadowColor: '#C96F57',
-    shadowOffset: { width: 0, height: 10 },
+    shadowColor: '#8CBFCC',
+    shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.08,
-    shadowRadius: 20,
+    shadowRadius: 24,
     elevation: 4,
   },
   floating: {
-    shadowColor: '#C96F57',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.14,
-    shadowRadius: 18,
+    shadowColor: '#5CAEC4',
+    shadowOffset: { width: 0, height: 14 },
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
     elevation: 8,
   },
 };

@@ -80,7 +80,7 @@ export default function BudgetVsActualScreen() {
   const getStatusColor = (status) => {
     switch (status) {
       case 'over':
-        return colors.primary;
+        return colors.expense;
       case 'under':
         return colors.teal;
       case 'on-track':
@@ -145,7 +145,7 @@ export default function BudgetVsActualScreen() {
               </View>
               <View style={styles.summaryCard}>
                 <Text style={styles.cardEyebrow}>Total spent</Text>
-                <Text style={[styles.summaryValue, { color: colors.primary }]}>
+                <Text style={[styles.summaryValue, { color: colors.expense }]}>
                   Rp {summary.totalActual.toLocaleString('id-ID')}
                 </Text>
               </View>
@@ -161,7 +161,7 @@ export default function BudgetVsActualScreen() {
                   <Text
                     style={[
                       styles.remainingPillText,
-                      { color: summary.totalVariance >= 0 ? colors.teal : colors.primary },
+                      { color: summary.totalVariance >= 0 ? colors.teal : colors.expense },
                     ]}
                   >
                     Rp {summary.totalVariance.toLocaleString('id-ID')}
@@ -177,7 +177,7 @@ export default function BudgetVsActualScreen() {
                       width: `${Math.min(summary.utilizationPercent, 100)}%`,
                       backgroundColor:
                         summary.utilizationPercent > 100
-                          ? colors.primary
+                          ? colors.expense
                           : summary.utilizationPercent > 80
                           ? colors.mango
                           : colors.teal,
@@ -197,7 +197,7 @@ export default function BudgetVsActualScreen() {
                 </View>
                 <View style={styles.statItem}>
                   <Text style={styles.statLabel}>Over</Text>
-                  <Text style={[styles.statValue, { color: colors.primary }]}>{summary.overBudgetCount}</Text>
+                  <Text style={[styles.statValue, { color: colors.expense }]}>{summary.overBudgetCount}</Text>
                 </View>
               </View>
             </View>
@@ -257,7 +257,7 @@ export default function BudgetVsActualScreen() {
                       styles.progressFill,
                       {
                         width: `${Math.min(cat.utilization, 100)}%`,
-                        backgroundColor: cat.utilization > 100 ? colors.primary : colors.sky,
+                        backgroundColor: cat.utilization > 100 ? colors.expense : colors.sky,
                       },
                     ]}
                   />

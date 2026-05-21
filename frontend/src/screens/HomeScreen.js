@@ -242,7 +242,7 @@ export default function HomeScreen({ onNavigateTab }) {
               <Text
                 style={[
                   styles.quickStatValue,
-                  { color: remaining >= 0 ? colors.teal : colors.primary },
+                  { color: remaining >= 0 ? colors.teal : colors.expense },
                 ]}
               >
                 Rp {remaining.toLocaleString('id-ID')}
@@ -358,7 +358,7 @@ export default function HomeScreen({ onNavigateTab }) {
                   styles.progressFill,
                   {
                     width: `${Math.min(spentPercent, 100)}%`,
-                    backgroundColor: todaySpending > dailyBudget ? colors.primary : colors.teal,
+                    backgroundColor: todaySpending > dailyBudget ? colors.expense : colors.teal,
                   },
                 ]}
               />
@@ -488,7 +488,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     borderWidth: 1,
     borderColor: colors.border,
-    ...(webShadow('0 20px 42px rgba(201,111,87,0.10)') || shadows.card),
+    ...(webShadow('0 24px 48px rgba(92,174,196,0.14)') || shadows.card),
   },
   heroAccentCoral: {
     position: 'absolute',
@@ -497,7 +497,7 @@ const styles = StyleSheet.create({
     width: 140,
     height: 140,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.coralSoft,
   },
   heroAccentSky: {
     position: 'absolute',
@@ -517,7 +517,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   heroEyebrow: {
-    color: colors.primary,
+    color: colors.coral,
     fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
@@ -773,7 +773,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
   },
   planBadge: {
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.skySoft,
     borderRadius: borderRadius.full,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
@@ -846,7 +846,7 @@ const styles = StyleSheet.create({
     padding: spacing.lg,
     marginBottom: spacing.xl,
     borderWidth: 1,
-    borderColor: '#F5C7C0',
+    borderColor: '#F3C8BE',
   },
   errorText: {
     color: colors.error,
@@ -910,7 +910,7 @@ const styles = StyleSheet.create({
     marginTop: 3,
   },
   expenseAmount: {
-    color: colors.primary,
+    color: colors.expense,
     fontSize: 14,
     fontWeight: '800',
   },
@@ -924,7 +924,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.xl,
     alignItems: 'center',
     justifyContent: 'center',
-    ...(webShadow('0 16px 32px rgba(201,111,87,0.22)') || shadows.floating),
+    ...(webShadow('0 18px 36px rgba(33,182,180,0.24)') || shadows.floating),
   },
   fabText: {
     color: colors.surface,

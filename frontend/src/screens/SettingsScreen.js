@@ -416,7 +416,7 @@ const styles = StyleSheet.create({
     width: 120,
     height: 120,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.primarySoft,
+    backgroundColor: colors.coralSoft,
   },
   heroAccentBottom: {
     position: 'absolute',
@@ -425,10 +425,10 @@ const styles = StyleSheet.create({
     width: 110,
     height: 110,
     borderRadius: borderRadius.full,
-    backgroundColor: colors.skySoft,
+    backgroundColor: colors.primarySoft,
   },
   heroEyebrow: {
-    color: colors.primary,
+    color: colors.teal,
     fontSize: 12,
     fontWeight: '800',
     textTransform: 'uppercase',
