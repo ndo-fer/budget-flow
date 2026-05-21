@@ -1,0 +1,26 @@
+{
+  "name": "Budget Flow",
+  "short_name": "BudgetFlow",
+  "description": "Track expenses, manage budget, and stay on top of your finances.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#FEF9F4",
+  "theme_color": "#29B9AA",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "categories": ["finance", "productivity"]
+}

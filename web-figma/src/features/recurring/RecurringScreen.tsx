@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
-import { Pencil, RefreshCcw } from "lucide-react";
+import { CalendarPlus, Download, Pencil, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
 import { getCategories } from "../../services/categoryService";
 import { deleteRecurringExpense, getRecurringExpenses, syncRecurringExpensesForMonth } from "../../services/recurringService";
 import { formatCurrency } from "../../utils/format";
 import { getCurrentMonth } from "../../utils/date";
 import RecurringExpenseModal from "../../components/modals/RecurringExpenseModal";
+import { exportAllRecurringToICS, getGoogleCalendarUrl, recurringToCalendarEvent } from "../../services/calendarService";
 
 export default function RecurringScreen() {
   const [categories, setCategories] = useState<any[]>([]);
@@ -83,6 +84,20 @@ export default function RecurringScreen() {
             <RefreshCcw className="h-4 w-4" />
             {isSyncing ? "Syncing..." : "Sync month"}
           </button>
+          <button
+            onClick={() => {
+              if (recurringExpenses.length === 0) {
+                toast.error("Belum ada recurring expense.");
+                return;
+              }
+              const count = exportAllRecurringToICS(recurringExpenses);
+              toast.success(`${count} event diekspor ke file .ics`);
+            }}
+            className="inline-flex items-center gap-2 rounded-2xl border border-[#29B9AA] bg-white px-5 py-3 text-sm font-semibold text-[#29B9AA] shadow-sm"
+          >
+            <Download className="h-4 w-4" />
+            Export ke Kalender (.ics)
+          </button>
         </div>
 
         <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
@@ -109,6 +124,16 @@ export default function RecurringScreen() {
                   </div>
                   <p className="text-sm font-bold text-[#FF6B58]">{formatCurrency(item.amount)}</p>
                   <div className="flex items-center gap-2">
+                    <a
+                      href={getGoogleCalendarUrl(recurringToCalendarEvent(item))}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      title="Tambah ke Google Calendar"
+                      className="inline-flex items-center gap-1 rounded-full bg-[#EBF7F6] px-3 py-2 text-xs font-semibold text-[#29B9AA] shadow-sm"
+                    >
+                      <CalendarPlus className="h-3 w-3" />
+                      Calendar
+                    </a>
                     <button
                       onClick={() => {
                         setSelectedRecurring(item);

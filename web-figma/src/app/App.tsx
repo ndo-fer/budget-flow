@@ -5,6 +5,7 @@ import { OnboardingProvider, useOnboarding } from "../contexts/OnboardingContext
 import AuthScreen from "../features/auth/AuthScreen";
 import OnboardingOverlay from "../features/onboarding/OnboardingOverlay";
 import AppShell from "../layouts/AppShell";
+import { registerServiceWorker, scheduleHourlyCheck, tryRegisterPeriodicSync } from "../services/notificationService";
 
 function RootNavigator() {
   const { user, isLoading } = useAuth();
@@ -20,6 +21,14 @@ function RootNavigator() {
     if (user && (window.location.pathname === "/" || window.location.pathname === "/auth")) {
       window.history.replaceState({}, "", "/home");
     }
+  }, [user]);
+
+  // Initialize notifications when user is authenticated
+  useEffect(() => {
+    if (!user) return;
+    registerServiceWorker().then(() => tryRegisterPeriodicSync());
+    const stop = scheduleHourlyCheck();
+    return stop;
   }, [user]);
 
   if (isLoading) {

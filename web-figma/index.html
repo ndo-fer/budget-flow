@@ -4,13 +4,31 @@
     <head>
       <meta charset="UTF-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-      <title>Budget Flow App Idea</title>
+      <title>Budget Flow</title>
+      <meta name="description" content="Track expenses, manage budget, and stay on top of your finances." />
+      <meta name="theme-color" content="#29B9AA" />
+      <meta name="apple-mobile-web-app-capable" content="yes" />
+      <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+      <meta name="apple-mobile-web-app-title" content="BudgetFlow" />
+      <link rel="manifest" href="/manifest.json" />
+      <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+      <link rel="apple-touch-icon" href="/icon.svg" />
       <style>html, body { height: 100%; margin: 0; } #root { height: 100%; }</style>
     </head>
 
     <body>
       <div id="root"></div>
       <script type="module" src="/src/main.tsx"></script>
+      <script>
+        // Register service worker for PWA + push notification support
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js', { scope: '/' })
+              .then(reg => console.log('[BudgetFlow] SW registered:', reg.scope))
+              .catch(err => console.warn('[BudgetFlow] SW registration failed:', err));
+          });
+        }
+      </script>
     </body>
   </html>
   

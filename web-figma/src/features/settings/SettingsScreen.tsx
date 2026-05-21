@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
+import { Bell, BellOff, Calendar, Download } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useOnboarding } from "../../contexts/OnboardingContext";
 import { getCategories } from "../../services/categoryService";
@@ -7,6 +8,9 @@ import supabase from "../../lib/supabase";
 import { getCurrentUserId } from "../../services/queryUtils";
 import { formatCurrency } from "../../utils/format";
 import CategoryModal from "../../components/modals/CategoryModal";
+import { getPermissionStatus, requestNotificationPermission } from "../../services/notificationService";
+import { exportAllRecurringToICS } from "../../services/calendarService";
+import { getRecurringExpenses } from "../../services/recurringService";
 
 const APP_VERSION = "1.0.0";
 
@@ -21,10 +25,12 @@ export default function SettingsScreen({
   const { user, signOut } = useAuth();
   const { showChecklist } = useOnboarding();
   const [categories, setCategories] = useState<any[]>([]);
-  const [notifications, setNotifications] = useState(true);
+  const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
+  const [isEnablingNotif, setIsEnablingNotif] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<any>(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [isExportingCalendar, setIsExportingCalendar] = useState(false);
 
   const categorySummary = useMemo(() => {
     const totalBudget = categories.reduce((sum, category) => sum + (category.budget_amount || 0), 0);
@@ -46,7 +52,40 @@ export default function SettingsScreen({
 
   useEffect(() => {
     loadCategories();
+    setNotifPermission(getPermissionStatus());
   }, []);
+
+  const handleEnableNotifications = async () => {
+    setIsEnablingNotif(true);
+    try {
+      const granted = await requestNotificationPermission();
+      setNotifPermission(granted ? "granted" : "denied");
+      if (granted) {
+        toast.success("Notifikasi diaktifkan! Kamu akan dapat reminder budget dan jatuh tempo.");
+      } else {
+        toast.error("Notifikasi diblokir. Aktifkan manual di pengaturan browser.");
+      }
+    } finally {
+      setIsEnablingNotif(false);
+    }
+  };
+
+  const handleExportCalendar = async () => {
+    setIsExportingCalendar(true);
+    try {
+      const recurring = await getRecurringExpenses();
+      if (recurring.length === 0) {
+        toast.error("Belum ada recurring expense untuk diekspor.");
+        return;
+      }
+      const count = exportAllRecurringToICS(recurring);
+      toast.success(`${count} recurring expense berhasil diekspor ke kalender (.ics)`);
+    } catch (err: any) {
+      toast.error(err.message || "Gagal ekspor kalender.");
+    } finally {
+      setIsExportingCalendar(false);
+    }
+  };
 
   const handleExport = async () => {
     try {
@@ -165,13 +204,42 @@ export default function SettingsScreen({
             <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Preferences</p>
               <div className="mt-4 space-y-3">
-                <label className="flex items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-4">
-                  <div>
-                    <p className="text-sm font-semibold text-[#1A2B38]">Notifications</p>
-                    <p className="mt-1 text-xs text-[#7B6E67]">Untuk web baru ini masih berupa toggle lokal, belum tersambung ke web push.</p>
+                {/* Notification permission */}
+                <div className={`rounded-2xl px-4 py-4 ${
+                  notifPermission === "granted" ? "bg-[#EBF7F6]" :
+                  notifPermission === "denied" ? "bg-red-50" : "bg-[#FEF9F4]"
+                }`}>
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full ${
+                        notifPermission === "granted" ? "bg-[#29B9AA]/20 text-[#29B9AA]" :
+                        notifPermission === "denied" ? "bg-red-100 text-[#FF6B58]" : "bg-[#FFB347]/20 text-[#FFB347]"
+                      }`}>
+                        {notifPermission === "granted" ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#1A2B38]">Notifikasi Browser</p>
+                        <p className="mt-1 text-xs text-[#7B6E67]">
+                          {notifPermission === "granted" && "Aktif – kamu akan dapat reminder budget & jatuh tempo."}
+                          {notifPermission === "denied" && "Diblokir – aktifkan di pengaturan browser (klik 🔒 di address bar)."}
+                          {notifPermission === "default" && "Izinkan agar dapat pengingat budget & recurring expense."}
+                          {notifPermission === "unsupported" && "Browser ini tidak mendukung notifikasi."}
+                        </p>
+                      </div>
+                    </div>
+                    {notifPermission !== "granted" && notifPermission !== "unsupported" && (
+                      <button
+                        id="btn-enable-notifications"
+                        onClick={handleEnableNotifications}
+                        disabled={isEnablingNotif || notifPermission === "denied"}
+                        className="shrink-0 rounded-full bg-[#29B9AA] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
+                      >
+                        {isEnablingNotif ? "..." : "Aktifkan"}
+                      </button>
+                    )}
                   </div>
-                  <input type="checkbox" checked={notifications} onChange={(event) => setNotifications(event.target.checked)} />
-                </label>
+                </div>
+
                 <button onClick={handleOpenTutorial} className="flex w-full items-center justify-between rounded-2xl bg-[#29B9AA] px-4 py-4 text-left text-white shadow-sm">
                   <div>
                     <p className="text-sm font-semibold">Lihat Tutorial Lagi</p>
@@ -179,6 +247,41 @@ export default function SettingsScreen({
                   </div>
                   <span className="text-xs font-bold text-white">Open</span>
                 </button>
+              </div>
+            </div>
+
+            {/* Calendar integration */}
+            <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EBF7F6] text-[#29B9AA]">
+                  <Calendar className="h-4 w-4" />
+                </div>
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Kalender</p>
+              </div>
+              <div className="mt-4 space-y-3">
+                <button
+                  id="btn-export-calendar"
+                  onClick={handleExportCalendar}
+                  disabled={isExportingCalendar}
+                  className="flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left disabled:opacity-60"
+                >
+                  <div>
+                    <p className="text-sm font-semibold text-[#1A2B38]">Export Recurring ke Kalender</p>
+                    <p className="mt-1 text-xs text-[#7B6E67]">
+                      Download file .ics — bisa dibuka di Google Calendar, Apple Calendar, atau Outlook.
+                    </p>
+                  </div>
+                  <Download className="h-4 w-4 shrink-0 text-[#29B9AA]" />
+                </button>
+                <div className="rounded-2xl bg-[#FEF9F4] px-4 py-4">
+                  <p className="text-xs font-semibold text-[#1A2B38]">Cara pakai file .ics</p>
+                  <ol className="mt-2 space-y-1 text-xs text-[#7B6E67] list-decimal list-inside">
+                    <li>Klik "Export Recurring ke Kalender"</li>
+                    <li>Buka file .ics yang terdownload</li>
+                    <li>Pilih "Tambah ke Google Calendar / Apple Calendar"</li>
+                    <li>Semua recurring expense otomatis masuk sebagai event berulang ✅</li>
+                  </ol>
+                </div>
               </div>
             </div>
           </div>
