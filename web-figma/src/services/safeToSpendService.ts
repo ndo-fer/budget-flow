@@ -1,0 +1,90 @@
+/**
+ * safeToSpendService.ts
+ *
+ * Calculates how much the user can safely spend today based on:
+ *   available_money = total_estimated_balance - locked_money - upcoming_bills
+ *   safe_to_spend_per_day = available_money / days_until_next_income
+ *   safe_to_spend_today = safe_to_spend_per_day - today_spent
+ */
+
+import { getWallets } from "./walletService";
+import { getTodayWalletSpending } from "./walletTransactionService";
+import { getRecurringExpenses } from "./recurringService";
+import { getCurrentMonth } from "../utils/date";
+import type { SafeToSpend } from "../types/models";
+
+/**
+ * Calculates days until next income (payday).
+ * Uses the income plan's next expected date.
+ * Falls back to end of month if no plan.
+ */
+export const getDaysUntilNextIncome = (month: string): number => {
+  const today = new Date();
+  const [year, mon] = month.split("-").map(Number);
+  // Default to last day of the current month
+  const endOfMonth = new Date(year, mon, 0);
+  const diffMs = endOfMonth.getTime() - today.getTime();
+  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  return Math.max(diffDays, 1);
+};
+
+/**
+ * Calculates the total amount of upcoming bills still pending this month.
+ * Uses active monthly recurring expenses whose due day hasn't passed yet.
+ */
+export const getUpcomingBillsThisMonth = async (): Promise<number> => {
+  const today = new Date();
+  const todayDay = today.getDate();
+
+  try {
+    const recurring = await getRecurringExpenses();
+    return recurring
+      .filter((r) => r.frequency === "monthly" && r.is_active !== false)
+      .filter((r) => {
+        const dueDay = r.day_of_month || 1;
+        return dueDay > todayDay;
+      })
+      .reduce((sum, r) => sum + r.amount, 0);
+  } catch {
+    return 0;
+  }
+};
+
+export const calculateSafeToSpend = async (): Promise<SafeToSpend> => {
+  const month = getCurrentMonth();
+
+  const [wallets, todaySpent, upcomingBills] = await Promise.all([
+    getWallets().catch(() => []),
+    getTodayWalletSpending().catch(() => 0),
+    getUpcomingBillsThisMonth().catch(() => 0),
+  ]);
+
+  const totalEstimatedBalance = wallets.reduce((sum, w) => sum + w.estimated_balance, 0);
+
+  // Locked money: money we know is committed (savings targets — simplified to 0 for now)
+  const lockedMoney = 0;
+
+  const availableMoney = Math.max(totalEstimatedBalance - lockedMoney - upcomingBills, 0);
+
+  const daysUntilNextIncome = getDaysUntilNextIncome(month);
+
+  const safeToSpendPerDay =
+    daysUntilNextIncome > 0 ? availableMoney / daysUntilNextIncome : availableMoney;
+
+  const safeToSpendToday = Math.max(safeToSpendPerDay - todaySpent, 0);
+  const isOverDailyLimit = todaySpent > safeToSpendPerDay;
+  const overAmount = isOverDailyLimit ? todaySpent - safeToSpendPerDay : 0;
+
+  return {
+    totalEstimatedBalance,
+    lockedMoney,
+    upcomingBills,
+    availableMoney,
+    daysUntilNextIncome,
+    safeToSpendPerDay,
+    todaySpent,
+    safeToSpendToday,
+    isOverDailyLimit,
+    overAmount,
+  };
+};

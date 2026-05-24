@@ -13,6 +13,9 @@
  *  – tryRegisterPeriodicSync() → Chrome-only background reminder
  */
 
+import { Capacitor } from '@capacitor/core';
+import { LocalNotifications } from '@capacitor/local-notifications';
+
 const STORAGE_KEY_LAST_REMINDER = "bf_last_reminder_date";
 const STORAGE_KEY_LAST_BUDGET_ALERT = "bf_last_budget_alert";
 
@@ -24,6 +27,15 @@ export const getPermissionStatus = (): NotificationPermission | "unsupported" =>
 };
 
 export const requestNotificationPermission = async (): Promise<boolean> => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      const res = await LocalNotifications.requestPermissions();
+      return res.display === 'granted';
+    } catch {
+      return false;
+    }
+  }
+
   if (!("Notification" in window)) return false;
   if (Notification.permission === "granted") return true;
   if (Notification.permission === "denied") return false;
@@ -34,11 +46,30 @@ export const requestNotificationPermission = async (): Promise<boolean> => {
 
 // ── Show notification ─────────────────────────────────────────
 
-const showNotification = (
+const showNotification = async (
   title: string,
   body: string,
   options?: { tag?: string; requireInteraction?: boolean; icon?: string },
 ) => {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            id: Math.floor(Math.random() * 1000000), // Random ID
+            title,
+            body,
+            schedule: { at: new Date() }, // Fire immediately
+            sound: undefined, // Default system sound
+          }
+        ]
+      });
+      return;
+    } catch (e) {
+      console.warn("[Capacitor] Local notification failed", e);
+    }
+  }
+
   if (Notification.permission !== "granted") return;
 
   // Use service worker if available (works when tab is in background)
@@ -53,7 +84,7 @@ const showNotification = (
   } else {
     new Notification(title, {
       body,
-      icon: "/icon.svg",
+      icon: "/logo-mark.png",
       tag: options?.tag,
       requireInteraction: options?.requireInteraction,
     });

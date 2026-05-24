@@ -22,8 +22,8 @@ self.addEventListener("push", (event) => {
   const title = data.title ?? "Budget Flow";
   const options = {
     body: data.body ?? "Ada yang perlu kamu cek di Budget Flow.",
-    icon: "/icon.svg",
-    badge: "/icon.svg",
+    icon: "/logo-mark.png",
+    badge: "/logo-mark.png",
     tag: data.tag ?? "budget-flow-general",
     requireInteraction: data.requireInteraction ?? false,
     data: { url: data.url ?? "/" },
@@ -57,8 +57,8 @@ self.addEventListener("periodicsync", (event) => {
     event.waitUntil(
       self.registration.showNotification("Budget Flow", {
         body: "Jangan lupa catat pengeluaranmu hari ini! 💰",
-        icon: "/icon.svg",
-        badge: "/icon.svg",
+        icon: "/logo-mark.png",
+        badge: "/logo-mark.png",
         tag: "daily-reminder",
       }),
     );

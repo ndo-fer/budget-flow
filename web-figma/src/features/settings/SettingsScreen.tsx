@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Bell, BellOff, Calendar, Download } from "lucide-react";
+import { Bell, BellOff, Calendar, Download, ShieldCheck, ToggleLeft, ToggleRight } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useOnboarding } from "../../contexts/OnboardingContext";
 import { getCategories } from "../../services/categoryService";
@@ -11,6 +11,9 @@ import CategoryModal from "../../components/modals/CategoryModal";
 import { getPermissionStatus, requestNotificationPermission } from "../../services/notificationService";
 import { exportAllRecurringToICS } from "../../services/calendarService";
 import { getRecurringExpenses } from "../../services/recurringService";
+import { DEFAULT_ALLOWLIST_APPS } from "../../services/notificationParserService";
+
+const ALLOWLIST_KEY = "bf_notification_allowlist";
 
 const APP_VERSION = "1.0.0";
 
@@ -31,6 +34,24 @@ export default function SettingsScreen({
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingCalendar, setIsExportingCalendar] = useState(false);
+
+  // Notification allowlist (persisted to localStorage)
+  const [allowlist, setAllowlist] = useState<Record<string, boolean>>(() => {
+    try {
+      const stored = localStorage.getItem(ALLOWLIST_KEY);
+      if (stored) return JSON.parse(stored);
+    } catch { /* ignore */ }
+    // Default: all enabled
+    return Object.fromEntries(DEFAULT_ALLOWLIST_APPS.map((a) => [a.package_name, true]));
+  });
+
+  const toggleAllowlist = (packageName: string) => {
+    setAllowlist((prev) => {
+      const next = { ...prev, [packageName]: !prev[packageName] };
+      localStorage.setItem(ALLOWLIST_KEY, JSON.stringify(next));
+      return next;
+    });
+  };
 
   const categorySummary = useMemo(() => {
     const totalBudget = categories.reduce((sum, category) => sum + (category.budget_amount || 0), 0);
@@ -283,6 +304,42 @@ export default function SettingsScreen({
                   </ol>
                 </div>
               </div>
+            </div>
+
+            {/* Notification Allowlist */}
+            <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
+              <div className="flex items-center gap-3">
+                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EBF7F6] text-[#29B9AA]">
+                  <ShieldCheck className="h-4 w-4" />
+                </div>
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Notification Allowlist</p>
+              </div>
+              <p className="mt-3 text-xs text-[#7B6E67]">
+                Aplikasi keuangan yang dipantau notifikasinya. OTP dan kode verifikasi selalu difilter otomatis.
+              </p>
+              <div className="mt-4 space-y-2">
+                {DEFAULT_ALLOWLIST_APPS.map((app) => {
+                  const enabled = allowlist[app.package_name] !== false;
+                  return (
+                    <button
+                      key={app.package_name}
+                      onClick={() => toggleAllowlist(app.package_name)}
+                      className="flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-3 text-left"
+                    >
+                      <div>
+                        <p className="text-sm font-semibold text-[#1A2B38]">{app.app_name}</p>
+                        <p className="text-[10px] text-[#7B6E67]">{app.package_name}</p>
+                      </div>
+                      {enabled
+                        ? <ToggleRight className="h-5 w-5 text-[#29B9AA]" />
+                        : <ToggleLeft className="h-5 w-5 text-[#7B6E67]" />}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="mt-3 text-[10px] text-[#7B6E67]">
+                Aktif saat Budget Flow berjalan sebagai APK Android.
+              </p>
             </div>
           </div>
 

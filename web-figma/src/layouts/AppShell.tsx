@@ -9,36 +9,37 @@ import {
   LineChart,
   Plus,
   ChevronDown,
+  Wallet,
+  Upload,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { TabId } from "../types/models";
 import { useAuth } from "../contexts/AuthContext";
 import { useOnboarding } from "../contexts/OnboardingContext";
 import HomeScreen from "../features/home/HomeScreen";
+import WalletsScreen from "../features/wallets/WalletsScreen";
 import BudgetScreen from "../features/budget/BudgetScreen";
 import IncomeScreen from "../features/income/IncomeScreen";
 import HistoryScreen from "../features/history/HistoryScreen";
-import RecurringScreen from "../features/recurring/RecurringScreen";
-import AnalyticsScreen from "../features/analytics/AnalyticsScreen";
 import SettingsScreen from "../features/settings/SettingsScreen";
 
 const NAV_ITEMS: Array<{ id: TabId; label: string; icon: any }> = [
-  { id: "home", label: "Beranda", icon: LayoutDashboard },
-  { id: "budget", label: "Budget", icon: BarChart3 },
+  { id: "home", label: "Dashboard", icon: LayoutDashboard },
+  { id: "wallets", label: "Wallets", icon: Wallet },
+  { id: "budget", label: "Budgets", icon: BarChart3 },
   { id: "income", label: "Income", icon: TrendingUp },
-  { id: "history", label: "History", icon: Clock },
-  { id: "recurring", label: "Recurring", icon: Repeat2 },
-  { id: "analytics", label: "Analytics", icon: LineChart },
-  { id: "settings", label: "Settings", icon: Settings },
+  { id: "history", label: "Ledger", icon: Clock },
 ];
 
 const TAB_PATHS: Record<TabId, string> = {
   home: "/home",
+  wallets: "/wallets",
+  "csv-import": "/wallets",
   budget: "/budget",
   income: "/income",
-  history: "/history",
-  recurring: "/recurring",
-  analytics: "/analytics",
+  history: "/ledger",
+  recurring: "/ledger",
+  analytics: "/home",
   settings: "/settings",
 };
 
@@ -75,6 +76,28 @@ export default function AppShell() {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    // Listen to deep links from Android Widget quick actions
+    const setupDeepLinks = async () => {
+      try {
+        const { App: CapApp } = await import("@capacitor/app");
+        CapApp.addListener("appUrlOpen", (event) => {
+          const urlStr = event.url;
+          if (urlStr.includes("add-expense")) {
+            navigateToTab("home");
+            setOpenExpenseComposerTick((current) => current + 1);
+          } else if (urlStr.includes("ledger")) {
+            navigateToTab("history");
+          } else if (urlStr.includes("wallets")) {
+            navigateToTab("wallets");
+          }
+        });
+      } catch (err) {
+        console.warn("Failed to listen to deep links:", err);
+      }
+    };
+
+    setupDeepLinks();
+
     const syncFromLocation = () => {
       const nextTab = resolveTabFromPath(window.location.pathname) || "home";
       setActiveTab(nextTab);
@@ -91,11 +114,13 @@ export default function AppShell() {
 
   const renderScreen = () => {
     if (activeTab === "home") return <HomeScreen onNavigateTab={navigateToTab} openExpenseComposerTick={openExpenseComposerTick} />;
+    if (activeTab === "wallets") return <WalletsScreen />;
+    if (activeTab === "csv-import") return <WalletsScreen />;
     if (activeTab === "budget") return <BudgetScreen />;
     if (activeTab === "income") return <IncomeScreen />;
     if (activeTab === "history") return <HistoryScreen />;
-    if (activeTab === "recurring") return <RecurringScreen />;
-    if (activeTab === "analytics") return <AnalyticsScreen />;
+    if (activeTab === "recurring") return <HistoryScreen />;
+    if (activeTab === "analytics") return <HomeScreen onNavigateTab={navigateToTab} openExpenseComposerTick={openExpenseComposerTick} />;
     return <SettingsScreen onOpenTutorial={openOnboarding} />;
   };
 
@@ -111,9 +136,8 @@ export default function AppShell() {
   return (
     <div className="flex min-h-screen bg-[#FEF9F4]">
       <aside className="sticky top-0 hidden h-screen w-64 flex-col border-r border-black/10 bg-white lg:flex">
-        <div className="border-b border-black/5 px-5 py-5">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Budget Flow</p>
-          <h1 className="mt-3 text-2xl font-bold text-[#1A2B38]">Daily finance companion</h1>
+        <div className="border-b border-black/5 px-4 py-5">
+          <img src="/logo-horizontal.png" alt="Budget Flow Logo" className="h-16 w-auto object-contain" />
         </div>
         <div className="px-4 pt-4">
           <button
@@ -180,9 +204,12 @@ export default function AppShell() {
 
       <div className="fixed left-0 right-0 top-0 z-30 border-b border-black/10 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
         <div className="mx-auto flex max-w-6xl items-center gap-3">
-          <button onClick={() => navigateToTab("home")} className="min-w-0 flex-1 text-left">
-            <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Budget Flow</p>
-            <p className="mt-1 truncate text-sm font-semibold text-[#1A2B38]">{activeNavItem.label}</p>
+          <button onClick={() => navigateToTab("home")} className="flex min-w-0 flex-1 items-center gap-2.5 text-left">
+            <img src="/logo-mark.png" alt="Budget Flow Logo" className="h-9 w-9 rounded-lg object-contain" />
+            <div className="min-w-0">
+              <p className="text-[9px] font-bold uppercase tracking-[0.24em] text-[#29B9AA] leading-none">Budget Flow</p>
+              <p className="mt-1 truncate text-xs font-semibold text-[#1A2B38] leading-none">{activeNavItem.label}</p>
+            </div>
           </button>
           <button
             onClick={() => {
@@ -206,9 +233,10 @@ export default function AppShell() {
 
       <main className="min-w-0 flex-1 pb-20 pt-[78px] lg:pb-0 lg:pt-0">{renderScreen()}</main>
 
+      {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-black/10 bg-white px-2 py-1 lg:hidden">
-        <div className="grid grid-cols-6 items-center gap-1">
-          {NAV_ITEMS.filter((item) => item.id !== "settings").map((item) => {
+        <div className="grid grid-cols-5 items-center gap-1">
+          {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const active = activeTab === item.id;
             return (

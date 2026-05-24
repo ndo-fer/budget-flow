@@ -1,106 +1,143 @@
 import supabase from "../lib/supabase";
-import { getDaysInMonth, getMonthDateRange } from "../utils/date";
+import { getMonthDateRange, getDaysInMonth } from "../utils/date";
 import { getCurrentUserId } from "./queryUtils";
 
 export const getMonthlyExpenses = async (month: string) => {
-  const userId = await getCurrentUserId();
-  const { startDate, endDate } = getMonthDateRange(month);
-  const { data, error } = await supabase
-    .from("daily_expenses")
-    .select(`
-      *,
-      budget_categories (
-        id,
-        name,
-        color,
-        budget_amount
-      )
-    `)
-    .eq("user_id", userId)
-    .gte("date", startDate)
-    .lte("date", endDate)
-    .order("date", { ascending: false });
+  try {
+    const userId = await getCurrentUserId();
+    const { startDate, endDate } = getMonthDateRange(month);
+    const { data, error } = await supabase
+      .from("wallet_transactions")
+      .select(`
+        *,
+        budget_categories (
+          id,
+          name,
+          color,
+          budget_amount
+        )
+      `)
+      .eq("user_id", userId)
+      .eq("type", "expense")
+      .gte("occurred_at", `${startDate}T00:00:00Z`)
+      .lte("occurred_at", `${endDate}T23:59:59Z`)
+      .order("occurred_at", { ascending: false });
 
-  if (error) throw error;
-  return data || [];
+    if (error) throw error;
+    return (data || []).map((tx) => ({
+      ...tx,
+      date: tx.occurred_at.split("T")[0],
+    }));
+  } catch (err) {
+    console.error("Error fetching monthly expenses:", err);
+    throw err;
+  }
 };
 
 export const calculateMonthlySummary = async (month: string) => {
-  const userId = await getCurrentUserId();
-  const expenses = await getMonthlyExpenses(month);
-  const { data: planData, error } = await supabase
-    .from("monthly_plans")
-    .select("*")
-    .eq("user_id", userId)
-    .eq("month", month)
-    .maybeSingle();
+  try {
+    const userId = await getCurrentUserId();
+    const expenses = await getMonthlyExpenses(month);
+    const { data: planData } = await supabase
+      .from("monthly_plans")
+      .select("*")
+      .eq("user_id", userId)
+      .eq("month", month)
+      .maybeSingle();
 
-  if (error) throw error;
+    const totalSpending = expenses.reduce((sum, exp) => sum + exp.amount, 0);
+    const income = planData?.income || 0;
+    const remaining = income - totalSpending;
 
-  const totalSpending = expenses.reduce((sum, item) => sum + item.amount, 0);
-  const income = planData?.income || 0;
-  const remaining = income - totalSpending;
-
-  return {
-    income,
-    totalSpending,
-    remaining,
-    budgetUsagePercent: income > 0 ? (totalSpending / income) * 100 : 0,
-    expenseCount: expenses.length,
-  };
+    return {
+      income,
+      totalSpending,
+      remaining,
+      budgetUsagePercent: income > 0 ? (totalSpending / income) * 100 : 0,
+      expenseCount: expenses.length,
+    };
+  } catch (err) {
+    console.error("Error calculating summary:", err);
+    throw err;
+  }
 };
 
 export const getCategoryBreakdown = async (month: string) => {
-  const expenses = await getMonthlyExpenses(month);
-  const breakdown = new Map<string, { name: string; amount: number; color: string; count: number }>();
+  try {
+    const expenses = await getMonthlyExpenses(month);
+    const breakdown: { [key: string]: any } = {};
 
-  expenses.forEach((expense) => {
-    const categoryName = expense.budget_categories?.name || "Unknown";
-    const entry = breakdown.get(categoryName) || {
-      name: categoryName,
-      amount: 0,
-      color: expense.budget_categories?.color || "#999999",
-      count: 0,
-    };
+    expenses.forEach((expense) => {
+      const categoryName = expense.budget_categories?.name || "Unknown";
+      const categoryColor = expense.budget_categories?.color || "#999999";
 
-    entry.amount += expense.amount;
-    entry.count += 1;
-    breakdown.set(categoryName, entry);
-  });
+      if (!breakdown[categoryName]) {
+        breakdown[categoryName] = {
+          name: categoryName,
+          amount: 0,
+          color: categoryColor,
+          count: 0,
+        };
+      }
 
-  return Array.from(breakdown.values()).sort((a, b) => b.amount - a.amount);
+      breakdown[categoryName].amount += expense.amount;
+      breakdown[categoryName].count += 1;
+    });
+
+    return Object.values(breakdown).sort((a, b) => b.amount - a.amount);
+  } catch (err) {
+    console.error("Error getting category breakdown:", err);
+    throw err;
+  }
 };
 
 export const getDailySpendingTrend = async (month: string) => {
-  const expenses = await getMonthlyExpenses(month);
-  const daysInMonth = getDaysInMonth(month);
-  const dailyData: Record<string, number> = {};
+  try {
+    const expenses = await getMonthlyExpenses(month);
+    const dailyData: { [key: string]: number } = {};
 
-  for (let day = 1; day <= daysInMonth; day += 1) {
-    const date = `${month}-${String(day).padStart(2, "0")}`;
-    dailyData[date] = 0;
-  }
-
-  expenses.forEach((expense) => {
-    if (dailyData[expense.date] !== undefined) {
-      dailyData[expense.date] += expense.amount;
+    const daysInMonth = getDaysInMonth(month);
+    for (let i = 1; i <= daysInMonth; i++) {
+      const date = `${month}-${String(i).padStart(2, "0")}`;
+      dailyData[date] = 0;
     }
-  });
 
-  return Object.entries(dailyData).map(([date, amount]) => ({
-    date,
-    amount,
-    day: Number(date.slice(8)),
-  }));
+    expenses.forEach((expense) => {
+      if (dailyData[expense.date] !== undefined) {
+        dailyData[expense.date] += expense.amount;
+      }
+    });
+
+    const data = Object.entries(dailyData).map(([date, amount]) => ({
+      date,
+      amount,
+      day: parseInt(date.substring(8)),
+    }));
+
+    return data;
+  } catch (err) {
+    console.error("Error getting daily trend:", err);
+    throw err;
+  }
 };
 
 export const getTopCategories = async (month: string, limit = 5) => {
-  const breakdown = await getCategoryBreakdown(month);
-  return breakdown.slice(0, limit);
+  try {
+    const breakdown = await getCategoryBreakdown(month);
+    return breakdown.slice(0, limit);
+  } catch (err) {
+    console.error("Error getting top categories:", err);
+    throw err;
+  }
 };
 
 export const getDailyAverage = async (month: string) => {
-  const summary = await calculateMonthlySummary(month);
-  const days = getDaysInMonth(month);
-  return days > 0 ? Math.round(summary.totalSpending / days) : 0;
+  try {
+    const summary = await calculateMonthlySummary(month);
+    const daysInMonth = getDaysInMonth(month);
+    return daysInMonth > 0 ? Math.round(summary.totalSpending / daysInMonth) : 0;
+  } catch (err) {
+    console.error("Error getting daily average:", err);
+    throw err;
+  }
 };

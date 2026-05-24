@@ -1,0 +1,209 @@
+/**
+ * csvImportService.ts
+ *
+ * Flexible CSV import with:
+ *  - Auto-detect common column names
+ *  - Manual column mapping UI data
+ *  - Preview before save
+ *  - Duplicate detection
+ */
+
+import type { CsvColumnMapping, CsvImportPreview, WalletTransaction } from "../types/models";
+import { checkDuplicate } from "./walletTransactionService";
+
+// ── CSV Parsing ───────────────────────────────────────────────
+
+export const parseRawCsv = (raw: string): { headers: string[]; rows: Record<string, string>[] } => {
+  const lines = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
+  if (lines.length < 2) throw new Error("File CSV terlalu pendek atau kosong.");
+
+  // Detect separator (comma or semicolon)
+  const firstLine = lines[0];
+  const separator = firstLine.includes(";") ? ";" : ",";
+
+  const parseLine = (line: string): string[] => {
+    const result: string[] = [];
+    let current = "";
+    let inQuotes = false;
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+      if (char === '"') {
+        if (inQuotes && line[i + 1] === '"') {
+          current += '"';
+          i++;
+        } else {
+          inQuotes = !inQuotes;
+        }
+      } else if (char === separator && !inQuotes) {
+        result.push(current.trim());
+        current = "";
+      } else {
+        current += char;
+      }
+    }
+    result.push(current.trim());
+    return result;
+  };
+
+  const headers = parseLine(lines[0]).map((h) => h.replace(/^\uFEFF/, "")); // strip BOM
+  const rows: Record<string, string>[] = [];
+
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    const values = parseLine(line);
+    const row: Record<string, string> = {};
+    headers.forEach((header, idx) => {
+      row[header] = values[idx] || "";
+    });
+    rows.push(row);
+  }
+
+  return { headers, rows };
+};
+
+// ── Auto-detect column mapping ────────────────────────────────
+
+const DATE_ALIASES = ["date", "tanggal", "tgl", "waktu", "time", "datetime"];
+const DESCRIPTION_ALIASES = ["description", "deskripsi", "keterangan", "memo", "note", "notes", "narasi"];
+const AMOUNT_ALIASES = ["amount", "nominal", "jumlah", "nilai", "debit", "credit", "kredit"];
+const DIRECTION_ALIASES = ["type", "tipe", "jenis", "cr/db", "d/c", "debit/kredit"];
+const BALANCE_ALIASES = ["balance", "saldo", "saldo akhir"];
+const CATEGORY_ALIASES = ["category", "kategori", "jenis transaksi"];
+
+const findBestMatch = (headers: string[], aliases: string[]): string | undefined => {
+  for (const alias of aliases) {
+    const found = headers.find((h) => h.toLowerCase().includes(alias.toLowerCase()));
+    if (found) return found;
+  }
+  return undefined;
+};
+
+export const autoDetectMapping = (headers: string[]): Partial<CsvColumnMapping> => ({
+  date: findBestMatch(headers, DATE_ALIASES),
+  description: findBestMatch(headers, DESCRIPTION_ALIASES),
+  amount: findBestMatch(headers, AMOUNT_ALIASES),
+  direction: findBestMatch(headers, DIRECTION_ALIASES),
+  balance: findBestMatch(headers, BALANCE_ALIASES),
+  category: findBestMatch(headers, CATEGORY_ALIASES),
+});
+
+// ── Parse amount from CSV cell ────────────────────────────────
+
+const parseCsvAmount = (raw: string): number | null => {
+  if (!raw) return null;
+  const cleaned = raw
+    .replace(/[Rp\s]/gi, "")
+    .replace(/\./g, "") // remove thousand separators (Indonesian)
+    .replace(",", "."); // decimal comma -> dot
+  const num = parseFloat(cleaned);
+  return isNaN(num) ? null : Math.abs(num);
+};
+
+// ── Parse direction ───────────────────────────────────────────
+
+const parseCsvDirection = (raw: string): "in" | "out" | null => {
+  if (!raw) return null;
+  const lower = raw.toLowerCase().trim();
+  if (["d", "db", "debit", "dr", "out", "keluar", "expense"].includes(lower)) return "out";
+  if (["c", "cr", "credit", "kredit", "in", "masuk", "income"].includes(lower)) return "in";
+  // Check if value is negative (some exports use negative for debit)
+  if (raw.startsWith("-")) return "out";
+  return null;
+};
+
+// ── Parse date ────────────────────────────────────────────────
+
+const parseCsvDate = (raw: string): string | null => {
+  if (!raw) return null;
+  // Try ISO format first
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
+  // Indonesian format: DD/MM/YYYY or DD-MM-YYYY
+  const dmyMatch = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/.exec(raw);
+  if (dmyMatch) {
+    const [, d, m, y] = dmyMatch;
+    const year = y.length === 2 ? `20${y}` : y;
+    return `${year}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+  return null;
+};
+
+// ── Build transaction candidates ──────────────────────────────
+
+export const buildTransactionCandidates = (
+  rows: Record<string, string>[],
+  mapping: CsvColumnMapping,
+  walletId?: string,
+): Partial<WalletTransaction>[] => {
+  return rows
+    .map((row) => {
+      const dateStr = parseCsvDate(row[mapping.date] || "");
+      const rawAmount = row[mapping.amount] || "";
+      const amount = parseCsvAmount(rawAmount);
+      if (!amount || !dateStr) return null;
+
+      const rawDirection = mapping.direction ? row[mapping.direction] : undefined;
+      const direction: "in" | "out" = parseCsvDirection(rawDirection || "") || "out";
+
+      return {
+        wallet_id: walletId,
+        amount,
+        direction,
+        type: (direction === "in" ? "income" : "expense") as any,
+        note: row[mapping.description] || undefined,
+        category: mapping.category ? row[mapping.category] || undefined : undefined,
+        source: "csv" as const,
+        confidence: 0.95,
+        occurred_at: new Date(dateStr + "T12:00:00").toISOString(),
+        is_duplicate: false,
+      } as Partial<WalletTransaction>;
+    })
+    .filter((tx): tx is Partial<WalletTransaction> => tx !== null);
+};
+
+// ── Preview with duplicate check ──────────────────────────────
+
+export const buildImportPreview = async (
+  candidates: Partial<WalletTransaction>[],
+): Promise<CsvImportPreview> => {
+  let newCount = 0;
+  let duplicateCount = 0;
+  let reviewCount = 0;
+
+  const processed = await Promise.all(
+    candidates.map(async (tx) => {
+      if (!tx.amount || !tx.occurred_at) {
+        reviewCount++;
+        return { ...tx, is_duplicate: false };
+      }
+
+      try {
+        const isDup = await checkDuplicate({
+          wallet_id: tx.wallet_id || undefined,
+          amount: tx.amount,
+          direction: tx.direction || "out",
+          occurred_at: tx.occurred_at,
+        });
+
+        if (isDup) {
+          duplicateCount++;
+          return { ...tx, is_duplicate: true };
+        } else {
+          newCount++;
+          return { ...tx, is_duplicate: false };
+        }
+      } catch {
+        reviewCount++;
+        return { ...tx, is_duplicate: false };
+      }
+    }),
+  );
+
+  return {
+    total: candidates.length,
+    newCount,
+    duplicateCount,
+    reviewCount,
+    transactions: processed,
+  };
+};

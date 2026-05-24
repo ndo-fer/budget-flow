@@ -137,3 +137,8 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Installers / Large Binaries
+*.msi
+*.exe
+web-figma/android/jdk21.msi

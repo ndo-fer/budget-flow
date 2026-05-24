@@ -1,149 +1,193 @@
 import { useEffect, useState } from "react";
+import { X, Calendar, AlignLeft, Tag, CreditCard } from "lucide-react";
+import { getCategories } from "../../services/categoryService";
+import { getWallets } from "../../services/walletService";
+import { addExpense } from "../../services/expenseService";
 import { toast } from "sonner";
-import type { BudgetCategory, ExpenseRecord } from "../../types/models";
-import { addExpense, updateExpense } from "../../services/expenseService";
-import { validateAmount, validateDate } from "../../utils/validation";
-import ModalShell from "./ModalShell";
+import type { BudgetCategory, Wallet } from "../../types/models";
 
-export default function ExpenseModal({
-  open,
-  categories,
-  initialDate,
-  expense,
-  onClose,
-  onSaved,
-}: {
-  open: boolean;
-  categories: BudgetCategory[];
-  initialDate: string;
-  expense?: ExpenseRecord | null;
+interface ExpenseModalProps {
+  isOpen: boolean;
   onClose: () => void;
-  onSaved: () => Promise<void> | void;
-}) {
-  const [categoryId, setCategoryId] = useState("");
+  onSuccess?: () => void;
+}
+
+export default function ExpenseModal({ isOpen, onClose, onSuccess }: ExpenseModalProps) {
+  const [categories, setCategories] = useState<BudgetCategory[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
   const [amount, setAmount] = useState("");
-  const [date, setDate] = useState(initialDate);
+  const [categoryId, setCategoryId] = useState("");
+  const [walletId, setWalletId] = useState("");
+  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [note, setNote] = useState("");
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (!open) return;
+    if (isOpen) {
+      setAmount("");
+      setNote("");
+      setDate(new Date().toISOString().split("T")[0]);
+      
+      getCategories()
+        .then((cats) => {
+          setCategories(cats.filter((c) => c.is_active));
+          if (cats.length > 0) setCategoryId(cats[0].id.toString());
+        })
+        .catch(() => {});
 
-    setCategoryId(expense?.category_id || categories[0]?.id || "");
-    setAmount(expense?.amount ? String(expense.amount) : "");
-    setDate(expense?.date || initialDate);
-    setNote(expense?.note || "");
-  }, [categories, expense, initialDate, open]);
+      getWallets()
+        .then((ws) => {
+          setWallets(ws.filter((w) => w.is_active));
+        })
+        .catch(() => {});
+    }
+  }, [isOpen]);
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const numAmount = parseFloat(amount.replace(/[^0-9]/g, ""));
+    if (isNaN(numAmount) || numAmount <= 0) {
+      return toast.error("Nominal pengeluaran tidak valid.");
+    }
     if (!categoryId) {
-      toast.error("Pilih kategori dulu.");
-      return;
-    }
-    if (!validateAmount(amount)) {
-      toast.error("Nominal belum valid.");
-      return;
-    }
-    if (!validateDate(date)) {
-      toast.error("Tanggal belum valid.");
-      return;
+      return toast.error("Pilih kategori pengeluaran.");
     }
 
+    setIsSubmitting(true);
     try {
-      setIsSaving(true);
-      if (expense) {
-        await updateExpense(expense.id, {
-          categoryId,
-          amount: Number(amount),
-          date,
-          note: note.trim(),
-        });
-        toast.success("Expense berhasil diperbarui.");
-      } else {
-        await addExpense(categoryId, Number(amount), date, note.trim());
-        toast.success("Expense berhasil ditambahkan.");
-      }
+      await addExpense(
+        categoryId,
+        numAmount,
+        date,
+        note,
+        walletId || null,
+      );
+      toast.success("Pengeluaran berhasil ditambahkan.");
+      if (onSuccess) onSuccess();
       onClose();
-      Promise.resolve(onSaved()).catch((err: any) => {
-        toast.error(err?.message || "Expense tersimpan, tapi refresh data gagal.");
-      });
     } catch (err: any) {
-      toast.error(err.message || "Gagal menyimpan expense.");
+      toast.error(err.message || "Gagal menambahkan pengeluaran.");
     } finally {
-      setIsSaving(false);
+      setIsSubmitting(false);
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <ModalShell
-      open={open}
-      title={expense ? "Edit Expense" : "Tambah Expense"}
-      subtitle="Catat pengeluaran baru atau rapikan transaksi yang sudah ada."
-      onClose={onClose}
-      footer={
-        <div className="flex gap-3">
-          <button
-            onClick={onClose}
-            className="flex-1 rounded-2xl bg-[#F3EDE8] px-4 py-3 text-sm font-semibold text-[#7B6E67]"
-          >
-            Batal
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isSaving}
-            className="flex-1 rounded-2xl bg-[#29B9AA] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
-          >
-            {isSaving ? "Menyimpan..." : expense ? "Simpan Perubahan" : "Simpan Expense"}
-          </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md rounded-[32px] border border-black/10 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+        
+        {/* Close Button */}
+        <button 
+          onClick={onClose}
+          className="absolute right-5 top-5 rounded-full p-2 text-[#7B6E67] hover:bg-[#F3EDE8] hover:text-[#1A2B38]"
+        >
+          <X className="h-5 w-5" />
+        </button>
+
+        <div className="mb-5">
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#FF6B58]">Transaksi Baru</p>
+          <h2 className="mt-2 text-2xl font-bold text-[#1A2B38]">Tambah Expense</h2>
         </div>
-      }
-    >
-      <div className="space-y-4">
-        <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Tanggal</span>
-          <input
-            type="date"
-            value={date}
-            onChange={(event) => setDate(event.target.value)}
-            className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#29B9AA]"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Kategori</span>
-          <select
-            value={categoryId}
-            onChange={(event) => setCategoryId(event.target.value)}
-            className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#29B9AA]"
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          
+          {/* Amount input */}
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Nominal (Rp)</label>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-[#7B6E67]">Rp</span>
+              <input
+                type="text"
+                required
+                placeholder="0"
+                className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] py-3.5 pl-11 pr-4 text-lg font-bold text-[#1A2B38] outline-none focus:border-[#FF6B58]"
+                value={amount}
+                onChange={(e) => {
+                  const raw = e.target.value.replace(/[^0-9]/g, "");
+                  setAmount(raw ? parseInt(raw).toLocaleString("id-ID") : "");
+                }}
+              />
+            </div>
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Kategori</label>
+            <div className="relative">
+              <Tag className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B6E67]" />
+              <select
+                required
+                className="w-full appearance-none rounded-2xl border border-black/10 bg-[#FEF9F4] py-3 pl-11 pr-4 text-sm font-semibold text-[#1A2B38] outline-none"
+                value={categoryId}
+                onChange={(e) => setCategoryId(e.target.value)}
+              >
+                <option value="">Pilih Kategori</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Wallet Selection (Optional) */}
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Dompet / Wallet (Opsional)</label>
+            <div className="relative">
+              <CreditCard className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B6E67]" />
+              <select
+                className="w-full appearance-none rounded-2xl border border-black/10 bg-[#FEF9F4] py-3 pl-11 pr-4 text-sm font-semibold text-[#1A2B38] outline-none"
+                value={walletId}
+                onChange={(e) => setWalletId(e.target.value)}
+              >
+                <option value="">— Cash / Manual (Tanpa Wallet) —</option>
+                {wallets.map((w) => (
+                  <option key={w.id} value={w.id}>{w.name} (Rp {w.estimated_balance?.toLocaleString("id-ID")})</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Date */}
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Tanggal</label>
+            <div className="relative">
+              <Calendar className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B6E67]" />
+              <input
+                type="date"
+                required
+                className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] py-3 pl-11 pr-4 text-sm font-semibold text-[#1A2B38] outline-none"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Note */}
+          <div>
+            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Catatan / Note</label>
+            <div className="relative">
+              <AlignLeft className="absolute left-4 top-4.5 h-4 w-4 text-[#7B6E67]" />
+              <textarea
+                placeholder="Makan siang nasi goreng..."
+                className="w-full min-h-[80px] rounded-2xl border border-black/10 bg-[#FEF9F4] py-3 pl-11 pr-4 text-sm font-semibold text-[#1A2B38] outline-none"
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Submit */}
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className="w-full rounded-2xl bg-gradient-to-r from-[#FF6B58] to-[#E8503F] py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/10 hover:shadow-red-500/20 disabled:opacity-50"
           >
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Nominal</span>
-          <input
-            type="number"
-            min="0"
-            value={amount}
-            onChange={(event) => setAmount(event.target.value)}
-            placeholder="50000"
-            className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#29B9AA]"
-          />
-        </label>
-        <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Catatan</span>
-          <textarea
-            value={note}
-            onChange={(event) => setNote(event.target.value)}
-            rows={3}
-            placeholder="Misalnya: makan siang kantor"
-            className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#29B9AA]"
-          />
-        </label>
+            {isSubmitting ? "Menyimpan..." : "Simpan Pengeluaran"}
+          </button>
+        </form>
       </div>
-    </ModalShell>
+    </div>
   );
 }

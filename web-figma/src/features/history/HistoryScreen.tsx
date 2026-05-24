@@ -1,34 +1,76 @@
-import { useEffect, useMemo, useState } from "react";
-import { Pencil } from "lucide-react";
-import { toast } from "sonner";
-import { deleteExpense, getExpensesByDateRange } from "../../services/expenseService";
+import { useEffect, useState } from "react";
+import { 
+  Search, 
+  Trash2, 
+  ArrowUpRight, 
+  ArrowDownLeft, 
+  Calendar, 
+  Download, 
+  Plus, 
+  X,
+  CreditCard,
+  RefreshCw,
+  Clock,
+  ExternalLink
+} from "lucide-react";
+import { 
+  getWalletTransactions, 
+  deleteWalletTransaction 
+} from "../../services/walletTransactionService";
+import { 
+  getRecurringExpenses, 
+  createRecurringExpense, 
+  deleteRecurringExpense,
+  syncRecurringExpensesForMonth
+} from "../../services/recurringService";
 import { getCategories } from "../../services/categoryService";
-import { formatHumanDate, getToday } from "../../utils/date";
+import { 
+  exportAllRecurringToICS, 
+  getGoogleCalendarUrl, 
+  recurringToCalendarEvent 
+} from "../../services/calendarService";
 import { formatCurrency } from "../../utils/format";
-import ExpenseModal from "../../components/modals/ExpenseModal";
+import { getCurrentMonth } from "../../utils/date";
+import { toast } from "sonner";
+import type { WalletTransaction, BudgetCategory } from "../../types/models";
 
 export default function HistoryScreen() {
-  const today = getToday();
-  const [allExpenses, setAllExpenses] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  const [selectedDate, setSelectedDate] = useState(today);
-  const [selectedCategory, setSelectedCategory] = useState("");
+  const [activeTab, setActiveTab] = useState<"all" | "recurring">("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedExpense, setSelectedExpense] = useState<any>(null);
-  const [showEditModal, setShowEditModal] = useState(false);
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
+  const [recurring, setRecurring] = useState<any[]>([]);
+  const [categories, setCategories] = useState<BudgetCategory[]>([]);
+  
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSyncing, setIsSyncing] = useState(false);
+
+  // New recurring expense form
+  const [showAddRecurring, setShowAddRecurring] = useState(false);
+  const [recCategoryId, setRecCategoryId] = useState("");
+  const [recAmount, setRecAmount] = useState("");
+  const [recFrequency, setRecFrequency] = useState<"daily" | "weekly" | "monthly">("monthly");
+  const [recDayOfMonth, setRecDayOfMonth] = useState("1");
+  const [recStartDate, setRecStartDate] = useState(new Date().toISOString().split("T")[0]);
+  const [recNote, setRecNote] = useState("");
+  const [isSavingRecurring, setIsSavingRecurring] = useState(false);
 
   const loadData = async () => {
+    setIsLoading(true);
     try {
-      const fetchStart = new Date();
-      fetchStart.setMonth(fetchStart.getMonth() - 6);
-      const [expenseData, categoryData] = await Promise.all([
-        getExpensesByDateRange(fetchStart.toISOString().slice(0, 10), today),
-        getCategories(),
+      const [txs, recs, cats] = await Promise.all([
+        getWalletTransactions(undefined, 100),
+        getRecurringExpenses(),
+        getCategories()
       ]);
-      setAllExpenses(expenseData);
-      setCategories(categoryData);
-    } catch (err: any) {
-      toast.error(err.message || "Gagal memuat expense history.");
+      setTransactions(txs);
+      setRecurring(recs);
+      setCategories(cats.filter((c) => c.is_active));
+      if (cats.length > 0) setRecCategoryId(cats[0].id.toString());
+    } catch (err) {
+      console.error("Error loading history screen data:", err);
+      toast.error("Gagal memuat data transaksi.");
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -36,153 +78,448 @@ export default function HistoryScreen() {
     loadData();
   }, []);
 
-  const filteredExpenses = useMemo(() => {
-    return allExpenses.filter((expense) => {
-      if (selectedDate && expense.date !== selectedDate) return false;
-      if (selectedCategory && expense.category_id !== selectedCategory) return false;
-      if (searchQuery.trim() && !expense.note?.toLowerCase().includes(searchQuery.trim().toLowerCase())) return false;
-      return true;
-    });
-  }, [allExpenses, searchQuery, selectedCategory, selectedDate]);
-
-  const sections = useMemo(() => {
-    const grouped = new Map<string, any[]>();
-    filteredExpenses.forEach((expense) => {
-      grouped.set(expense.date, [...(grouped.get(expense.date) || []), expense]);
-    });
-    return Array.from(grouped.entries())
-      .sort(([a], [b]) => new Date(b).getTime() - new Date(a).getTime())
-      .map(([date, items]) => ({
-        date,
-        title: formatHumanDate(date),
-        summary: items.reduce((sum, item) => sum + item.amount, 0),
-        items,
-      }));
-  }, [filteredExpenses]);
-
-  const handleDelete = async (expenseId: string) => {
-    if (!window.confirm("Delete expense ini?")) return;
+  const handleDeleteTx = async (id: string) => {
+    if (!window.confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) return;
     try {
-      await deleteExpense(expenseId);
-      toast.success("Expense berhasil dihapus.");
-      await loadData();
+      await deleteWalletTransaction(id);
+      toast.success("Transaksi berhasil dihapus.");
+      setTransactions((prev) => prev.filter((t) => t.id !== id));
     } catch (err: any) {
-      toast.error(err.message || "Gagal menghapus expense.");
+      toast.error(err.message || "Gagal menghapus transaksi.");
     }
   };
 
+  const handleSyncRecurring = async () => {
+    setIsSyncing(true);
+    try {
+      const count = await syncRecurringExpensesForMonth(getCurrentMonth());
+      toast.success(`${count} tagihan rutin berhasil diproses.`);
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message || "Gagal sinkronisasi tagihan rutin.");
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
+  const handleCreateRecurring = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amount = parseFloat(recAmount.replace(/[^0-9]/g, ""));
+    if (isNaN(amount) || amount <= 0) return toast.error("Nominal tagihan tidak valid.");
+    if (!recCategoryId) return toast.error("Kategori wajib dipilih.");
+
+    setIsSavingRecurring(true);
+    try {
+      await createRecurringExpense({
+        category_id: recCategoryId,
+        amount,
+        frequency: recFrequency,
+        day_of_month: recFrequency === "monthly" ? parseInt(recDayOfMonth) : null,
+        start_date: recStartDate,
+        note: recNote,
+        is_active: true
+      });
+      toast.success("Tagihan rutin berhasil dibuat.");
+      setShowAddRecurring(false);
+      setRecAmount("");
+      setRecNote("");
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message || "Gagal menyimpan tagihan rutin.");
+    } finally {
+      setIsSavingRecurring(false);
+    }
+  };
+
+  const handleDeleteRecurring = async (id: string | number) => {
+    if (!window.confirm("Apakah Anda yakin ingin menonaktifkan tagihan rutin ini?")) return;
+    try {
+      await deleteRecurringExpense(id);
+      toast.success("Tagihan rutin dinonaktifkan.");
+      loadData();
+    } catch (err: any) {
+      toast.error(err.message || "Gagal menonaktifkan.");
+    }
+  };
+
+  const handleExportICS = () => {
+    if (recurring.length === 0) return toast.error("Tidak ada tagihan rutin untuk diexport.");
+    const count = exportAllRecurringToICS(recurring);
+    toast.success(`${count} event tagihan diexport ke file .ics`);
+  };
+
+  const handleGoogleCalendarUrl = (item: any) => {
+    const ev = recurringToCalendarEvent(item);
+    const url = getGoogleCalendarUrl(ev);
+    window.open(url, "_blank");
+  };
+
+  // Group transactions by date
+  const filteredTxs = transactions.filter((t) => {
+    if (!searchQuery) return true;
+    const q = searchQuery.toLowerCase();
+    return (
+      t.note?.toLowerCase().includes(q) ||
+      t.merchant?.toLowerCase().includes(q) ||
+      t.source?.toLowerCase().includes(q)
+    );
+  });
+
+  const groupedTxs: Record<string, WalletTransaction[]> = {};
+  filteredTxs.forEach((tx) => {
+    const d = tx.occurred_at ? tx.occurred_at.slice(0, 10) : new Date().toISOString().slice(0, 10);
+    if (!groupedTxs[d]) groupedTxs[d] = [];
+    groupedTxs[d].push(tx);
+  });
+
+  const sortedDates = Object.keys(groupedTxs).sort((a, b) => b.localeCompare(a));
+
+  const formatDateLabel = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const today = new Date().toISOString().slice(0, 10);
+    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    
+    if (dateStr === today) return "Hari Ini";
+    if (dateStr === yesterday) return "Kemarin";
+    
+    return d.toLocaleDateString("id-ID", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+      year: "numeric"
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#FEF9F4]">
+        <div className="text-center space-y-3">
+          <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#29B9AA] border-t-transparent mx-auto"></div>
+          <p className="text-sm font-semibold text-[#7B6E67]">Memuat Ledger...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <>
-      <div className="mx-auto max-w-6xl space-y-5 px-4 py-5 md:px-8">
-        <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#5BAEE8]">History</p>
-          <h1 className="mt-3 text-3xl font-bold text-[#1A2B38]">Cari pola belanja, edit transaksi, dan rapikan catatanmu.</h1>
-          <p className="mt-3 text-sm text-[#7B6E67]">Filter berdasarkan tanggal, kategori, atau note supaya history tetap gampang dipahami.</p>
+    <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-8">
+      
+      {/* Title & Tabs */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Buku Kas</p>
+          <h1 className="mt-1 text-3xl font-bold text-[#1A2B38]">Ledger & Tagihan</h1>
         </div>
 
-        <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-          <div className="grid gap-4 md:grid-cols-4">
-            <input
-              type="date"
-              value={selectedDate}
-              onChange={(event) => setSelectedDate(event.target.value)}
-              className="rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#5BAEE8]"
-            />
-            <select
-              value={selectedCategory}
-              onChange={(event) => setSelectedCategory(event.target.value)}
-              className="rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#5BAEE8]"
-            >
-              <option value="">Semua kategori</option>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-            <input
-              value={searchQuery}
-              onChange={(event) => setSearchQuery(event.target.value)}
-              placeholder="Cari note..."
-              className="rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#5BAEE8]"
-            />
-            <button
-              onClick={() => {
-                setSelectedDate(today);
-                setSelectedCategory("");
-                setSearchQuery("");
-              }}
-              className="rounded-2xl bg-[#F3EDE8] px-4 py-3 text-sm font-semibold text-[#7B6E67]"
-            >
-              Reset
-            </button>
-          </div>
-        </div>
-
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
-            <p className="text-xs text-[#7B6E67]">Total result</p>
-            <p className="mt-1 text-2xl font-bold text-[#1A2B38]">{filteredExpenses.length}</p>
-          </div>
-          <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
-            <p className="text-xs text-[#7B6E67]">Total amount</p>
-            <p className="mt-1 text-2xl font-bold text-[#FF6B58]">{formatCurrency(filteredExpenses.reduce((sum, item) => sum + item.amount, 0))}</p>
-          </div>
-        </div>
-
-        <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Expense list</p>
-          <div className="mt-4 space-y-5">
-            {sections.length === 0 ? (
-              <div className="rounded-2xl bg-[#FEF9F4] px-5 py-8 text-center text-sm text-[#7B6E67]">Tidak ada expense yang cocok dengan filter ini.</div>
-            ) : (
-              sections.map((section) => (
-                <div key={section.date}>
-                  <div className="mb-3 flex items-center justify-between rounded-2xl bg-[#F3EDE8] px-4 py-3">
-                    <p className="text-sm font-semibold text-[#1A2B38]">{section.title}</p>
-                    <p className="text-sm font-bold text-[#FF6B58]">{formatCurrency(section.summary)}</p>
-                  </div>
-                  <div className="space-y-3">
-                    {section.items.map((expense) => (
-                      <div key={expense.id} className="flex flex-wrap items-center gap-4 rounded-2xl bg-[#FEF9F4] px-4 py-4">
-                        <div className="flex-1 text-left">
-                          <p className="text-sm font-semibold text-[#1A2B38]">{expense.budget_categories?.name || "Unknown"}</p>
-                          {expense.note ? <p className="mt-1 text-xs text-[#7B6E67]">{expense.note}</p> : null}
-                        </div>
-                        <p className="text-sm font-bold text-[#FF6B58]">{formatCurrency(expense.amount)}</p>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => {
-                              setSelectedExpense(expense);
-                              setShowEditModal(true);
-                            }}
-                            className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-2 text-xs font-semibold text-[#29B9AA] shadow-sm"
-                          >
-                            <Pencil className="h-3 w-3" />
-                            Edit
-                          </button>
-                          <button onClick={() => handleDelete(expense.id)} className="rounded-full bg-red-50 px-3 py-2 text-xs font-semibold text-[#FF6B58]">
-                            Delete
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
+        <div className="flex rounded-2xl bg-[#F3EDE8] p-1 shadow-inner">
+          <button
+            onClick={() => setActiveTab("all")}
+            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+              activeTab === "all" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
+            }`}
+          >
+            Semua Transaksi
+          </button>
+          <button
+            onClick={() => setActiveTab("recurring")}
+            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+              activeTab === "recurring" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
+            }`}
+          >
+            Tagihan Rutin
+          </button>
         </div>
       </div>
 
-      <ExpenseModal
-        open={showEditModal}
-        categories={categories}
-        initialDate={selectedExpense?.date || today}
-        expense={selectedExpense}
-        onClose={() => setShowEditModal(false)}
-        onSaved={loadData}
-      />
-    </>
+      {activeTab === "all" ? (
+        // ── ALL TRANSACTIONS TAB ──────────────────────────────
+        <div className="space-y-4">
+          
+          {/* Filters & Search */}
+          <div className="flex items-center gap-3 rounded-2xl border border-black/5 bg-white px-4 py-3 shadow-sm">
+            <Search className="h-4 w-4 text-[#7B6E67] shrink-0" />
+            <input
+              type="text"
+              placeholder="Cari transaksi berdasarkan catatan atau merchant..."
+              className="flex-1 bg-transparent text-sm font-medium text-[#1A2B38] outline-none"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
+              <button onClick={() => setSearchQuery("")} className="text-[#7B6E67] hover:text-[#1A2B38]">
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Grouped lists */}
+          {sortedDates.length === 0 ? (
+            <div className="rounded-[32px] border border-black/10 bg-white p-12 text-center">
+              <p className="text-sm font-semibold text-[#7B6E67]">Tidak ditemukan histori transaksi.</p>
+            </div>
+          ) : (
+            <div className="space-y-5">
+              {sortedDates.map((dateStr) => (
+                <div key={dateStr} className="space-y-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-[#7B6E67] px-2">
+                    {formatDateLabel(dateStr)}
+                  </h3>
+                  
+                  <div className="rounded-[32px] border border-black/10 bg-white p-2 shadow-sm space-y-1 overflow-hidden">
+                    {groupedTxs[dateStr].map((tx) => {
+                      const isExpense = tx.direction === "out";
+                      return (
+                        <div 
+                          key={tx.id}
+                          className="flex items-center justify-between rounded-2xl hover:bg-[#FEF9F4] px-4 py-3 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            {/* Direction Icon */}
+                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                              isExpense ? "bg-rose-50 text-[#FF6B58]" : "bg-emerald-50 text-[#29B9AA]"
+                            }`}>
+                              {isExpense ? <ArrowDownLeft className="h-4.5 w-4.5" /> : <ArrowUpRight className="h-4.5 w-4.5" />}
+                            </div>
+
+                            <div className="min-w-0">
+                              <p className="text-sm font-semibold text-[#1A2B38] truncate">
+                                {tx.note || tx.merchant || "—"}
+                              </p>
+                              <div className="flex items-center gap-1.5 text-[10px] text-[#7B6E67] font-medium mt-0.5">
+                                <span className="capitalize">{tx.source}</span>
+                                {tx.category && (
+                                  <>
+                                    <span>·</span>
+                                    <span className="capitalize">{tx.category}</span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-4">
+                            <p className={`text-sm font-bold shrink-0 ${isExpense ? "text-[#FF6B58]" : "text-[#29B9AA]"}`}>
+                              {isExpense ? "-" : "+"}{formatCurrency(tx.amount)}
+                            </p>
+
+                            <button 
+                              onClick={() => handleDeleteTx(tx.id)}
+                              className="rounded-xl p-1.5 text-[#7B6E67]/50 hover:bg-rose-50 hover:text-[#FF6B58] transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        // ── RECURRING BILLS TAB ───────────────────────────────
+        <div className="grid gap-6 md:grid-cols-3">
+          
+          <div className="md:col-span-2 space-y-4">
+            {/* Toolbar */}
+            <div className="flex items-center justify-between rounded-2xl border border-black/5 bg-white px-5 py-3.5 shadow-sm">
+              <span className="text-xs font-bold text-[#7B6E67]">
+                {recurring.length} Tagihan Terdaftar
+              </span>
+              
+              <div className="flex gap-2">
+                <button
+                  onClick={handleSyncRecurring}
+                  disabled={isSyncing}
+                  className="flex items-center gap-1.5 rounded-xl border border-black/5 bg-[#FEF9F4] px-3.5 py-2 text-xs font-bold text-[#1A2B38] hover:bg-[#F3EDE8]"
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
+                  Sinkronisasi
+                </button>
+
+                <button
+                  onClick={handleExportICS}
+                  className="flex items-center gap-1.5 rounded-xl bg-[#29B9AA] px-3.5 py-2 text-xs font-bold text-white hover:bg-[#229A8E]"
+                >
+                  <Download className="h-3.5 w-3.5" />
+                  Export .ics
+                </button>
+              </div>
+            </div>
+
+            {/* List */}
+            {recurring.length === 0 ? (
+              <div className="rounded-[32px] border border-black/10 bg-white p-12 text-center">
+                <p className="text-sm font-semibold text-[#7B6E67]">Tidak ditemukan tagihan rutin.</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {recurring.map((item) => (
+                  <div 
+                    key={item.id}
+                    className="flex flex-col justify-between rounded-[24px] border border-black/10 bg-white p-5 shadow-sm sm:flex-row sm:items-center"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#FEF9F4] border border-black/5 text-[#FFB347]">
+                        <Clock className="h-5 w-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-[#1A2B38]">
+                          {item.budget_categories?.name || "Tagihan"}
+                        </h4>
+                        <p className="text-xs text-[#7B6E67] font-medium mt-0.5 capitalize">
+                          Setiap {item.frequency === "monthly" ? `Tanggal ${item.day_of_month}` : item.frequency} · {item.note || "Tanpa catatan"}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 flex items-center justify-between border-t border-black/5 pt-3 sm:mt-0 sm:border-0 sm:pt-0 gap-4">
+                      <p className="text-sm font-extrabold text-[#1A2B38]">
+                        {formatCurrency(item.amount)}
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleGoogleCalendarUrl(item)}
+                          className="flex items-center gap-1.5 rounded-xl border border-black/5 bg-[#FEF9F4] px-2.5 py-1.5 text-[10px] font-bold text-[#7B6E67] hover:text-[#1A2B38]"
+                          title="Add to Google Calendar"
+                        >
+                          <ExternalLink className="h-3 w-3" />
+                          GCal
+                        </button>
+                        
+                        <button
+                          onClick={() => handleDeleteRecurring(item.id)}
+                          className="rounded-xl p-1.5 text-[#7B6E67]/50 hover:bg-rose-50 hover:text-[#FF6B58] transition-colors"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Form Create Sidebar */}
+          <div className="md:col-span-1">
+            {showAddRecurring ? (
+              <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38]">Buat Tagihan</h3>
+                  <button onClick={() => setShowAddRecurring(false)} className="rounded-full p-1.5 hover:bg-[#FEF9F4] text-[#7B6E67]">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleCreateRecurring} className="space-y-3">
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Kategori</label>
+                    <select
+                      required
+                      className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-3 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
+                      value={recCategoryId}
+                      onChange={(e) => setRecCategoryId(e.target.value)}
+                    >
+                      <option value="">Pilih Kategori</option>
+                      {categories.map((c) => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Nominal (Rp)</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="0"
+                      className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
+                      value={recAmount}
+                      onChange={(e) => {
+                        const raw = e.target.value.replace(/[^0-9]/g, "");
+                        setRecAmount(raw ? parseInt(raw).toLocaleString("id-ID") : "");
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Frekuensi</label>
+                    <select
+                      className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-3 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
+                      value={recFrequency}
+                      onChange={(e: any) => setRecFrequency(e.target.value)}
+                    >
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                    </select>
+                  </div>
+
+                  {recFrequency === "monthly" && (
+                    <div>
+                      <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Tanggal Tagihan (1-31)</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="31"
+                        required
+                        className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
+                        value={recDayOfMonth}
+                        onChange={(e) => setRecDayOfMonth(e.target.value)}
+                      />
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Tanggal Mulai</label>
+                    <input
+                      type="date"
+                      required
+                      className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
+                      value={recStartDate}
+                      onChange={(e) => setRecStartDate(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Catatan</label>
+                    <input
+                      type="text"
+                      placeholder="Bayar Wifi Indihome..."
+                      className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
+                      value={recNote}
+                      onChange={(e) => setRecNote(e.target.value)}
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSavingRecurring}
+                    className="w-full rounded-2xl bg-[#29B9AA] py-3 text-xs font-bold text-white disabled:opacity-50"
+                  >
+                    {isSavingRecurring ? "Menyimpan..." : "Simpan Tagihan"}
+                  </button>
+                </form>
+              </div>
+            ) : (
+              <button
+                onClick={() => setShowAddRecurring(true)}
+                className="flex w-full flex-col items-center justify-center gap-3 rounded-[32px] border-2 border-dashed border-black/10 bg-[#FEF9F4]/40 hover:bg-[#FEF9F4] px-6 py-12 text-center"
+              >
+                <Plus className="h-6 w-6 text-[#29B9AA]" />
+                <span className="text-xs font-bold text-[#1A2B38]">Buat Tagihan Rutin</span>
+                <span className="text-[10px] text-[#7B6E67]">Daftarkan biaya langganan, sewa, tagihan listrik, dll.</span>
+              </button>
+            )}
+          </div>
+
+        </div>
+      )}
+
+    </div>
   );
 }

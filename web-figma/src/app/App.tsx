@@ -5,6 +5,7 @@ import { OnboardingProvider, useOnboarding } from "../contexts/OnboardingContext
 import AuthScreen from "../features/auth/AuthScreen";
 import OnboardingOverlay from "../features/onboarding/OnboardingOverlay";
 import AppShell from "../layouts/AppShell";
+import { initNativeUI } from "../services/capacitorService";
 import { registerServiceWorker, scheduleHourlyCheck, tryRegisterPeriodicSync } from "../services/notificationService";
 
 function RootNavigator() {
@@ -26,6 +27,7 @@ function RootNavigator() {
   // Initialize notifications when user is authenticated
   useEffect(() => {
     if (!user) return;
+    initNativeUI();
     registerServiceWorker().then(() => tryRegisterPeriodicSync());
     const stop = scheduleHourlyCheck();
     return stop;
