@@ -11,11 +11,17 @@ import {
   CreditCard,
   RefreshCw,
   Clock,
-  ExternalLink
+  ExternalLink,
+  ChevronLeft,
+  ChevronRight,
+  Repeat2,
+  SlidersHorizontal,
+  Check
 } from "lucide-react";
 import { 
   getWalletTransactions, 
-  deleteWalletTransaction 
+  deleteWalletTransaction,
+  updateWalletTransaction
 } from "../../services/walletTransactionService";
 import { 
   getRecurringExpenses, 
@@ -30,6 +36,7 @@ import {
   recurringToCalendarEvent 
 } from "../../services/calendarService";
 import { formatCurrency } from "../../utils/format";
+import { getAppFriendlyName } from "../../services/notificationParserService";
 import { getCurrentMonth } from "../../utils/date";
 import { toast } from "sonner";
 import type { WalletTransaction, BudgetCategory } from "../../types/models";
@@ -53,6 +60,8 @@ export default function HistoryScreen() {
   const [recStartDate, setRecStartDate] = useState(new Date().toISOString().split("T")[0]);
   const [recNote, setRecNote] = useState("");
   const [isSavingRecurring, setIsSavingRecurring] = useState(false);
+  const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [tempNote, setTempNote] = useState("");
 
   const loadData = async () => {
     setIsLoading(true);
@@ -156,6 +165,20 @@ export default function HistoryScreen() {
 
   // Group transactions by date
   const filteredTxs = transactions.filter((t) => {
+    // Filter out future calendar dates
+    if (t.occurred_at) {
+      const txDate = new Date(t.occurred_at);
+      const now = new Date();
+      const getLocalDateStr = (d: Date) => {
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      };
+      const todayStr = getLocalDateStr(now);
+      const txDateStr = getLocalDateStr(txDate);
+      if (txDateStr > todayStr) {
+        return false; // exclude future days
+      }
+    }
+
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -165,9 +188,17 @@ export default function HistoryScreen() {
     );
   });
 
+  const getLocalDateStrFromISO = (isoStr: string) => {
+    const d = new Date(isoStr);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    const date = String(d.getDate()).padStart(2, "0");
+    return `${year}-${month}-${date}`;
+  };
+
   const groupedTxs: Record<string, WalletTransaction[]> = {};
   filteredTxs.forEach((tx) => {
-    const d = tx.occurred_at ? tx.occurred_at.slice(0, 10) : new Date().toISOString().slice(0, 10);
+    const d = tx.occurred_at ? getLocalDateStrFromISO(tx.occurred_at) : getLocalDateStrFromISO(new Date().toISOString());
     if (!groupedTxs[d]) groupedTxs[d] = [];
     groupedTxs[d].push(tx);
   });
@@ -175,12 +206,24 @@ export default function HistoryScreen() {
   const sortedDates = Object.keys(groupedTxs).sort((a, b) => b.localeCompare(a));
 
   const formatDateLabel = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const today = new Date().toISOString().slice(0, 10);
-    const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const parts = dateStr.split("-");
+    const year = parseInt(parts[0]);
+    const month = parseInt(parts[1]) - 1;
+    const date = parseInt(parts[2]);
+    const d = new Date(year, month, date);
     
-    if (dateStr === today) return "Hari Ini";
-    if (dateStr === yesterday) return "Kemarin";
+    const getLocalDateStr = (dateObj: Date) => {
+      const y = dateObj.getFullYear();
+      const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+      const day = String(dateObj.getDate()).padStart(2, "0");
+      return `${y}-${m}-${day}`;
+    };
+
+    const todayStr = getLocalDateStr(new Date());
+    const yesterdayStr = getLocalDateStr(new Date(Date.now() - 24 * 60 * 60 * 1000));
+    
+    if (dateStr === todayStr) return "Hari Ini";
+    if (dateStr === yesterdayStr) return "Kemarin";
     
     return d.toLocaleDateString("id-ID", {
       weekday: "long",
@@ -207,25 +250,30 @@ export default function HistoryScreen() {
       {/* Title & Tabs */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Buku Kas</p>
-          <h1 className="mt-1 text-3xl font-bold text-[#1A2B38]">Ledger & Tagihan</h1>
+          <div className="flex items-center gap-2">
+            <Calendar className="h-4 w-4 text-[#29B9AA] flex-shrink-0" />
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">Buku Kas</p>
+          </div>
+          <h1 className="mt-2 text-3xl font-bold text-[#1A2B38]">Ledger & Tagihan</h1>
         </div>
 
         <div className="flex rounded-2xl bg-[#F3EDE8] p-1 shadow-inner">
           <button
             onClick={() => setActiveTab("all")}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5 ${
               activeTab === "all" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
             }`}
           >
+            <Clock className="w-3.5 h-3.5" />
             Semua Transaksi
           </button>
           <button
             onClick={() => setActiveTab("recurring")}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all ${
+            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5 ${
               activeTab === "recurring" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
             }`}
           >
+            <Repeat2 className="w-3.5 h-3.5" />
             Tagihan Rutin
           </button>
         </div>
@@ -245,6 +293,9 @@ export default function HistoryScreen() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
+            <div className="flex items-center gap-2 border-l border-black/5 pl-2 shrink-0">
+              <SlidersHorizontal className="h-4 w-4 text-[#7B6E67]" />
+            </div>
             {searchQuery && (
               <button onClick={() => setSearchQuery("")} className="text-[#7B6E67] hover:text-[#1A2B38]">
                 <X className="h-4 w-4" />
@@ -265,48 +316,173 @@ export default function HistoryScreen() {
                     {formatDateLabel(dateStr)}
                   </h3>
                   
-                  <div className="rounded-[32px] border border-black/10 bg-white p-2 shadow-sm space-y-1 overflow-hidden">
+                  <div className="space-y-3">
                     {groupedTxs[dateStr].map((tx) => {
                       const isExpense = tx.direction === "out";
+                      
+                      // Extract package name and actual notification text from raw_text
+                      let appFriendlyName = "";
+                      let displayRawText = tx.raw_text || "";
+                      if (tx.source === "notification" && tx.raw_text) {
+                        const pipeIdx = tx.raw_text.indexOf("|");
+                        if (pipeIdx !== -1) {
+                          const pkg = tx.raw_text.slice(0, pipeIdx);
+                          displayRawText = tx.raw_text.slice(pipeIdx + 1);
+                          appFriendlyName = getAppFriendlyName(pkg);
+                        }
+                      }
+
                       return (
                         <div 
                           key={tx.id}
-                          className="flex items-center justify-between rounded-2xl hover:bg-[#FEF9F4] px-4 py-3 transition-colors"
+                          className="flex flex-col gap-3 rounded-2xl border border-black/10 bg-white p-4 shadow-sm hover:bg-[#FEF9F4]/30 transition-all"
                         >
-                          <div className="flex items-center gap-3 min-w-0">
-                            {/* Direction Icon */}
-                            <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
-                              isExpense ? "bg-rose-50 text-[#FF6B58]" : "bg-emerald-50 text-[#29B9AA]"
-                            }`}>
-                              {isExpense ? <ArrowDownLeft className="h-4.5 w-4.5" /> : <ArrowUpRight className="h-4.5 w-4.5" />}
+                          {/* Top Row: Icon, Merchant/Title, and Amount */}
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="flex items-center gap-3 min-w-0">
+                              {/* Direction Icon */}
+                              <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${
+                                isExpense ? "bg-rose-50 text-[#FF6B58]" : "bg-emerald-50 text-[#29B9AA]"
+                              }`}>
+                                {isExpense ? <ArrowDownLeft className="h-4.5 w-4.5" /> : <ArrowUpRight className="h-4.5 w-4.5" />}
+                              </div>
+
+                              <div className="min-w-0">
+                                <h4 className="text-sm font-bold text-[#1A2B38] truncate">
+                                  {tx.source === "notification" 
+                                    ? (tx.merchant || "Notifikasi Otomatis")
+                                    : (tx.note || "Transaksi Manual")
+                                  }
+                                </h4>
+                                <p className="text-[10px] text-[#7B6E67] font-semibold uppercase tracking-wider mt-0.5">
+                                  {tx.source} {appFriendlyName ? `· ${appFriendlyName}` : ""}
+                                </p>
+                              </div>
                             </div>
 
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold text-[#1A2B38] truncate">
-                                {tx.note || tx.merchant || "—"}
+                            <div className="shrink-0">
+                              <p className={`text-sm font-extrabold ${isExpense ? "text-[#FF6B58]" : "text-[#29B9AA]"}`}>
+                                {isExpense ? "-" : "+"}{formatCurrency(tx.amount)}
                               </p>
-                              <div className="flex items-center gap-1.5 text-[10px] text-[#7B6E67] font-medium mt-0.5">
-                                <span className="capitalize">{tx.source}</span>
-                                {tx.category && (
-                                  <>
-                                    <span>·</span>
-                                    <span className="capitalize">{tx.category}</span>
-                                  </>
-                                )}
-                              </div>
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-4">
-                            <p className={`text-sm font-bold shrink-0 ${isExpense ? "text-[#FF6B58]" : "text-[#29B9AA]"}`}>
-                              {isExpense ? "-" : "+"}{formatCurrency(tx.amount)}
-                            </p>
+                          {/* Middle Row: Raw notification text preview (if source is notification) */}
+                          {tx.source === "notification" && displayRawText && (
+                            <div className="rounded-xl bg-[#FEF9F4] p-3 text-xs border border-black/5">
+                              <p className="font-semibold text-[#7B6E67] mb-1 text-[10px] uppercase tracking-wider">Detail Notifikasi:</p>
+                              <p className="text-[#1A2B38] leading-relaxed italic">
+                                "{displayRawText}"
+                              </p>
+                            </div>
+                          )}
 
+                          {/* Editable Note/Description Section */}
+                          <div className="text-xs text-[#7B6E67] border-t border-black/5 pt-2 mt-1">
+                            {editingNoteId === tx.id ? (
+                              <div className="flex items-center gap-2 mt-1">
+                                <input
+                                  type="text"
+                                  className="flex-1 rounded-xl border border-black/10 px-3 py-1.5 text-xs text-[#1A2B38] outline-none focus:border-[#29B9AA] bg-white font-medium"
+                                  value={tempNote}
+                                  onChange={(e) => setTempNote(e.target.value)}
+                                  placeholder="Tambahkan catatan..."
+                                  autoFocus
+                                />
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      await updateWalletTransaction(tx.id, { note: tempNote || null });
+                                      toast.success("Catatan berhasil diperbarui.");
+                                      setTransactions((prev) => 
+                                        prev.map((t) => t.id === tx.id ? { ...t, note: tempNote || null } : t)
+                                      );
+                                      setEditingNoteId(null);
+                                    } catch (err) {
+                                      toast.error("Gagal menyimpan catatan.");
+                                    }
+                                  }}
+                                  className="rounded-xl bg-[#29B9AA] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#229A8E] flex items-center gap-1"
+                                >
+                                  <Check className="w-3.5 h-3.5" />
+                                  Simpan
+                                </button>
+                                <button
+                                  onClick={() => setEditingNoteId(null)}
+                                  className="rounded-xl border border-black/5 bg-[#FEF9F4] px-3 py-1.5 text-xs font-bold text-[#7B6E67] hover:bg-[#F3EDE8] flex items-center gap-1"
+                                >
+                                  <X className="w-3.5 h-3.5" />
+                                  Batal
+                                </button>
+                              </div>
+                            ) : (
+                              <div className="flex items-center gap-1.5 mt-0.5">
+                                <span className="font-semibold text-[10px] uppercase tracking-wider">Catatan:</span>
+                                <span className="text-[#1A2B38] font-medium">
+                                  {tx.note || <span className="text-gray-400 italic">Tidak ada catatan</span>}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    setEditingNoteId(tx.id);
+                                    setTempNote(tx.note || "");
+                                  }}
+                                  className="text-[#29B9AA] hover:underline font-bold text-[10px] uppercase tracking-wider ml-1"
+                                >
+                                  [ Edit ]
+                                </button>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Bottom Row: Category Selector & Actions */}
+                          <div className="flex items-center justify-between border-t border-black/5 pt-2.5 mt-1">
+                            {/* Category Pill Selector */}
+                            <div className="flex items-center gap-2">
+                              <span className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Kategori:</span>
+                              <div className="relative">
+                                <select
+                                  value={tx.category || ""}
+                                  onChange={async (e) => {
+                                    const newCat = e.target.value;
+                                    try {
+                                      await updateWalletTransaction(tx.id, { category: newCat || null });
+                                      toast.success("Kategori transaksi berhasil diubah.");
+                                      setTransactions((prev) => 
+                                        prev.map((t) => t.id === tx.id ? { ...t, category: newCat || null } : t)
+                                      );
+                                    } catch (err: any) {
+                                      toast.error("Gagal mengubah kategori.");
+                                    }
+                                  }}
+                                  className={`appearance-none cursor-pointer rounded-full pl-3 pr-7 py-1 text-xs font-bold transition-all focus:outline-none ${
+                                    tx.category 
+                                      ? "bg-[#29B9AA]/10 text-[#29B9AA] hover:bg-[#29B9AA]/20" 
+                                      : "bg-amber-50 text-amber-600 hover:bg-amber-100 border border-dashed border-amber-300"
+                                  }`}
+                                >
+                                  <option value="" className="bg-white text-gray-800 font-medium">+ Pilih Kategori</option>
+                                  {categories.map((c) => (
+                                    <option key={c.id} value={c.name} className="bg-white text-gray-800 font-medium">
+                                      {c.name}
+                                    </option>
+                                  ))}
+                                </select>
+                                {/* Custom arrow indicator */}
+                                <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-current opacity-70">
+                                  <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 20 20">
+                                    <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                  </svg>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Delete Button */}
                             <button 
                               onClick={() => handleDeleteTx(tx.id)}
-                              className="rounded-xl p-1.5 text-[#7B6E67]/50 hover:bg-rose-50 hover:text-[#FF6B58] transition-colors"
+                              className="flex items-center gap-1 rounded-xl p-1.5 text-[#7B6E67]/50 hover:bg-rose-50 hover:text-[#FF6B58] transition-colors text-xs font-bold"
                             >
                               <Trash2 className="h-4 w-4" />
+                              <span>Hapus</span>
                             </button>
                           </div>
                         </div>
@@ -499,9 +675,16 @@ export default function HistoryScreen() {
                   <button
                     type="submit"
                     disabled={isSavingRecurring}
-                    className="w-full rounded-2xl bg-[#29B9AA] py-3 text-xs font-bold text-white disabled:opacity-50"
+                    className="w-full rounded-2xl bg-[#29B9AA] py-3 text-xs font-bold text-white disabled:opacity-50 flex items-center justify-center gap-1.5"
                   >
-                    {isSavingRecurring ? "Menyimpan..." : "Simpan Tagihan"}
+                    {isSavingRecurring ? (
+                      "Menyimpan..."
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4" />
+                        Simpan Tagihan
+                      </>
+                    )}
                   </button>
                 </form>
               </div>

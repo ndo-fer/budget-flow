@@ -1,6 +1,8 @@
 import supabase from "../lib/supabase";
 import { getCurrentUserId } from "./queryUtils";
 import type { WalletTransaction, TransactionDirection, TransactionType, TransactionSource } from "../types/models";
+import { invalidateMonthlyExpensesCache } from "./analyticsService";
+import { getToday, getLocalDayBounds } from "../utils/date";
 
 // ── CRUD ──────────────────────────────────────────────────────
 
@@ -80,6 +82,7 @@ export const addWalletTransaction = async (payload: {
     .single();
 
   if (error) throw error;
+  invalidateMonthlyExpensesCache();
   return data;
 };
 
@@ -100,6 +103,7 @@ export const addBulkWalletTransactions = async (
     .select("id");
 
   if (error) throw error;
+  invalidateMonthlyExpensesCache();
   return data?.length || 0;
 };
 
@@ -117,6 +121,7 @@ export const updateWalletTransaction = async (
     .single();
 
   if (error) throw error;
+  invalidateMonthlyExpensesCache();
   return data;
 };
 
@@ -129,6 +134,7 @@ export const deleteWalletTransaction = async (txId: string): Promise<void> => {
     .eq("id", txId);
 
   if (error) throw error;
+  invalidateMonthlyExpensesCache();
 };
 
 // ── Duplicate Detection ───────────────────────────────────────
@@ -175,9 +181,8 @@ export const checkDuplicate = async (payload: {
 
 export const getTodayWalletSpending = async (): Promise<number> => {
   const userId = await getCurrentUserId();
-  const today = new Date();
-  const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString();
-  const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString();
+  const todayStr = getToday();
+  const { startUtc, endUtc } = getLocalDayBounds(todayStr);
 
   const { data, error } = await supabase
     .from("wallet_transactions")
@@ -185,8 +190,8 @@ export const getTodayWalletSpending = async (): Promise<number> => {
     .eq("user_id", userId)
     .eq("direction", "out")
     .eq("is_duplicate", false)
-    .gte("occurred_at", startOfDay)
-    .lt("occurred_at", endOfDay);
+    .gte("occurred_at", startUtc)
+    .lte("occurred_at", endUtc);
 
   if (error) return 0;
   return (data || []).reduce((sum, tx) => sum + tx.amount, 0);

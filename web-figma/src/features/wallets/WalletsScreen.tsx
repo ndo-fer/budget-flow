@@ -8,7 +8,15 @@ import {
   RefreshCw, 
   AlertCircle, 
   Check,
-  Plus
+  Plus,
+  X,
+  Building2,
+  Coins,
+  Lock,
+  Sparkles,
+  Clock,
+  Shield,
+  PlusCircle
 } from "lucide-react";
 import { getWallets, createWallet } from "../../services/walletService";
 import { formatCurrency } from "../../utils/format";
@@ -16,6 +24,13 @@ import { toast } from "sonner";
 import type { Wallet } from "../../types/models";
 import CsvImportModal from "../../components/modals/CsvImportModal";
 import { ScreenshotBalanceModal, ReceiptScanModal } from "../../components/modals/OcrModals";
+
+const walletTypeIcon = {
+  bank: Building2,
+  ewallet: Smartphone,
+  cash: Coins,
+  other: CreditCard,
+} as const;
 
 export default function WalletsScreen() {
   const [wallets, setWallets] = useState<Wallet[]>([]);
@@ -103,8 +118,11 @@ export default function WalletsScreen() {
       {/* Header with ingestion actions */}
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Keuangan</p>
-          <h1 className="mt-1 text-3xl font-bold text-[#1A2B38]">Daftar Wallet</h1>
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-4 w-4 text-[#29B9AA] flex-shrink-0" />
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">Keuangan</p>
+          </div>
+          <h1 className="mt-2 text-3xl font-bold text-[#1A2B38]">Daftar Wallet</h1>
           <p className="mt-1.5 text-xs text-[#7B6E67]">Kelola saldo terkonfirmasi vs estimasi dengan ingest otomatis.</p>
         </div>
 
@@ -162,8 +180,8 @@ export default function WalletsScreen() {
                 className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between"
               >
                 {/* Confidence score badge */}
-                <div className="absolute right-6 top-6 flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider" style={{ contentVisibility: 'auto' }}>
-                  <div className={`h-1.5 w-1.5 rounded-full ${wallet.confidence >= 0.9 ? "bg-emerald-500" : wallet.confidence >= 0.7 ? "bg-amber-500" : "bg-rose-500"}`}></div>
+                <div className="absolute right-6 top-6 flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-white/80" style={{ contentVisibility: 'auto' }}>
+                  <Shield className="w-3 h-3 text-[#29B9AA] flex-shrink-0" />
                   <span className="text-[#1A2B38]">Confidence: {Math.round(wallet.confidence * 100)}%</span>
                 </div>
 
@@ -174,20 +192,32 @@ export default function WalletsScreen() {
                     </div>
                     <div>
                       <h3 className="text-base font-bold text-[#1A2B38]">{wallet.name}</h3>
-                      <p className="text-xs text-[#7B6E67] font-medium capitalize">{wallet.provider || wallet.type}</p>
+                      <p className="text-xs text-[#7B6E67] font-medium capitalize flex items-center gap-1">
+                        {(() => {
+                          const IconComp = walletTypeIcon[wallet.type as keyof typeof walletTypeIcon] || CreditCard;
+                          return <IconComp className="h-3 w-3 text-[#7B6E67]" />;
+                        })()}
+                        {wallet.provider || wallet.type}
+                      </p>
                     </div>
                   </div>
 
                   {/* Balance details */}
                   <div className="mt-6 grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Saldo Terkonfirmasi</p>
+                      <div className="flex items-center gap-1 text-[#7B6E67]">
+                        <Lock className="w-3.5 h-3.5 text-[#7B6E67] flex-shrink-0" />
+                        <p className="text-[10px] font-bold uppercase tracking-wider">Saldo Terkonfirmasi</p>
+                      </div>
                       <p className="mt-1 text-lg font-bold text-[#7B6E67]">
                         Rp {wallet.confirmed_balance?.toLocaleString("id-ID")}
                       </p>
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-[#29B9AA]">Saldo Estimasi</p>
+                      <div className="flex items-center gap-1 text-[#29B9AA]">
+                        <Sparkles className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
+                        <p className="text-[10px] font-bold uppercase tracking-wider">Saldo Estimasi</p>
+                      </div>
                       <p className="mt-1 text-xl font-black text-[#1A2B38]">
                         Rp {wallet.estimated_balance?.toLocaleString("id-ID")}
                       </p>
@@ -196,7 +226,8 @@ export default function WalletsScreen() {
                 </div>
 
                 <div className="mt-6 flex items-center justify-between border-t border-black/5 pt-4">
-                  <span className="text-[10px] text-[#7B6E67] font-semibold">
+                  <span className="text-[10px] text-[#7B6E67] font-semibold flex items-center gap-1">
+                    <Clock className="w-3 h-3 text-[#7B6E67]" />
                     Last confirmed: {wallet.last_confirmed_at ? new Date(wallet.last_confirmed_at).toLocaleDateString("id-ID", { day: "numeric", month: "long" }) : "Belum pernah"}
                   </span>
                   
@@ -285,9 +316,16 @@ export default function WalletsScreen() {
                 <button
                   type="submit"
                   disabled={isCreatingWallet}
-                  className="w-full rounded-2xl bg-[#29B9AA] py-3 text-xs font-bold text-white disabled:opacity-50"
+                  className="w-full rounded-2xl bg-[#29B9AA] py-3 text-xs font-bold text-white disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
-                  {isCreatingWallet ? "Menyimpan..." : "Tambah Wallet"}
+                  {isCreatingWallet ? (
+                    "Menyimpan..."
+                  ) : (
+                    <>
+                      <PlusCircle className="w-4 h-4" />
+                      Tambah Wallet
+                    </>
+                  )}
                 </button>
               </form>
             </div>

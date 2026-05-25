@@ -5,6 +5,7 @@ import { getWallets } from "../../services/walletService";
 import { recordIncomeTransaction } from "../../services/incomeService";
 import { toast } from "sonner";
 import type { IncomeSource, Wallet } from "../../types/models";
+import { getToday } from "../../utils/date";
 
 interface IncomeTransactionModalProps {
   isOpen: boolean;
@@ -18,7 +19,7 @@ export default function IncomeTransactionModal({ isOpen, onClose, onSuccess }: I
   const [amount, setAmount] = useState("");
   const [incomeSourceId, setIncomeSourceId] = useState("");
   const [walletId, setWalletId] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
+  const [date, setDate] = useState(getToday());
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -26,7 +27,7 @@ export default function IncomeTransactionModal({ isOpen, onClose, onSuccess }: I
     if (isOpen) {
       setAmount("");
       setNote("");
-      setDate(new Date().toISOString().split("T")[0]);
+      setDate(getToday());
       
       getIncomeSources()
         .then((srcs) => {
@@ -123,9 +124,9 @@ export default function IncomeTransactionModal({ isOpen, onClose, onSuccess }: I
                 value={incomeSourceId}
                 onChange={(e) => setIncomeSourceId(e.target.value)}
               >
-                <option value="">Pilih Sumber</option>
+                <option value="" className="bg-white text-gray-800 font-medium">Pilih Sumber</option>
                 {sources.map((s) => (
-                  <option key={s.id} value={s.id}>{s.source_name}</option>
+                  <option key={s.id} value={s.id} className="bg-white text-gray-800 font-medium">{s.source_name}</option>
                 ))}
               </select>
             </div>
@@ -141,9 +142,9 @@ export default function IncomeTransactionModal({ isOpen, onClose, onSuccess }: I
                 value={walletId}
                 onChange={(e) => setWalletId(e.target.value)}
               >
-                <option value="">— Cash / Manual (Tanpa Wallet) —</option>
+                <option value="" className="bg-white text-gray-800 font-medium">— Cash / Manual (Tanpa Wallet) —</option>
                 {wallets.map((w) => (
-                  <option key={w.id} value={w.id}>{w.name} (Rp {w.estimated_balance?.toLocaleString("id-ID")})</option>
+                  <option key={w.id} value={w.id} className="bg-white text-gray-800 font-medium">{w.name} (Rp {w.estimated_balance?.toLocaleString("id-ID")})</option>
                 ))}
               </select>
             </div>

@@ -1,37 +1,57 @@
 import supabase from "../lib/supabase";
-import { getMonthDateRange, getDaysInMonth } from "../utils/date";
+import { getDaysInMonth, getLocalMonthBounds, toLocalDateString } from "../utils/date";
 import { getCurrentUserId } from "./queryUtils";
 
-export const getMonthlyExpenses = async (month: string) => {
-  try {
-    const userId = await getCurrentUserId();
-    const { startDate, endDate } = getMonthDateRange(month);
-    const { data, error } = await supabase
-      .from("wallet_transactions")
-      .select(`
-        *,
-        budget_categories (
-          id,
-          name,
-          color,
-          budget_amount
-        )
-      `)
-      .eq("user_id", userId)
-      .eq("type", "expense")
-      .gte("occurred_at", `${startDate}T00:00:00Z`)
-      .lte("occurred_at", `${endDate}T23:59:59Z`)
-      .order("occurred_at", { ascending: false });
+const monthlyExpensesPromises = new Map<string, Promise<any[]>>();
 
-    if (error) throw error;
-    return (data || []).map((tx) => ({
-      ...tx,
-      date: tx.occurred_at.split("T")[0],
-    }));
-  } catch (err) {
-    console.error("Error fetching monthly expenses:", err);
-    throw err;
+export const invalidateMonthlyExpensesCache = (month?: string) => {
+  if (month) {
+    monthlyExpensesPromises.delete(month);
+  } else {
+    monthlyExpensesPromises.clear();
   }
+};
+
+export const getMonthlyExpenses = (month: string) => {
+  if (monthlyExpensesPromises.has(month)) {
+    return monthlyExpensesPromises.get(month)!;
+  }
+
+  const promise = (async () => {
+    try {
+      const userId = await getCurrentUserId();
+      const { startUtc, endUtc } = getLocalMonthBounds(month);
+      const { data, error } = await supabase
+        .from("wallet_transactions")
+        .select(`
+          *,
+          budget_categories (
+            id,
+            name,
+            color,
+            budget_amount
+          )
+        `)
+        .eq("user_id", userId)
+        .eq("type", "expense")
+        .gte("occurred_at", startUtc)
+        .lte("occurred_at", endUtc)
+        .order("occurred_at", { ascending: false });
+
+      if (error) throw error;
+      return (data || []).map((tx) => ({
+        ...tx,
+        date: toLocalDateString(tx.occurred_at),
+      }));
+    } catch (err) {
+      console.error("Error fetching monthly expenses:", err);
+      invalidateMonthlyExpensesCache(month);
+      throw err;
+    }
+  })();
+
+  monthlyExpensesPromises.set(month, promise);
+  return promise;
 };
 
 export const calculateMonthlySummary = async (month: string) => {

@@ -11,6 +11,8 @@ import {
   ChevronDown,
   Wallet,
   Upload,
+  User,
+  LogOut,
 } from "lucide-react";
 import { toast } from "sonner";
 import type { TabId } from "../types/models";
@@ -22,6 +24,12 @@ import BudgetScreen from "../features/budget/BudgetScreen";
 import IncomeScreen from "../features/income/IncomeScreen";
 import HistoryScreen from "../features/history/HistoryScreen";
 import SettingsScreen from "../features/settings/SettingsScreen";
+import { registerPlugin, Capacitor } from "@capacitor/core";
+import { parseNotification, getAppFriendlyName } from "../services/notificationParserService";
+import { addWalletTransaction } from "../services/walletTransactionService";
+import { getWallets } from "../services/walletService";
+
+const NotificationReceiver = registerPlugin<any>("NotificationReceiver");
 
 const NAV_ITEMS: Array<{ id: TabId; label: string; icon: any }> = [
   { id: "home", label: "Dashboard", icon: LayoutDashboard },
@@ -49,6 +57,75 @@ const resolveTabFromPath = (pathname: string): TabId | null => {
   return (match?.[0] as TabId | undefined) || null;
 };
 
+export const processPendingNotifications = async () => {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    const access = await NotificationReceiver.checkNotificationAccess();
+    if (!access.enabled) return;
+
+    const res = await NotificationReceiver.getPendingNotifications();
+    const notifications = res.notifications || [];
+    if (notifications.length === 0) return;
+
+    console.log(`[NotificationReceiver] Processing ${notifications.length} pending notifications.`);
+    const wallets = await getWallets().catch(() => []);
+
+    for (const notif of notifications) {
+      // Check allowlist
+      const allowlistJson = localStorage.getItem("bf_notification_allowlist");
+      if (allowlistJson) {
+        const allowlist = JSON.parse(allowlistJson);
+        if (allowlist[notif.packageName] === false) {
+          continue;
+        }
+      }
+
+      const parsed = parseNotification(notif.text, notif.packageName);
+      if (!parsed) {
+        console.warn(`[NotificationReceiver] Gagal mem-parsing teks notifikasi: "${notif.text}" dari package: ${notif.packageName}`);
+        continue;
+      }
+
+      let walletId = undefined;
+      let walletName = getAppFriendlyName(notif.packageName);
+
+      if (parsed.walletCandidate) {
+        const matched = wallets.find(w => 
+          w.name.toLowerCase().includes(parsed.walletCandidate!.toLowerCase()) ||
+          parsed.walletCandidate!.toLowerCase().includes(w.name.toLowerCase())
+        );
+        if (matched) {
+          walletId = matched.id;
+          walletName = matched.name;
+        }
+      }
+
+      const actionTxt = parsed.direction === "out" ? "berkurang" : "masuk";
+      const formattedAmount = `Rp${parsed.amount.toLocaleString("id-ID")}`;
+      const summaryNote = `Saldo ${walletName} ${actionTxt} ${formattedAmount}`;
+
+      await addWalletTransaction({
+        wallet_id: walletId,
+        amount: parsed.amount,
+        direction: parsed.direction,
+        merchant: parsed.merchant || "Notifikasi Otomatis",
+        note: summaryNote,
+        source: "notification",
+        confidence: parsed.confidence,
+        raw_text: `${notif.packageName}|${notif.text}`,
+        occurred_at: new Date(notif.timestamp).toISOString()
+      });
+
+      toast.success(
+        `Catat otomatis: Rp ${parsed.amount.toLocaleString("id-ID")} (${parsed.walletCandidate || "Dompet"})`
+      );
+    }
+  } catch (err) {
+    console.error("[NotificationReceiver] Error parsing queued notifications:", err);
+  }
+};
+
 export default function AppShell() {
   const { user, signOut } = useAuth();
   const { openOnboarding } = useOnboarding();
@@ -73,6 +150,8 @@ export default function AppShell() {
     window.scrollTo({ top: 0, behavior: "auto" });
   };
 
+
+
   useEffect(() => {
     if (typeof window === "undefined") return;
 
@@ -91,8 +170,18 @@ export default function AppShell() {
             navigateToTab("wallets");
           }
         });
+
+        // Pull notifications on start
+        processPendingNotifications();
+
+        // Pull notifications when returning to foreground
+        CapApp.addListener("appStateChange", ({ isActive }) => {
+          if (isActive) {
+            processPendingNotifications();
+          }
+        });
       } catch (err) {
-        console.warn("Failed to listen to deep links:", err);
+        console.warn("Failed to listen to native app events:", err);
       }
     };
 
@@ -172,17 +261,23 @@ export default function AppShell() {
         <div className="relative border-t border-black/5 p-3">
           {showProfileMenu ? (
             <div className="absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-[24px] border border-black/10 bg-white shadow-lg">
-              <button className="w-full px-4 py-3 text-left text-sm font-semibold text-[#1A2B38] hover:bg-[#FEF9F4]">
-                {user?.email}
-              </button>
+              <div className="flex items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-[#1A2B38] border-b border-black/5">
+                <User className="w-4 h-4 text-[#7B6E67] flex-shrink-0" />
+                <span className="truncate">{user?.email}</span>
+              </div>
               <button
                 onClick={() => navigateToTab("settings")}
-                className="w-full px-4 py-3 text-left text-sm font-semibold text-[#1A2B38] hover:bg-[#FEF9F4]"
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-[#1A2B38] hover:bg-[#FEF9F4] transition-colors"
               >
-                Settings
+                <Settings className="h-4 w-4 text-[#7B6E67] flex-shrink-0" />
+                <span>Settings</span>
               </button>
-              <button onClick={handleLogout} className="w-full px-4 py-3 text-left text-sm font-semibold text-[#FF6B58] hover:bg-red-50">
-                Logout
+              <button 
+                onClick={handleLogout} 
+                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-[#FF6B58] hover:bg-red-50 transition-colors"
+              >
+                <LogOut className="h-4 w-4 flex-shrink-0" />
+                <span>Logout</span>
               </button>
             </div>
           ) : null}
@@ -223,10 +318,13 @@ export default function AppShell() {
           </button>
           <button
             onClick={() => navigateToTab("settings")}
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EBF7F6] text-sm font-bold text-[#29B9AA]"
+            className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EBF7F6] text-sm font-bold text-[#29B9AA] shadow-sm"
             aria-label="Open settings"
           >
             {(user?.email || "B").slice(0, 1).toUpperCase()}
+            <span className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full bg-white border border-black/10 shadow-sm flex items-center justify-center">
+              <Settings className="w-3 h-3 text-[#29B9AA]" />
+            </span>
           </button>
         </div>
       </div>

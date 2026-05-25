@@ -1,6 +1,24 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
-import { Bell, BellOff, Calendar, Download, ShieldCheck, ToggleLeft, ToggleRight } from "lucide-react";
+import { 
+  Bell, 
+  BellOff, 
+  Calendar, 
+  Download, 
+  ShieldCheck, 
+  ToggleLeft, 
+  ToggleRight,
+  Trash2,
+  RefreshCw,
+  Lock,
+  Pencil,
+  PlusCircle,
+  User,
+  Sparkles,
+  BookOpen,
+  Layers,
+  Settings
+} from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useOnboarding } from "../../contexts/OnboardingContext";
 import { getCategories } from "../../services/categoryService";
@@ -20,6 +38,11 @@ const APP_VERSION = "1.0.0";
 const escapeCsvCell = (value: string | number | null | undefined) =>
   `"${String(value ?? "").replace(/"/g, '""')}"`;
 
+import { registerPlugin, Capacitor } from "@capacitor/core";
+import { App as CapApp } from "@capacitor/app";
+
+const NotificationReceiver = registerPlugin<any>("NotificationReceiver");
+
 export default function SettingsScreen({
   onOpenTutorial,
 }: {
@@ -34,6 +57,9 @@ export default function SettingsScreen({
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [isExportingCalendar, setIsExportingCalendar] = useState(false);
+
+  // Android Notification access state
+  const [androidNotifEnabled, setAndroidNotifEnabled] = useState<boolean | null>(null);
 
   // Notification allowlist (persisted to localStorage)
   const [allowlist, setAllowlist] = useState<Record<string, boolean>>(() => {
@@ -74,7 +100,43 @@ export default function SettingsScreen({
   useEffect(() => {
     loadCategories();
     setNotifPermission(getPermissionStatus());
+
+    if (!Capacitor.isNativePlatform()) return;
+
+    const checkAccess = async () => {
+      try {
+        const res = await NotificationReceiver.checkNotificationAccess();
+        setAndroidNotifEnabled(res.enabled);
+      } catch {}
+    };
+
+    checkAccess();
+
+    const listener = CapApp.addListener("appStateChange", ({ isActive }) => {
+      if (isActive) {
+        checkAccess();
+      }
+    });
+
+    return () => {
+      listener.then((l) => l.remove());
+    };
   }, []);
+
+  const handleOpenAndroidNotifSettings = async () => {
+    if (Capacitor.isNativePlatform()) {
+      try {
+        await NotificationReceiver.openNotificationSettings();
+        // Fallback check
+        setTimeout(async () => {
+          const res = await NotificationReceiver.checkNotificationAccess();
+          setAndroidNotifEnabled(res.enabled);
+        }, 1000);
+      } catch (err: any) {
+        toast.error("Gagal membuka pengaturan sistem.");
+      }
+    }
+  };
 
   const handleEnableNotifications = async () => {
     setIsEnablingNotif(true);
@@ -189,10 +251,14 @@ export default function SettingsScreen({
     <>
       <div className="mx-auto max-w-6xl space-y-5 px-4 py-5 md:px-8">
         <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Settings</p>
+          <div className="flex items-center gap-2">
+            <Settings className="w-4 h-4 text-[#29B9AA] flex-shrink-0" />
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">Settings</p>
+          </div>
           <h1 className="mt-3 text-3xl font-bold text-[#1A2B38]">Biar app ini terasa makin pas dengan ritmemu.</h1>
-          <p className="mt-3 text-sm text-[#7B6E67]">
-            {categorySummary.count} kategori aktif dengan total budget {formatCurrency(categorySummary.totalBudget)}.
+          <p className="mt-3 text-sm text-[#7B6E67] flex items-center gap-1">
+            <Sparkles className="w-3.5 h-3.5 text-[#FFB347]" />
+            <span>{categorySummary.count} kategori aktif dengan total budget {formatCurrency(categorySummary.totalBudget)}.</span>
           </p>
         </div>
 
@@ -201,23 +267,32 @@ export default function SettingsScreen({
             <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Account</p>
               <div className="mt-4 space-y-3">
-                <div className="rounded-2xl bg-[#FEF9F4] px-4 py-4">
-                  <p className="text-sm font-semibold text-[#1A2B38]">{user?.email || "Unknown user"}</p>
-                  <p className="mt-1 text-xs text-[#7B6E67]">Budget Flow account</p>
+                <div className="rounded-2xl bg-[#FEF9F4] px-4 py-4 flex items-center gap-3">
+                  <User className="w-5 h-5 text-[#29B9AA] flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-[#1A2B38]">{user?.email || "Unknown user"}</p>
+                    <p className="text-xs text-[#7B6E67]">Budget Flow account</p>
+                  </div>
                 </div>
-                <button onClick={handleChangePassword} className="flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left">
-                  <div>
-                    <p className="text-sm font-semibold text-[#1A2B38]">Change Password</p>
-                    <p className="mt-1 text-xs text-[#7B6E67]">Web implementation memakai prompt sederhana untuk sekarang.</p>
+                <button onClick={handleChangePassword} className="flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left hover:bg-[#F3EDE8] transition-colors">
+                  <div className="flex items-start gap-3">
+                    <Lock className="w-5 h-5 text-[#7B6E67] flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-[#1A2B38]">Change Password</p>
+                      <p className="mt-1 text-xs text-[#7B6E67]">Web implementation memakai prompt sederhana untuk sekarang.</p>
+                    </div>
                   </div>
-                  <span className="text-xs font-bold text-[#29B9AA]">Open</span>
+                  <span className="text-xs font-bold text-[#29B9AA] shrink-0">Open</span>
                 </button>
-                <button onClick={handleLogout} className="flex w-full items-center justify-between rounded-2xl bg-red-50 px-4 py-4 text-left">
-                  <div>
-                    <p className="text-sm font-semibold text-[#FF6B58]">Logout</p>
-                    <p className="mt-1 text-xs text-[#7B6E67]">Keluar dari akun ini kapan saja.</p>
+                <button onClick={handleLogout} className="flex w-full items-center justify-between rounded-2xl bg-red-50 px-4 py-4 text-left hover:bg-red-100 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <Trash2 className="w-5 h-5 text-[#FF6B58] flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-[#FF6B58]">Logout</p>
+                      <p className="mt-1 text-xs text-[#7B6E67]">Keluar dari akun ini kapan saja.</p>
+                    </div>
                   </div>
-                  <span className="text-xs font-bold text-[#FF6B58]">Now</span>
+                  <span className="text-xs font-bold text-[#FF6B58] shrink-0">Now</span>
                 </button>
               </div>
             </div>
@@ -260,6 +335,37 @@ export default function SettingsScreen({
                     )}
                   </div>
                 </div>
+
+                {/* Android Notification Listener Permission */}
+                {Capacitor.isNativePlatform() && (
+                  <div className={`rounded-2xl px-4 py-4 ${
+                    androidNotifEnabled ? "bg-[#EBF7F6]" : "bg-red-50"
+                  }`}>
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex items-start gap-3">
+                        <div className={`mt-0.5 flex h-8 w-8 items-center justify-center rounded-full ${
+                          androidNotifEnabled ? "bg-[#29B9AA]/20 text-[#29B9AA]" : "bg-red-100 text-[#FF6B58]"
+                        }`}>
+                          <ShieldCheck className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-semibold text-[#1A2B38]">Pemantauan Transaksi Android</p>
+                          <p className="mt-1 text-xs text-[#7B6E67]">
+                            {androidNotifEnabled 
+                              ? "Akses aktif – transaksi otomatis dipantau di background dari notifikasi/email."
+                              : "Akses dinonaktifkan – aktifkan agar app bisa mencatat otomatis dari GoPay, SeaBank, dan email Gmail."}
+                          </p>
+                        </div>
+                      </div>
+                      <button
+                        onClick={handleOpenAndroidNotifSettings}
+                        className="shrink-0 rounded-full bg-[#29B9AA] px-4 py-2 text-xs font-semibold text-white"
+                      >
+                        {androidNotifEnabled ? "Atur" : "Aktifkan"}
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 <button onClick={handleOpenTutorial} className="flex w-full items-center justify-between rounded-2xl bg-[#29B9AA] px-4 py-4 text-left text-white shadow-sm">
                   <div>
@@ -347,17 +453,21 @@ export default function SettingsScreen({
             <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
               <div className="mb-4 flex items-start justify-between gap-4">
                 <div>
-                  <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Categories</p>
-                  <h2 className="mt-1 text-xl font-bold text-[#1A2B38]">Kelola kategori</h2>
+                  <div className="flex items-center gap-1.5 text-[#7B6E67]">
+                    <Layers className="w-3.5 h-3.5 text-[#7B6E67] flex-shrink-0" />
+                    <p className="text-xs font-bold uppercase tracking-[0.28em]">Categories</p>
+                  </div>
+                  <h2 className="mt-2 text-xl font-bold text-[#1A2B38]">Kelola kategori</h2>
                 </div>
                 <button
                   onClick={() => {
                     setSelectedCategory(null);
                     setShowCategoryModal(true);
                   }}
-                  className="rounded-full bg-[#29B9AA] px-4 py-2 text-xs font-semibold text-white"
+                  className="rounded-full bg-[#29B9AA] px-4 py-2 text-xs font-semibold text-white flex items-center gap-1"
                 >
-                  + Add
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  Add
                 </button>
               </div>
               <div className="space-y-3">
@@ -371,7 +481,7 @@ export default function SettingsScreen({
                         setSelectedCategory(category);
                         setShowCategoryModal(true);
                       }}
-                      className="flex w-full items-center justify-between gap-4 rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left"
+                      className="flex w-full items-center justify-between gap-4 rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left hover:bg-[#F3EDE8] transition-colors"
                     >
                       <div className="flex items-center gap-3">
                         <div className="h-4 w-4 rounded-full" style={{ backgroundColor: category.color }} />
@@ -382,7 +492,10 @@ export default function SettingsScreen({
                           </p>
                         </div>
                       </div>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#29B9AA] shadow-sm">Edit</span>
+                      <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#29B9AA] shadow-sm flex items-center gap-1">
+                        <Pencil className="w-3 h-3" />
+                        Edit
+                      </span>
                     </button>
                   ))
                 )}

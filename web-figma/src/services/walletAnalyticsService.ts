@@ -6,7 +6,7 @@
  */
 
 import { getWalletTransactionsByDateRange, getLastNDaysTransactions } from "./walletTransactionService";
-import { getMonthDateRange } from "../utils/date";
+import { getLocalMonthBounds } from "../utils/date";
 import type { WalletTransaction } from "../types/models";
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -59,8 +59,8 @@ export const getTopMerchants = async (days = 30, limit = 5) => {
 // ── Cashflow by month ────────────────────────────────────────
 
 export const getWalletCashflow = async (month: string) => {
-  const { startDate, endDate } = getMonthDateRange(month);
-  const txns = await getWalletTransactionsByDateRange(startDate + "T00:00:00Z", endDate + "T23:59:59Z");
+  const { startUtc, endUtc } = getLocalMonthBounds(month);
+  const txns = await getWalletTransactionsByDateRange(startUtc, endUtc);
 
   const income = sum(txns, "in");
   const spending = sum(txns, "out");

@@ -1,6 +1,7 @@
 import supabase from "../lib/supabase";
-import { getMonthDateRange } from "../utils/date";
+import { getLocalMonthBounds, toLocalDateString } from "../utils/date";
 import { getCurrentUserId } from "./queryUtils";
+import { invalidateMonthlyExpensesCache } from "./analyticsService";
 
 export const getIncomeSources = async () => {
   try {
@@ -75,7 +76,7 @@ export const deleteIncomeSource = async (id: string | number) => {
 export const getIncomeTransactions = async (month: string) => {
   try {
     const userId = await getCurrentUserId();
-    const { startDate, endDate } = getMonthDateRange(month);
+    const { startUtc, endUtc } = getLocalMonthBounds(month);
     const { data, error } = await supabase
       .from("wallet_transactions")
       .select(`
@@ -87,14 +88,14 @@ export const getIncomeTransactions = async (month: string) => {
       `)
       .eq("user_id", userId)
       .eq("type", "income")
-      .gte("occurred_at", `${startDate}T00:00:00Z`)
-      .lte("occurred_at", `${endDate}T23:59:59Z`)
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc)
       .order("occurred_at", { ascending: false });
 
     if (error) throw error;
     return (data || []).map((tx) => ({
       ...tx,
-      date: tx.occurred_at.split("T")[0],
+      date: toLocalDateString(tx.occurred_at),
     }));
   } catch (err) {
     console.error("Error fetching income transactions:", err);
@@ -105,12 +106,18 @@ export const getIncomeTransactions = async (month: string) => {
 export const recordIncomeTransaction = async (transactionData: any) => {
   try {
     const userId = await getCurrentUserId();
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+    const occurred_at = transactionData.date
+      ? new Date(`${transactionData.date}T${timeStr}`).toISOString()
+      : now.toISOString();
+
     const payload = {
       user_id: userId,
       income_source_id: transactionData.income_source_id,
       amount: transactionData.amount,
       wallet_id: transactionData.wallet_id || null,
-      occurred_at: transactionData.date ? `${transactionData.date}T12:00:00Z` : new Date().toISOString(),
+      occurred_at,
       note: transactionData.note || null,
       type: "income",
       direction: "in",
@@ -121,6 +128,7 @@ export const recordIncomeTransaction = async (transactionData: any) => {
     const { error } = await supabase.from("wallet_transactions").insert([payload]);
 
     if (error) throw error;
+    invalidateMonthlyExpensesCache();
     return true;
   } catch (err) {
     console.error("Error recording income transaction:", err);
@@ -143,7 +151,9 @@ export const updateIncomeTransaction = async (id: string, transactionData: any) 
       payload.wallet_id = transactionData.wallet_id || null;
     }
     if (transactionData.date !== undefined) {
-      payload.occurred_at = `${transactionData.date}T12:00:00Z`;
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+      payload.occurred_at = new Date(`${transactionData.date}T${timeStr}`).toISOString();
     }
     if (transactionData.note !== undefined) {
       payload.note = transactionData.note || null;
@@ -156,6 +166,7 @@ export const updateIncomeTransaction = async (id: string, transactionData: any) 
       .eq("id", id);
 
     if (error) throw error;
+    invalidateMonthlyExpensesCache();
     return true;
   } catch (err) {
     console.error("Error updating income transaction:", err);
@@ -173,6 +184,7 @@ export const deleteIncomeTransaction = async (id: string) => {
       .eq("id", id);
 
     if (error) throw error;
+    invalidateMonthlyExpensesCache();
     return true;
   } catch (err) {
     console.error("Error deleting income transaction:", err);
@@ -183,7 +195,7 @@ export const deleteIncomeTransaction = async (id: string) => {
 export const getIncomeSummary = async (month: string) => {
   try {
     const userId = await getCurrentUserId();
-    const { startDate, endDate } = getMonthDateRange(month);
+    const { startUtc, endUtc } = getLocalMonthBounds(month);
 
     // Get incomes from wallet_transactions (type = 'income')
     const { data: transactions } = await supabase
@@ -191,8 +203,8 @@ export const getIncomeSummary = async (month: string) => {
       .select("*")
       .eq("user_id", userId)
       .eq("type", "income")
-      .gte("occurred_at", `${startDate}T00:00:00Z`)
-      .lte("occurred_at", `${endDate}T23:59:59Z`);
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc);
 
     const totalIncome = transactions?.reduce((sum, t) => sum + t.amount, 0) || 0;
 
@@ -202,8 +214,8 @@ export const getIncomeSummary = async (month: string) => {
       .select("*")
       .eq("user_id", userId)
       .eq("type", "expense")
-      .gte("occurred_at", `${startDate}T00:00:00Z`)
-      .lte("occurred_at", `${endDate}T23:59:59Z`);
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc);
 
     const totalExpenses = expenses?.reduce((sum, e) => sum + e.amount, 0) || 0;
 
@@ -227,7 +239,7 @@ export const getIncomeSummary = async (month: string) => {
 export const getIncomeBySource = async (month: string) => {
   try {
     const userId = await getCurrentUserId();
-    const { startDate, endDate } = getMonthDateRange(month);
+    const { startUtc, endUtc } = getLocalMonthBounds(month);
 
     const { data: sources } = await supabase
       .from("income_sources")
@@ -240,8 +252,8 @@ export const getIncomeBySource = async (month: string) => {
       .select("*")
       .eq("user_id", userId)
       .eq("type", "income")
-      .gte("occurred_at", `${startDate}T00:00:00Z`)
-      .lte("occurred_at", `${endDate}T23:59:59Z`);
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc);
 
     const activeSources = sources || [];
     const incomeBySource = activeSources.map((source) => {

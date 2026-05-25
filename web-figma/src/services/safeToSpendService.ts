@@ -12,6 +12,30 @@ import { getTodayWalletSpending } from "./walletTransactionService";
 import { getRecurringExpenses } from "./recurringService";
 import { getCurrentMonth } from "../utils/date";
 import type { SafeToSpend } from "../types/models";
+import { Capacitor, registerPlugin } from "@capacitor/core";
+
+const WidgetData = registerPlugin<any>("WidgetData");
+
+export const updateAndroidWidget = (availableMoney: number, safeToSpendToday: number) => {
+  if (Capacitor.isNativePlatform()) {
+    const formattedSaldo = new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    }).format(availableMoney);
+
+    const formattedLimit = new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
+      maximumFractionDigits: 0,
+    }).format(safeToSpendToday);
+
+    WidgetData.updateWidgetData({
+      saldo: formattedSaldo,
+      limitHarian: formattedLimit,
+    }).catch((err: any) => console.warn("Failed to update Android widget:", err));
+  }
+};
 
 /**
  * Calculates days until next income (payday).
@@ -20,11 +44,15 @@ import type { SafeToSpend } from "../types/models";
  */
 export const getDaysUntilNextIncome = (month: string): number => {
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const [year, mon] = month.split("-").map(Number);
   // Default to last day of the current month
   const endOfMonth = new Date(year, mon, 0);
+  endOfMonth.setHours(0, 0, 0, 0);
+
   const diffMs = endOfMonth.getTime() - today.getTime();
-  const diffDays = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
   return Math.max(diffDays, 1);
 };
 
@@ -74,6 +102,9 @@ export const calculateSafeToSpend = async (): Promise<SafeToSpend> => {
   const safeToSpendToday = Math.max(safeToSpendPerDay - todaySpent, 0);
   const isOverDailyLimit = todaySpent > safeToSpendPerDay;
   const overAmount = isOverDailyLimit ? todaySpent - safeToSpendPerDay : 0;
+
+  // Automatically update the Android widget
+  updateAndroidWidget(availableMoney, safeToSpendToday);
 
   return {
     totalEstimatedBalance,

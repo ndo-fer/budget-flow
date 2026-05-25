@@ -198,39 +198,58 @@ export const syncRecurringExpensesForMonth = async (month: string) => {
   try {
     const userId = await getCurrentUserId();
     const generated = await generateMonthlyRecurringExpenses(month);
-    let count = 0;
+    if (generated.length === 0) return 0;
 
-    for (const exp of generated) {
-      const exists = await isRecurringExpenseGenerated(
-        exp.recurring_expense_id,
-        exp.date,
-      );
+    const { startDate, endDate } = getMonthDateRange(month);
 
-      if (!exists) {
-        const { error } = await supabase.from("wallet_transactions").insert([
-          {
-            user_id: userId,
-            occurred_at: `${exp.date}T12:00:00Z`,
-            category_id: exp.category_id,
-            amount: exp.amount,
-            note: exp.note,
-            recurring_expense_id: exp.recurring_expense_id,
-            type: "expense",
-            direction: "out",
-            source: "manual",
-            confidence: 1.0,
-          },
-        ]);
+    // Fetch existing recurring transactions for this month in one single query
+    const { data: existingTransactions, error: selectError } = await supabase
+      .from("wallet_transactions")
+      .select("recurring_expense_id, occurred_at")
+      .eq("user_id", userId)
+      .is("is_duplicate", false)
+      .gte("occurred_at", `${startDate}T00:00:00Z`)
+      .lte("occurred_at", `${endDate}T23:59:59Z`)
+      .not("recurring_expense_id", "is", null);
 
-        if (error) {
-          console.error("Error inserting recurring expense:", error);
-        } else {
-          count++;
-        }
-      }
+    if (selectError) throw selectError;
+
+    // Create a set of keys combining id and date for fast lookups
+    const existingKeys = new Set(
+      (existingTransactions || []).map((tx) => {
+        const txDate = tx.occurred_at.split("T")[0];
+        return `${tx.recurring_expense_id}_${txDate}`;
+      })
+    );
+
+    // Filter out expenses that are already sync'd
+    const toInsert = generated
+      .filter((exp) => {
+        const key = `${exp.recurring_expense_id}_${exp.date}`;
+        return !existingKeys.has(key);
+      })
+      .map((exp) => ({
+        user_id: userId,
+        occurred_at: `${exp.date}T12:00:00Z`,
+        category_id: exp.category_id,
+        amount: exp.amount,
+        note: exp.note,
+        recurring_expense_id: exp.recurring_expense_id,
+        type: "expense",
+        direction: "out",
+        source: "manual",
+        confidence: 1.0,
+      }));
+
+    if (toInsert.length > 0) {
+      const { error: insertError } = await supabase
+        .from("wallet_transactions")
+        .insert(toInsert);
+
+      if (insertError) throw insertError;
     }
 
-    return count;
+    return toInsert.length;
   } catch (err) {
     console.error("Error syncing recurring expenses:", err);
     throw err;

@@ -1,10 +1,12 @@
 import supabase from "../lib/supabase";
-import { getMonthDateRange } from "../utils/date";
+import { getLocalDayBounds, getLocalMonthBounds, toLocalDateString } from "../utils/date";
 import { getCurrentUserId } from "./queryUtils";
+import { invalidateMonthlyExpensesCache } from "./analyticsService";
 
 export const getExpensesByDate = async (date: string) => {
   try {
     const userId = await getCurrentUserId();
+    const { startUtc, endUtc } = getLocalDayBounds(date);
     const { data, error } = await supabase
       .from("wallet_transactions")
       .select(`
@@ -22,14 +24,14 @@ export const getExpensesByDate = async (date: string) => {
       `)
       .eq("user_id", userId)
       .eq("type", "expense")
-      .gte("occurred_at", `${date}T00:00:00Z`)
-      .lte("occurred_at", `${date}T23:59:59Z`)
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc)
       .order("created_at", { ascending: false });
 
     if (error) throw error;
     return (data || []).map((tx) => ({
       ...tx,
-      date: tx.occurred_at.split("T")[0],
+      date: toLocalDateString(tx.occurred_at),
     }));
   } catch (err) {
     console.error("Error fetching expenses:", err);
@@ -40,7 +42,7 @@ export const getExpensesByDate = async (date: string) => {
 export const getExpensesByMonth = async (month: string) => {
   try {
     const userId = await getCurrentUserId();
-    const { startDate, endDate } = getMonthDateRange(month);
+    const { startUtc, endUtc } = getLocalMonthBounds(month);
     const { data, error } = await supabase
       .from("wallet_transactions")
       .select(`
@@ -58,14 +60,14 @@ export const getExpensesByMonth = async (month: string) => {
       `)
       .eq("user_id", userId)
       .eq("type", "expense")
-      .gte("occurred_at", `${startDate}T00:00:00Z`)
-      .lte("occurred_at", `${endDate}T23:59:59Z`)
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc)
       .order("occurred_at", { ascending: false });
 
     if (error) throw error;
     return (data || []).map((tx) => ({
       ...tx,
-      date: tx.occurred_at.split("T")[0],
+      date: toLocalDateString(tx.occurred_at),
     }));
   } catch (err) {
     console.error("Error fetching monthly expenses:", err);
@@ -82,6 +84,10 @@ export const addExpense = async (
 ) => {
   try {
     const userId = await getCurrentUserId();
+    const now = new Date();
+    const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+    const occurred_at = new Date(`${date}T${timeStr}`).toISOString();
+
     const { data, error } = await supabase
       .from("wallet_transactions")
       .insert([
@@ -89,7 +95,7 @@ export const addExpense = async (
           user_id: userId,
           category_id: categoryId,
           amount,
-          occurred_at: `${date}T12:00:00Z`,
+          occurred_at,
           note: note || null,
           wallet_id: walletId || null,
           type: "expense",
@@ -102,6 +108,7 @@ export const addExpense = async (
       .single();
 
     if (error) throw error;
+    invalidateMonthlyExpensesCache(date.substring(0, 7));
     return data;
   } catch (err) {
     console.error("Error adding expense:", err);
@@ -121,7 +128,9 @@ export const updateExpense = async (expenseId: string, updates: any) => {
       payload.amount = updates.amount;
     }
     if (updates.date !== undefined) {
-      payload.occurred_at = `${updates.date}T12:00:00Z`;
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+      payload.occurred_at = new Date(`${updates.date}T${timeStr}`).toISOString();
     }
     if (updates.note !== undefined) {
       payload.note = updates.note || null;
@@ -151,9 +160,13 @@ export const updateExpense = async (expenseId: string, updates: any) => {
       .single();
 
     if (error) throw error;
+    if (updates.date) {
+      invalidateMonthlyExpensesCache(updates.date.substring(0, 7));
+    }
+    invalidateMonthlyExpensesCache(toLocalDateString(data.occurred_at).substring(0, 7));
     return {
       ...data,
-      date: data.occurred_at.split("T")[0],
+      date: toLocalDateString(data.occurred_at),
     };
   } catch (err) {
     console.error("Error updating expense:", err);
@@ -171,6 +184,7 @@ export const deleteExpense = async (expenseId: string) => {
       .eq("id", expenseId);
 
     if (error) throw error;
+    invalidateMonthlyExpensesCache();
   } catch (err) {
     console.error("Error deleting expense:", err);
     throw err;
@@ -180,6 +194,9 @@ export const deleteExpense = async (expenseId: string) => {
 export const getExpensesByDateRange = async (startDate: string, endDate: string) => {
   try {
     const userId = await getCurrentUserId();
+    const { startUtc } = getLocalDayBounds(startDate);
+    const { endUtc } = getLocalDayBounds(endDate);
+
     const { data, error } = await supabase
       .from("wallet_transactions")
       .select(`
@@ -193,14 +210,14 @@ export const getExpensesByDateRange = async (startDate: string, endDate: string)
       `)
       .eq("user_id", userId)
       .eq("type", "expense")
-      .gte("occurred_at", `${startDate}T00:00:00Z`)
-      .lte("occurred_at", `${endDate}T23:59:59Z`)
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc)
       .order("occurred_at", { ascending: false });
 
     if (error) throw error;
     return (data || []).map((tx) => ({
       ...tx,
-      date: tx.occurred_at.split("T")[0],
+      date: toLocalDateString(tx.occurred_at),
     }));
   } catch (err) {
     console.error("Error fetching expenses by range:", err);
@@ -215,6 +232,9 @@ export const getExpensesByCategory = async (
 ) => {
   try {
     const userId = await getCurrentUserId();
+    const { startUtc } = getLocalDayBounds(startDate);
+    const { endUtc } = getLocalDayBounds(endDate);
+
     const { data, error } = await supabase
       .from("wallet_transactions")
       .select(`
@@ -229,14 +249,14 @@ export const getExpensesByCategory = async (
       .eq("user_id", userId)
       .eq("category_id", categoryId)
       .eq("type", "expense")
-      .gte("occurred_at", `${startDate}T00:00:00Z`)
-      .lte("occurred_at", `${endDate}T23:59:59Z`)
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc)
       .order("occurred_at", { ascending: false });
 
     if (error) throw error;
     return (data || []).map((tx) => ({
       ...tx,
-      date: tx.occurred_at.split("T")[0],
+      date: toLocalDateString(tx.occurred_at),
     }));
   } catch (err) {
     console.error("Error fetching expenses by category:", err);
@@ -247,6 +267,9 @@ export const getExpensesByCategory = async (
 export const searchExpenses = async (searchTerm: string, startDate: string, endDate: string) => {
   try {
     const userId = await getCurrentUserId();
+    const { startUtc } = getLocalDayBounds(startDate);
+    const { endUtc } = getLocalDayBounds(endDate);
+
     const { data, error } = await supabase
       .from("wallet_transactions")
       .select(`
@@ -260,15 +283,15 @@ export const searchExpenses = async (searchTerm: string, startDate: string, endD
       `)
       .eq("user_id", userId)
       .eq("type", "expense")
-      .gte("occurred_at", `${startDate}T00:00:00Z`)
-      .lte("occurred_at", `${endDate}T23:59:59Z`)
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc)
       .ilike("note", `%${searchTerm}%`)
       .order("occurred_at", { ascending: false });
 
     if (error) throw error;
     return (data || []).map((tx) => ({
       ...tx,
-      date: tx.occurred_at.split("T")[0],
+      date: toLocalDateString(tx.occurred_at),
     }));
   } catch (err) {
     console.error("Error searching expenses:", err);

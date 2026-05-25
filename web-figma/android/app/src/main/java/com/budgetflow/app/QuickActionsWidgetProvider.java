@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager;
 import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
 import android.widget.RemoteViews;
@@ -21,6 +22,15 @@ public class QuickActionsWidgetProvider extends AppWidgetProvider {
     static void updateAppWidget(Context context, AppWidgetManager appWidgetManager, int appWidgetId) {
         // Construct the RemoteViews object
         RemoteViews views = new RemoteViews(context.getPackageName(), R.layout.quick_actions_widget);
+
+        // Read values from SharedPreferences
+        SharedPreferences prefs = context.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE);
+        String saldo = prefs.getString("saldo", "Rp -");
+        String limitHarian = prefs.getString("limitHarian", "Rp -");
+
+        // Update RemoteViews Text
+        views.setTextViewText(R.id.txt_saldo, saldo);
+        views.setTextViewText(R.id.txt_limit_harian, limitHarian);
 
         // Define pending intent flags helper for android 12+ (mutability requirement)
         int pendingIntentFlags = PendingIntent.FLAG_UPDATE_CURRENT;

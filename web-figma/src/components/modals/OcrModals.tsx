@@ -4,9 +4,10 @@ import { parseBalanceScreenshot, parseReceiptImage } from "../../services/ocrSer
 import { adjustWalletBalance } from "../../services/walletService";
 import { addWalletTransaction } from "../../services/walletTransactionService";
 import { getWallets } from "../../services/walletService";
-import { formatCurrency } from "../../utils/format";
+import { formatCurrency, parseRawCurrencyInput } from "../../utils/format";
 import { toast } from "sonner";
 import type { Wallet, BalanceOcrResult, ReceiptOcrResult } from "../../types/models";
+import { toLocalDateString } from "../../utils/date";
 
 // ── OCR Progress Bar ──────────────────────────────────────────
 
@@ -52,6 +53,15 @@ export function ScreenshotBalanceModal({
 
   useEffect(() => {
     getWallets().then(setWallets).catch(() => {});
+
+    // Prevent default drag/drop behaviors globally to avoid browser navigation
+    const preventDefault = (e: DragEvent) => e.preventDefault();
+    window.addEventListener("dragover", preventDefault);
+    window.addEventListener("drop", preventDefault);
+    return () => {
+      window.removeEventListener("dragover", preventDefault);
+      window.removeEventListener("drop", preventDefault);
+    };
   }, []);
 
   useEffect(() => {
@@ -97,8 +107,8 @@ export function ScreenshotBalanceModal({
   };
 
   const handleSave = async () => {
-    const balance = parseFloat(editedBalance.replace(/\D/g, ""));
-    if (isNaN(balance)) return toast.error("Nominal tidak valid.");
+    const balance = parseRawCurrencyInput(editedBalance);
+    if (isNaN(balance) || balance < 0) return toast.error("Nominal tidak valid.");
     if (!selectedWalletId) return toast.error("Pilih wallet terlebih dahulu.");
 
     setIsSaving(true);
@@ -115,14 +125,22 @@ export function ScreenshotBalanceModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-lg rounded-t-[32px] bg-white p-6 shadow-xl sm:rounded-[32px] max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => e.preventDefault()}
+    >
+      <div className="w-full max-w-lg rounded-t-[32px] bg-white p-6 shadow-xl sm:rounded-[32px] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-center justify-between">
           <div>
+            <div className="flex items-center gap-1.5 text-[#29B9AA] mb-0.5">
+              <Upload className="w-4 h-4 animate-bounce" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.28em] leading-none">Automated Sync</span>
+            </div>
             <h2 className="text-xl font-bold text-[#1A2B38]">Update dari Screenshot</h2>
             <p className="mt-1 text-xs text-[#7B6E67]">Upload screenshot saldo dari aplikasi finansialmu.</p>
           </div>
-          <button onClick={onClose} className="rounded-full bg-[#F3EDE8] p-2 text-[#7B6E67]">
+          <button onClick={onClose} className="rounded-full bg-[#F3EDE8] hover:bg-[#EADFD8] p-2 text-[#7B6E67]">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -221,9 +239,16 @@ export function ScreenshotBalanceModal({
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="mt-5 w-full rounded-2xl bg-[#29B9AA] py-3 text-sm font-bold text-white disabled:opacity-50"
+            className="mt-5 w-full rounded-2xl bg-[#29B9AA] hover:bg-[#229A8E] py-3 text-sm font-bold text-white disabled:opacity-50 flex items-center justify-center gap-1.5"
           >
-            {isSaving ? "Menyimpan..." : "Simpan sebagai saldo terkonfirmasi"}
+            {isSaving ? (
+              "Menyimpan..."
+            ) : (
+              <>
+                <Check className="w-4 h-4" />
+                Simpan sebagai saldo terkonfirmasi
+              </>
+            )}
           </button>
         )}
       </div>
@@ -257,6 +282,15 @@ export function ReceiptScanModal({
       setWallets(ws);
       if (ws.length > 0) setSelectedWalletId(ws[0].id);
     }).catch(() => {});
+
+    // Prevent default drag/drop behaviors globally to avoid browser navigation
+    const preventDefault = (e: DragEvent) => e.preventDefault();
+    window.addEventListener("dragover", preventDefault);
+    window.addEventListener("drop", preventDefault);
+    return () => {
+      window.removeEventListener("dragover", preventDefault);
+      window.removeEventListener("drop", preventDefault);
+    };
   }, []);
 
   const handleFile = useCallback(async (file: File) => {
@@ -274,14 +308,21 @@ export function ReceiptScanModal({
       setEditedAmount(result.totalAmount?.toString() || "");
       setEditedMerchant(result.merchant || "");
     } catch (e: any) {
-      toast.error("Gagal membaca struk: " + e.message);
+      const errMsg = e?.message || e?.toString() || "Koneksi terputus atau file lokal Tesseract belum lengkap.";
+      toast.error("Gagal membaca struk: " + errMsg);
     } finally {
       setIsProcessing(false);
     }
   }, []);
 
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file?.type.startsWith("image/")) handleFile(file);
+  }, [handleFile]);
+
   const handleSave = async () => {
-    const amount = parseFloat(editedAmount.replace(/\D/g, ""));
+    const amount = parseRawCurrencyInput(editedAmount);
     if (isNaN(amount) || amount <= 0) return toast.error("Nominal tidak valid.");
 
     setIsSaving(true);
@@ -294,10 +335,12 @@ export function ReceiptScanModal({
         merchant: editedMerchant || ocrResult?.merchant,
         source: "receipt",
         raw_text: ocrResult?.rawText,
-        confidence: ocrResult?.confidence ?? 0.7,
-        occurred_at: ocrResult?.transactionDate
-          ? new Date(ocrResult.transactionDate + "T12:00:00").toISOString()
-          : new Date().toISOString(),
+        occurred_at: (() => {
+          const now = new Date();
+          const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
+          const dateStr = ocrResult?.transactionDate || toLocalDateString(now.toISOString());
+          return new Date(`${dateStr}T${timeStr}`).toISOString();
+        })(),
       });
       toast.success("Transaksi dari struk berhasil disimpan.");
       onSaved();
@@ -310,14 +353,22 @@ export function ReceiptScanModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-lg rounded-t-[32px] bg-white p-6 shadow-xl sm:rounded-[32px] max-h-[90vh] overflow-y-auto">
+    <div 
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
+      onDragOver={(e) => e.preventDefault()}
+      onDrop={(e) => e.preventDefault()}
+    >
+      <div className="w-full max-w-lg rounded-t-[32px] bg-white p-6 shadow-xl sm:rounded-[32px] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-center justify-between">
           <div>
+            <div className="flex items-center gap-1.5 text-[#FF6B58] mb-0.5">
+              <Camera className="w-4 h-4" />
+              <span className="text-[10px] font-bold uppercase tracking-[0.28em] leading-none">Receipt OCR Scan</span>
+            </div>
             <h2 className="text-xl font-bold text-[#1A2B38]">Scan Struk</h2>
             <p className="mt-1 text-xs text-[#7B6E67]">Foto struk → otomatis jadi transaksi.</p>
           </div>
-          <button onClick={onClose} className="rounded-full bg-[#F3EDE8] p-2 text-[#7B6E67]">
+          <button onClick={onClose} className="rounded-full bg-[#F3EDE8] hover:bg-[#EADFD8] p-2 text-[#7B6E67]">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -341,6 +392,8 @@ export function ReceiptScanModal({
         {!imageUrl ? (
           <div
             className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[#FF6B58]/40 bg-[#FEF9F4] px-6 py-12 text-center"
+            onDrop={handleDrop}
+            onDragOver={(e) => e.preventDefault()}
             onClick={() => inputRef.current?.click()}
           >
             <Camera className="h-8 w-8 text-[#FF6B58]" />
@@ -419,9 +472,16 @@ export function ReceiptScanModal({
           <button
             onClick={handleSave}
             disabled={isSaving}
-            className="mt-5 w-full rounded-2xl bg-[#FF6B58] py-3 text-sm font-bold text-white disabled:opacity-50"
+            className="mt-5 w-full rounded-2xl bg-[#FF6B58] hover:bg-[#E8503F] py-3 text-sm font-bold text-white disabled:opacity-50 flex items-center justify-center gap-1.5"
           >
-            {isSaving ? "Menyimpan..." : "Simpan transaksi"}
+            {isSaving ? (
+              "Menyimpan..."
+            ) : (
+              <>
+                <Check className="w-4 h-4" />
+                Simpan transaksi
+              </>
+            )}
           </button>
         )}
       </div>

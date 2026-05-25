@@ -1,5 +1,5 @@
 import supabase from "../lib/supabase";
-import { getMonthDateRange } from "../utils/date";
+import { getLocalMonthBounds } from "../utils/date";
 import { getCurrentUserId } from "./queryUtils";
 
 export const getBudgetVsActual = async (month: string) => {
@@ -15,7 +15,7 @@ export const getBudgetVsActual = async (month: string) => {
 
     if (!categories) return [];
 
-    const { startDate, endDate } = getMonthDateRange(month);
+    const { startUtc, endUtc } = getLocalMonthBounds(month);
 
     // Get expenses from wallet_transactions for this month
     const { data: expenses } = await supabase
@@ -23,8 +23,8 @@ export const getBudgetVsActual = async (month: string) => {
       .select("*")
       .eq("user_id", userId)
       .eq("type", "expense")
-      .gte("occurred_at", `${startDate}T00:00:00Z`)
-      .lte("occurred_at", `${endDate}T23:59:59Z`);
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc);
 
     // Calculate budget vs actual for each category
     const comparison = categories.map((cat) => {

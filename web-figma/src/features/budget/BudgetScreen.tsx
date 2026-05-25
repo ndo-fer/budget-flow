@@ -1,5 +1,18 @@
 import { useEffect, useMemo, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { 
+  ChevronDown, 
+  ChevronUp, 
+  ChevronLeft, 
+  ChevronRight, 
+  PiggyBank, 
+  ArrowDownCircle, 
+  Target, 
+  CheckCircle2, 
+  TrendingDown, 
+  AlertTriangle, 
+  Lightbulb, 
+  BarChart3 
+} from "lucide-react";
 import { toast } from "sonner";
 import { getBudgetVsActual, getBudgetVsActualSummary, getSpendingRecommendations } from "../../services/comparisonService";
 import { formatMonthLabel, getCurrentMonth, shiftMonth } from "../../utils/date";
@@ -45,12 +58,20 @@ export default function BudgetScreen() {
       </div>
 
       <div className="flex items-center justify-between rounded-2xl border border-black/10 bg-white px-5 py-4 shadow-sm">
-        <button onClick={() => setMonth((current) => shiftMonth(current, -1))} className="rounded-full bg-[#F3EDE8] px-4 py-2 text-xs font-semibold text-[#7B6E67]">
-          Prev
+        <button 
+          onClick={() => setMonth((current) => shiftMonth(current, -1))} 
+          className="rounded-full bg-[#F3EDE8] p-2 hover:bg-[#EADFD8] transition-colors"
+          aria-label="Previous month"
+        >
+          <ChevronLeft className="h-4 w-4 text-[#7B6E67]" />
         </button>
         <p className="text-sm font-bold text-[#1A2B38]">{formatMonthLabel(month)}</p>
-        <button onClick={() => setMonth((current) => shiftMonth(current, 1))} className="rounded-full bg-[#F3EDE8] px-4 py-2 text-xs font-semibold text-[#7B6E67]">
-          Next
+        <button 
+          onClick={() => setMonth((current) => shiftMonth(current, 1))} 
+          className="rounded-full bg-[#F3EDE8] p-2 hover:bg-[#EADFD8] transition-colors"
+          aria-label="Next month"
+        >
+          <ChevronRight className="h-4 w-4 text-[#7B6E67]" />
         </button>
       </div>
 
@@ -58,18 +79,27 @@ export default function BudgetScreen() {
         <>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-xs text-[#7B6E67]">Total Budget</p>
-              <p className="mt-1 text-2xl font-bold text-[#1A2B38]">{formatCompactCurrency(summary.totalBudget)}</p>
+              <div className="flex items-center gap-1.5 text-[#7B6E67]">
+                <PiggyBank className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
+                <p className="text-xs">Total Budget</p>
+              </div>
+              <p className="mt-1.5 text-2xl font-bold text-[#1A2B38]">{formatCompactCurrency(summary.totalBudget)}</p>
             </div>
             <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-xs text-[#7B6E67]">Total Realisasi</p>
-              <p className="mt-1 text-2xl font-bold text-[#FF6B58]">{formatCompactCurrency(summary.totalActual)}</p>
+              <div className="flex items-center gap-1.5 text-[#7B6E67]">
+                <ArrowDownCircle className="w-3.5 h-3.5 text-[#FF6B58] flex-shrink-0" />
+                <p className="text-xs">Total Realisasi</p>
+              </div>
+              <p className="mt-1.5 text-2xl font-bold text-[#FF6B58]">{formatCompactCurrency(summary.totalActual)}</p>
             </div>
           </div>
           <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
             <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Overall utilization</p>
+                <div className="flex items-center gap-1.5 text-[#7B6E67]">
+                  <Target className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
+                  <p className="text-xs font-bold uppercase tracking-[0.28em]">Overall utilization</p>
+                </div>
                 <h2 className="mt-2 text-3xl font-bold text-[#1A2B38]">{Math.round(summary.utilizationPercent)}%</h2>
               </div>
               <p className={`text-sm font-bold ${summary.totalVariance >= 0 ? "text-[#29B9AA]" : "text-[#FF6B58]"}`}>
@@ -87,15 +117,24 @@ export default function BudgetScreen() {
             </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded-2xl bg-[#FEF9F4] p-4">
-                <p className="text-xs text-[#7B6E67]">On track</p>
+                <div className="flex items-center gap-1 text-[#7B6E67]">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
+                  <p className="text-xs">On track</p>
+                </div>
                 <p className="mt-1 text-lg font-bold text-[#1A2B38]">{summary.onTrackCount}</p>
               </div>
               <div className="rounded-2xl bg-[#FEF9F4] p-4">
-                <p className="text-xs text-[#7B6E67]">Under</p>
+                <div className="flex items-center gap-1 text-[#7B6E67]">
+                  <TrendingDown className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
+                  <p className="text-xs">Under</p>
+                </div>
                 <p className="mt-1 text-lg font-bold text-[#29B9AA]">{summary.underBudgetCount}</p>
               </div>
               <div className="rounded-2xl bg-[#FEF9F4] p-4">
-                <p className="text-xs text-[#7B6E67]">Over</p>
+                <div className="flex items-center gap-1 text-[#7B6E67]">
+                  <AlertTriangle className="w-3.5 h-3.5 text-[#FF6B58] flex-shrink-0" />
+                  <p className="text-xs">Over</p>
+                </div>
                 <p className="mt-1 text-lg font-bold text-[#FF6B58]">{summary.overBudgetCount}</p>
               </div>
             </div>
@@ -106,7 +145,10 @@ export default function BudgetScreen() {
       {recommendations.length > 0 ? (
         <div className="rounded-[32px] border border-amber-200 bg-amber-50 p-5 shadow-sm">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-amber-700">Recommendations</p>
+            <div className="flex items-center gap-1.5 text-amber-700">
+              <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <p className="text-xs font-bold uppercase tracking-[0.28em]">Recommendations</p>
+            </div>
             {recommendations.length > 4 ? (
               <button
                 onClick={() => setShowAllRecommendations((current) => !current)}
@@ -130,7 +172,10 @@ export default function BudgetScreen() {
       <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Category breakdown</p>
+            <div className="flex items-center gap-1.5 text-[#7B6E67]">
+              <BarChart3 className="w-4 h-4 text-[#29B9AA] flex-shrink-0" />
+              <p className="text-xs font-bold uppercase tracking-[0.28em]">Category breakdown</p>
+            </div>
             <p className="mt-2 text-sm text-[#7B6E67]">Kartu-kartu ini diringkas biar nggak terlalu memanjang ke bawah, tapi tetap enak dibaca per kategori.</p>
           </div>
           <p className="text-xs font-semibold text-[#7B6E67]">{comparison.length} kategori aktif</p>

@@ -100,12 +100,40 @@ const IN_KEYWORDS = [
   "credit",
   "incoming",
   "uang masuk",
+  "dana masuk",
+  "transfer masuk",
+  "pembayaran masuk",
+  "pembayaran diterima",
 ];
 
-const detectDirection = (text: string): "in" | "out" | null => {
+const detectDirection = (text: string, packageName = ""): "in" | "out" | null => {
   const lower = text.toLowerCase();
-  const outScore = OUT_KEYWORDS.filter((kw) => lower.includes(kw)).length;
+  const lowerPkg = packageName.toLowerCase();
+
+  // 1. Merchant / Seller apps always receive incoming payments
+  if (
+    lowerPkg.includes("merchant") ||
+    lowerPkg.includes("seller") ||
+    lowerPkg.includes("partner")
+  ) {
+    return "in";
+  }
+
+  // 2. Keyword scoring
+  const outScore = OUT_KEYWORDS.filter((kw) => {
+    // Avoid false positive matching 'bayar' inside 'pembayaran' unless it is 'pembayaran ke/untuk'
+    if (kw === "bayar" && lower.includes("pembayaran")) {
+      return lower.includes("pembayaran ke") || lower.includes("pembayaran untuk");
+    }
+    // Avoid false positive matching 'pembayaran' inside 'pembayaran masuk'
+    if (kw === "pembayaran" && lower.includes("pembayaran masuk")) {
+      return false;
+    }
+    return lower.includes(kw);
+  }).length;
+
   const inScore = IN_KEYWORDS.filter((kw) => lower.includes(kw)).length;
+
   if (outScore > inScore) return "out";
   if (inScore > outScore) return "in";
   return null;
@@ -114,13 +142,25 @@ const detectDirection = (text: string): "in" | "out" | null => {
 // ── Merchant extraction ───────────────────────────────────────
 
 const extractMerchant = (text: string): string | undefined => {
-  // "di [Merchant Name]" pattern
-  const diMatch = /di\s+([A-Z][a-zA-Z\s&.']+?)(?:\.|,|\n|$)/i.exec(text);
+  // 1. "di [Merchant Name]" pattern
+  const diMatch = /\bdi\s+([A-Z0-9][a-zA-Z0-9&.']*(?:\s+[A-Z0-9][a-zA-Z0-9&.']*)*)/.exec(text);
   if (diMatch) return diMatch[1].trim();
 
-  // "ke [Merchant/Person]" pattern
-  const keMatch = /(?:transfer ke|kirim ke|bayar ke)\s+([A-Z][a-zA-Z\s&.']+?)(?:\.|,|\n|$)/i.exec(text);
+  // 2. "ke [Merchant/Person]" pattern
+  const keMatch = /\b(?:transfer ke|kirim ke|bayar ke)\s+([A-Z0-9][a-zA-Z0-9&.']*(?:\s+[A-Z0-9][a-zA-Z0-9&.']*)*)/.exec(text);
   if (keMatch) return keMatch[1].trim();
+
+  // 3. "dari [Sender/Merchant]" pattern (common in credit/deposit texts)
+  const dariMatch = /\b(?:dari|from)\s+([A-Z0-9][a-zA-Z0-9&.']*(?:\s+[A-Z0-9][a-zA-Z0-9&.']*)*)/.exec(text);
+  if (dariMatch) return dariMatch[1].trim();
+
+  // 4. General "ke [Name]" fallback pattern
+  const simpleKeMatch = /\bke\s+([A-Z0-9][a-zA-Z0-9&.']*(?:\s+[A-Z0-9][a-zA-Z0-9&.']*)*)/.exec(text);
+  if (simpleKeMatch) return simpleKeMatch[1].trim();
+
+  // 5. "Penerima [Name]" pattern (common in Livin email/notif layout)
+  const penerimaMatch = /\b(?:penerima|recipient)\s*[\n:]*\s*([A-Z0-9][a-zA-Z0-9&.']*(?:\s+[A-Z0-9][a-zA-Z0-9&.']*)*)/i.exec(text);
+  if (penerimaMatch) return penerimaMatch[1].trim();
 
   return undefined;
 };
@@ -173,7 +213,7 @@ export const parseNotification = (
   const amount = parseAmount(text);
   if (!amount) return null;
 
-  const direction = detectDirection(text);
+  const direction = detectDirection(text, appName);
   if (!direction) return null;
 
   const merchant = extractMerchant(text);
@@ -202,7 +242,12 @@ export const parseNotification = (
 
 export const DEFAULT_ALLOWLIST_APPS = [
   { package_name: "com.gojek.app", app_name: "Gojek (GoPay)" },
-  { package_name: "com.ubercab.driver", app_name: "OVO" },
+  { package_name: "com.gopay.app", app_name: "GoPay Standalone" },
+  { package_name: "com.gojek.merchant", app_name: "GoPay Merchant" },
+  { package_name: "com.gopay.merchant", app_name: "GoPay Merchant (Standalone)" },
+  { package_name: "com.grab.merchant", app_name: "GrabMerchant" },
+  { package_name: "com.shopee.partner", app_name: "Shopee Partner (Merchant)" },
+  { package_name: "ovo.id", app_name: "OVO" },
   { package_name: "com.shopee.id", app_name: "Shopee (ShopeePay)" },
   { package_name: "id.dana", app_name: "Dana" },
   { package_name: "com.telkom.tcash", app_name: "LinkAja" },
@@ -211,6 +256,37 @@ export const DEFAULT_ALLOWLIST_APPS = [
   { package_name: "com.seamoney.android", app_name: "SeaBank" },
   { package_name: "com.bca", app_name: "myBCA" },
   { package_name: "com.bri.brimo", app_name: "BRImo" },
-  { package_name: "id.co.mandiri.mobile", app_name: "Livin' Mandiri" },
+  { package_name: "id.co.mandiri.mobile", app_name: "Livin' Mandiri (Classic)" },
+  { package_name: "id.co.mandiri.livin", app_name: "Livin' Mandiri (New)" },
   { package_name: "com.bni.mobilebanking", app_name: "BNI Mobile Banking" },
+  { package_name: "com.google.android.gm", app_name: "Gmail" },
+  { package_name: "com.microsoft.office.outlook", app_name: "Outlook" },
+  { package_name: "com.samsung.android.email.provider", app_name: "Samsung Mail" },
 ];
+
+export const getAppFriendlyName = (packageName: string): string => {
+  const mapping: Record<string, string> = {
+    "com.gojek.app": "GoPay",
+    "com.gopay.app": "GoPay",
+    "com.gojek.merchant": "GoPay Merchant",
+    "com.gopay.merchant": "GoPay Merchant",
+    "com.grab.merchant": "GrabMerchant",
+    "com.shopee.partner": "Shopee Partner",
+    "ovo.id": "OVO",
+    "com.shopee.id": "ShopeePay",
+    "id.dana": "Dana",
+    "com.telkom.tcash": "LinkAja",
+    "com.btpn.jenius": "Jenius",
+    "id.co.bankjago.android": "Bank Jago",
+    "com.seamoney.android": "SeaBank",
+    "com.bca": "myBCA",
+    "com.bri.brimo": "BRImo",
+    "id.co.mandiri.mobile": "Livin Mandiri",
+    "id.co.mandiri.livin": "Livin Mandiri",
+    "com.bni.mobilebanking": "BNI Mobile",
+    "com.google.android.gm": "Gmail",
+    "com.microsoft.office.outlook": "Outlook",
+    "com.samsung.android.email.provider": "Email"
+  };
+  return mapping[packageName] || packageName;
+};

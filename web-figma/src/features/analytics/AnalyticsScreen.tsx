@@ -3,6 +3,24 @@ import { toast } from "sonner";
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { calculateMonthlySummary, getCategoryBreakdown, getDailyAverage, getDailySpendingTrend, getTopCategories } from "../../services/analyticsService";
 import { getQrisInsight, getDailyBurnRate, getTopMerchants, detectRecurringPatterns } from "../../services/walletAnalyticsService";
+import { 
+  TrendingUp, 
+  TrendingDown, 
+  PiggyBank, 
+  ArrowDownCircle, 
+  ChevronLeft, 
+  ChevronRight, 
+  Globe, 
+  Activity, 
+  Trophy, 
+  Wallet, 
+  QrCode, 
+  Flame, 
+  AlertTriangle, 
+  Store, 
+  Repeat2, 
+  PieChart as PieIcon 
+} from "lucide-react";
 import { formatMonthLabel, getCurrentMonth, shiftMonth } from "../../utils/date";
 import { formatCurrency } from "../../utils/format";
 
@@ -87,61 +105,96 @@ export default function AnalyticsScreen() {
       <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#A78BFA]">{text.heading}</p>
+            <div className="flex items-center gap-1.5 text-[#A78BFA] mb-1">
+              <Activity className="w-4 h-4 text-[#A78BFA]" />
+              <p className="text-xs font-bold uppercase tracking-[0.28em] leading-none">{text.heading}</p>
+            </div>
             <h1 className="mt-3 max-w-3xl text-3xl font-bold text-[#1A2B38]">{text.title}</h1>
             <p className="mt-3 max-w-3xl text-sm text-[#7B6E67]">{text.subtitle}</p>
           </div>
-          <div className="inline-flex rounded-full bg-[#F3EDE8] p-1 text-xs font-semibold">
+          <div className="inline-flex items-center rounded-full bg-[#F3EDE8] p-1 text-xs font-semibold gap-1">
+            <Globe className="w-3.5 h-3.5 text-[#7B6E67] ml-2.5" />
             <button
               onClick={() => setCopyLanguage("id")}
-              className={`rounded-full px-4 py-2 ${copyLanguage === "id" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67]"}`}
+              className={`rounded-full px-3 py-1.5 ${copyLanguage === "id" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67]"}`}
             >
-              Indonesia
+              ID
             </button>
             <button
               onClick={() => setCopyLanguage("en")}
-              className={`rounded-full px-4 py-2 ${copyLanguage === "en" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67]"}`}
+              className={`rounded-full px-3 py-1.5 ${copyLanguage === "en" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67]"}`}
             >
-              English
+              EN
             </button>
           </div>
         </div>
       </div>
 
-      <div className="flex items-center justify-between rounded-2xl border border-black/10 bg-white px-5 py-4 shadow-sm">
-        <button onClick={() => setMonth((current) => shiftMonth(current, -1))} className="rounded-full bg-[#F3EDE8] px-4 py-2 text-xs font-semibold text-[#7B6E67]">
-          Prev
+      <div className="flex items-center justify-between rounded-2xl border border-black/10 bg-white px-4 py-3 shadow-sm">
+        <button 
+          onClick={() => setMonth((current) => shiftMonth(current, -1))} 
+          className="rounded-full bg-[#F3EDE8] p-2 text-[#7B6E67] hover:bg-[#EADFD8] transition-colors"
+          title="Previous Month"
+        >
+          <ChevronLeft className="w-4 h-4" />
         </button>
         <p className="text-sm font-bold text-[#1A2B38]">{formatMonthLabel(month)}</p>
-        <button onClick={() => setMonth((current) => shiftMonth(current, 1))} className="rounded-full bg-[#F3EDE8] px-4 py-2 text-xs font-semibold text-[#7B6E67]">
-          Next
+        <button 
+          onClick={() => setMonth((current) => shiftMonth(current, 1))} 
+          className="rounded-full bg-[#F3EDE8] p-2 text-[#7B6E67] hover:bg-[#EADFD8] transition-colors"
+          title="Next Month"
+        >
+          <ChevronRight className="w-4 h-4" />
         </button>
       </div>
 
       {summary ? (
-        <div className="grid gap-4 md:grid-cols-4">
-          <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
-            <p className="text-xs text-[#7B6E67]">{text.income}</p>
-            <p className="mt-1 text-xl font-bold text-[#1A2B38]">{formatCurrency(summary.income)}</p>
+        <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4">
+          <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-[#7B6E67]">{text.income}</p>
+              <p className="mt-1 text-xl font-bold text-[#1A2B38]">{formatCurrency(summary.income)}</p>
+            </div>
+            <div className="h-8 w-8 rounded-full bg-[#EBF7F6] flex items-center justify-center text-[#29B9AA] flex-shrink-0">
+              <TrendingUp className="h-4 w-4" />
+            </div>
           </div>
-          <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
-            <p className="text-xs text-[#7B6E67]">{text.spending}</p>
-            <p className="mt-1 text-xl font-bold text-[#FF6B58]">{formatCurrency(summary.totalSpending)}</p>
+          <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-[#7B6E67]">{text.spending}</p>
+              <p className="mt-1 text-xl font-bold text-[#FF6B58]">{formatCurrency(summary.totalSpending)}</p>
+            </div>
+            <div className="h-8 w-8 rounded-full bg-red-50 flex items-center justify-center text-[#FF6B58] flex-shrink-0">
+              <TrendingDown className="h-4 w-4" />
+            </div>
           </div>
-          <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
-            <p className="text-xs text-[#7B6E67]">{text.remaining}</p>
-            <p className={`mt-1 text-xl font-bold ${summary.remaining >= 0 ? "text-[#29B9AA]" : "text-[#FF6B58]"}`}>{formatCurrency(summary.remaining)}</p>
+          <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-[#7B6E67]">{text.remaining}</p>
+              <p className={`mt-1 text-xl font-bold ${summary.remaining >= 0 ? "text-[#29B9AA]" : "text-[#FF6B58]"}`}>{formatCurrency(summary.remaining)}</p>
+            </div>
+            <div className={`h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 ${summary.remaining >= 0 ? "bg-[#EBF7F6] text-[#29B9AA]" : "bg-red-50 text-[#FF6B58]"}`}>
+              <PiggyBank className="h-4 w-4" />
+            </div>
           </div>
-          <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
-            <p className="text-xs text-[#7B6E67]">{text.dailyAvg}</p>
-            <p className="mt-1 text-xl font-bold text-[#1A2B38]">{formatCurrency(dailyAverage)}</p>
+          <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm flex items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-[#7B6E67]">{text.dailyAvg}</p>
+              <p className="mt-1 text-xl font-bold text-[#1A2B38]">{formatCurrency(dailyAverage)}</p>
+            </div>
+            <div className="h-8 w-8 rounded-full bg-[#FEF9F4] flex items-center justify-center text-[#7B6E67] flex-shrink-0">
+              <ArrowDownCircle className="h-4 w-4" />
+            </div>
           </div>
         </div>
       ) : null}
 
       <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr]">
         <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">{text.byCategory}</p>
+          <div className="flex items-center gap-1.5 text-[#7B6E67] mb-4">
+            <PieIcon className="w-4 h-4 text-[#7B6E67]" />
+            <p className="text-xs font-bold uppercase tracking-[0.28em] leading-none">{text.byCategory}</p>
+          </div>
           <div className="mt-4 h-[320px]">
             {categoryBreakdown.length === 0 ? (
               <div className="flex h-full items-center justify-center rounded-2xl bg-[#FEF9F4] text-sm text-[#7B6E67]">Belum ada data category breakdown.</div>
@@ -161,7 +214,10 @@ export default function AnalyticsScreen() {
         </div>
 
         <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">{text.trend}</p>
+          <div className="flex items-center gap-1.5 text-[#7B6E67] mb-4">
+            <Activity className="w-4 h-4 text-[#7B6E67]" />
+            <p className="text-xs font-bold uppercase tracking-[0.28em] leading-none">{text.trend}</p>
+          </div>
           <div className="mt-4 h-[320px]">
             {dailyTrend.length === 0 ? (
               <div className="flex h-full items-center justify-center rounded-2xl bg-[#FEF9F4] text-sm text-[#7B6E67]">Belum ada data trend harian.</div>
@@ -181,7 +237,10 @@ export default function AnalyticsScreen() {
       </div>
 
       <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-        <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">{text.topCategories}</p>
+        <div className="flex items-center gap-1.5 text-[#7B6E67] mb-4">
+          <Trophy className="w-4 h-4 text-[#7B6E67]" />
+          <p className="text-xs font-bold uppercase tracking-[0.28em] leading-none">{text.topCategories}</p>
+        </div>
         <div className="mt-4 space-y-3">
           {topCategories.length === 0 ? (
             <div className="rounded-2xl bg-[#FEF9F4] px-5 py-8 text-center text-sm text-[#7B6E67]">Belum ada top categories untuk bulan ini.</div>
@@ -205,18 +264,25 @@ export default function AnalyticsScreen() {
       {(qrisInsight || burnRate > 0 || topMerchants.length > 0 || recurringPatterns.length > 0) && (
         <>
           <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Wallet Insights — 30 hari terakhir</p>
+            <div className="flex items-center gap-1.5 text-[#7B6E67] mb-4">
+              <Wallet className="w-4 h-4 text-[#7B6E67]" />
+              <p className="text-xs font-bold uppercase tracking-[0.28em] leading-none">Wallet Insights — 30 hari terakhir</p>
+            </div>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               {/* QRIS */}
               {qrisInsight && (
                 <div className="rounded-2xl bg-[#EBF7F6] p-4">
-                  <p className="text-xs font-semibold text-[#7B6E67]">QRIS 7 hari</p>
+                  <div className="flex items-center gap-1 text-[#7B6E67] mb-1">
+                    <QrCode className="w-3.5 h-3.5" />
+                    <p className="text-xs font-semibold">QRIS 7 hari</p>
+                  </div>
                   <p className="mt-1 text-2xl font-bold text-[#29B9AA]">{qrisInsight.count}x</p>
                   <p className="text-sm text-[#1A2B38] font-semibold">{formatCurrency(qrisInsight.total)}</p>
                   <p className="mt-1 text-xs text-[#7B6E67]">Rata-rata {formatCurrency(qrisInsight.avg)} per transaksi</p>
                   {qrisInsight.count >= 5 && (
-                    <p className="mt-2 rounded-xl bg-[#FFB347]/20 px-3 py-1.5 text-xs font-semibold text-[#7B6E67]">
-                      ⚠ QRIS sering — kecil-kecil jadi bukit.
+                    <p className="mt-2 rounded-xl bg-[#FFB347]/20 px-3 py-1.5 text-xs font-semibold text-[#7B6E67] flex items-center gap-1.5">
+                      <AlertTriangle className="w-3.5 h-3.5 text-[#FFB347] flex-shrink-0" />
+                      <span>QRIS sering — kecil-kecil jadi bukit.</span>
                     </p>
                   )}
                 </div>
@@ -224,7 +290,10 @@ export default function AnalyticsScreen() {
               {/* Burn rate */}
               {burnRate > 0 && (
                 <div className="rounded-2xl bg-[#FEF9F4] p-4">
-                  <p className="text-xs font-semibold text-[#7B6E67]">Burn rate harian</p>
+                  <div className="flex items-center gap-1 text-[#7B6E67] mb-1">
+                    <Flame className="w-3.5 h-3.5" />
+                    <p className="text-xs font-semibold">Burn rate harian</p>
+                  </div>
                   <p className="mt-1 text-2xl font-bold text-[#FF6B58]">{formatCurrency(burnRate)}</p>
                   <p className="mt-1 text-xs text-[#7B6E67]">Rata-rata pengeluaran wallet per hari (30 hari)</p>
                   <p className="mt-1 text-xs text-[#7B6E67]">Per bulan ≈ {formatCurrency(burnRate * 30)}</p>
@@ -236,7 +305,10 @@ export default function AnalyticsScreen() {
           {/* Top merchants */}
           {topMerchants.length > 0 && (
             <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Merchant terbanyak (30 hari)</p>
+              <div className="flex items-center gap-1.5 text-[#7B6E67] mb-4">
+                <Store className="w-4 h-4 text-[#7B6E67]" />
+                <p className="text-xs font-bold uppercase tracking-[0.28em] leading-none">Merchant terbanyak (30 hari)</p>
+              </div>
               <div className="mt-3 space-y-2">
                 {topMerchants.map((m, i) => (
                   <div key={m.merchant} className="flex items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-3">
@@ -257,7 +329,10 @@ export default function AnalyticsScreen() {
           {/* Recurring patterns */}
           {recurringPatterns.length > 0 && (
             <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Pola transaksi berulang (terdeteksi otomatis)</p>
+              <div className="flex items-center gap-1.5 text-[#7B6E67] mb-4">
+                <Repeat2 className="w-4 h-4 text-[#7B6E67]" />
+                <p className="text-xs font-bold uppercase tracking-[0.28em] leading-none">Pola transaksi berulang (terdeteksi otomatis)</p>
+              </div>
               <div className="mt-3 space-y-2">
                 {recurringPatterns.map((r, i) => (
                   <div key={i} className="flex items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-3">

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useAuth } from "../../contexts/AuthContext";
+import { LogIn, UserPlus, ArrowRight } from "lucide-react";
 
 export default function AuthScreen() {
   const { signIn, signUp, isLoading } = useAuth();
@@ -87,14 +88,16 @@ export default function AuthScreen() {
           <div className="mb-6 flex rounded-full bg-[#F3EDE8] p-1">
             <button
               onClick={() => switchMode(false)}
-              className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition-colors ${!isSignUp ? "bg-white text-[#FF6B58]" : "text-[#7B6E67]"}`}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition-colors ${!isSignUp ? "bg-white text-[#FF6B58]" : "text-[#7B6E67]"}`}
             >
+              <LogIn className="w-4 h-4" />
               Login
             </button>
             <button
               onClick={() => switchMode(true)}
-              className={`flex-1 rounded-full px-4 py-3 text-sm font-semibold transition-colors ${isSignUp ? "bg-white text-[#FF6B58]" : "text-[#7B6E67]"}`}
+              className={`flex-1 flex items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition-colors ${isSignUp ? "bg-white text-[#FF6B58]" : "text-[#7B6E67]"}`}
             >
+              <UserPlus className="w-4 h-4" />
               Daftar
             </button>
           </div>
@@ -135,9 +138,21 @@ export default function AuthScreen() {
           <button
             onClick={handleSubmit}
             disabled={busy}
-            className="mt-8 w-full rounded-2xl bg-[#29B9AA] px-4 py-4 text-sm font-semibold text-white transition-opacity disabled:opacity-60"
+            className="mt-8 w-full rounded-2xl bg-[#29B9AA] px-4 py-4 text-sm font-semibold text-white transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
           >
-            {busy ? "Mohon tunggu..." : isSignUp ? "Buat Akun" : "Masuk Sekarang"}
+            {busy ? (
+              <span>Mohon tunggu...</span>
+            ) : isSignUp ? (
+              <>
+                <UserPlus className="w-4 h-4" />
+                <span>Buat Akun</span>
+              </>
+            ) : (
+              <>
+                <span>Masuk Sekarang</span>
+                <ArrowRight className="w-4 h-4" />
+              </>
+            )}
           </button>
 
           <p className="mt-6 text-center text-sm leading-6 text-[#7B6E67]">

@@ -9,7 +9,8 @@
  */
 
 import type { CsvColumnMapping, CsvImportPreview, WalletTransaction } from "../types/models";
-import { checkDuplicate } from "./walletTransactionService";
+import supabase from "../lib/supabase";
+import { getCurrentUserId } from "./queryUtils";
 
 // ── CSV Parsing ───────────────────────────────────────────────
 
@@ -166,44 +167,106 @@ export const buildTransactionCandidates = (
 export const buildImportPreview = async (
   candidates: Partial<WalletTransaction>[],
 ): Promise<CsvImportPreview> => {
+  if (candidates.length === 0) {
+    return {
+      total: 0,
+      newCount: 0,
+      duplicateCount: 0,
+      reviewCount: 0,
+      transactions: [],
+    };
+  }
+
   let newCount = 0;
   let duplicateCount = 0;
   let reviewCount = 0;
 
-  const processed = await Promise.all(
-    candidates.map(async (tx) => {
+  try {
+    const userId = await getCurrentUserId();
+
+    // 1. Calculate time bounds (min/max occurred_at)
+    let minTime = Infinity;
+    let maxTime = -Infinity;
+
+    for (const tx of candidates) {
+      if (tx.occurred_at) {
+        const time = new Date(tx.occurred_at).getTime();
+        if (time < minTime) minTime = time;
+        if (time > maxTime) maxTime = time;
+      }
+    }
+
+    if (minTime === Infinity || maxTime === -Infinity) {
+      return {
+        total: candidates.length,
+        newCount: 0,
+        duplicateCount: 0,
+        reviewCount: candidates.length,
+        transactions: candidates.map((tx) => ({ ...tx, is_duplicate: false })),
+      };
+    }
+
+    // Add 5-minute buffer on both ends of the window (5 * 60 * 1000 = 300000ms)
+    const windowStart = new Date(minTime - 300000).toISOString();
+    const windowEnd = new Date(maxTime + 300000).toISOString();
+
+    // 2. Fetch existing transactions inside the window once
+    const { data: existing, error } = await supabase
+      .from("wallet_transactions")
+      .select("id, wallet_id, amount, direction, occurred_at")
+      .eq("user_id", userId)
+      .gte("occurred_at", windowStart)
+      .lte("occurred_at", windowEnd);
+
+    if (error) throw error;
+    const existingList = existing || [];
+
+    // Helper function for in-memory check
+    const isDuplicateLocal = (tx: Partial<WalletTransaction>): boolean => {
+      if (!tx.amount || !tx.occurred_at) return false;
+      const txTime = new Date(tx.occurred_at).getTime();
+
+      return existingList.some((ext) => {
+        if (tx.wallet_id !== ext.wallet_id) return false;
+        if (tx.amount !== ext.amount) return false;
+        if (tx.direction !== ext.direction) return false;
+        const extTime = new Date(ext.occurred_at).getTime();
+        return Math.abs(txTime - extTime) <= 300000;
+      });
+    };
+
+    // 3. Process candidates locally
+    const processed = candidates.map((tx) => {
       if (!tx.amount || !tx.occurred_at) {
         reviewCount++;
         return { ...tx, is_duplicate: false };
       }
 
-      try {
-        const isDup = await checkDuplicate({
-          wallet_id: tx.wallet_id || undefined,
-          amount: tx.amount,
-          direction: tx.direction || "out",
-          occurred_at: tx.occurred_at,
-        });
-
-        if (isDup) {
-          duplicateCount++;
-          return { ...tx, is_duplicate: true };
-        } else {
-          newCount++;
-          return { ...tx, is_duplicate: false };
-        }
-      } catch {
-        reviewCount++;
+      const isDup = isDuplicateLocal(tx);
+      if (isDup) {
+        duplicateCount++;
+        return { ...tx, is_duplicate: true };
+      } else {
+        newCount++;
         return { ...tx, is_duplicate: false };
       }
-    }),
-  );
+    });
 
-  return {
-    total: candidates.length,
-    newCount,
-    duplicateCount,
-    reviewCount,
-    transactions: processed,
-  };
+    return {
+      total: candidates.length,
+      newCount,
+      duplicateCount,
+      reviewCount,
+      transactions: processed,
+    };
+  } catch (err) {
+    console.error("Error building CSV import preview:", err);
+    return {
+      total: candidates.length,
+      newCount: 0,
+      duplicateCount: 0,
+      reviewCount: candidates.length,
+      transactions: candidates.map((tx) => ({ ...tx, is_duplicate: false })),
+    };
+  }
 };

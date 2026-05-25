@@ -15,9 +15,20 @@ export const getMonthDateRange = (monthStr: string) => {
 
 export const getDaysInMonth = (monthStr: string) => getMonthDateRange(monthStr).lastDay || 0;
 
-export const getCurrentMonth = () => new Date().toISOString().slice(0, 7);
+export const getToday = (): string => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
 
-export const getToday = () => new Date().toISOString().slice(0, 10);
+export const getCurrentMonth = (): string => {
+  const d = new Date();
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  return `${year}-${month}`;
+};
 
 export const formatHumanDate = (dateStr: string) =>
   new Date(`${dateStr}T00:00:00`).toLocaleDateString("id-ID", {
@@ -37,4 +48,34 @@ export const shiftMonth = (monthStr: string, delta: number) => {
   const date = new Date(`${monthStr}-01T00:00:00`);
   date.setMonth(date.getMonth() + delta);
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+};
+
+// ── Timezone-Aware Bounds & Formatting ────────────────────────
+
+export const toLocalDateString = (isoString: string): string => {
+  if (!isoString) return "";
+  const d = new Date(isoString);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+export const getLocalDayBounds = (dateStr: string) => {
+  const start = new Date(`${dateStr}T00:00:00`);
+  const end = new Date(`${dateStr}T23:59:59.999`);
+  return {
+    startUtc: start.toISOString(),
+    endUtc: end.toISOString()
+  };
+};
+
+export const getLocalMonthBounds = (monthStr: string) => {
+  const [year, month] = monthStr.split("-").map(Number);
+  const start = new Date(year, month - 1, 1, 0, 0, 0, 0);
+  const end = new Date(year, month, 0, 23, 59, 59, 999);
+  return {
+    startUtc: start.toISOString(),
+    endUtc: end.toISOString()
+  };
 };

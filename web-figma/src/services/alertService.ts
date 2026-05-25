@@ -1,5 +1,5 @@
 import supabase from "../lib/supabase";
-import { getMonthDateRange } from "../utils/date";
+import { getLocalDayBounds, getLocalMonthBounds } from "../utils/date";
 import { getCurrentUserId } from "./queryUtils";
 
 export const getAlertLevel = (percentUsed: number) => {
@@ -12,7 +12,7 @@ export const getAlertLevel = (percentUsed: number) => {
 export const checkBudgetStatus = async (month: string) => {
   try {
     const userId = await getCurrentUserId();
-    const { startDate, endDate } = getMonthDateRange(month);
+    const { startUtc, endUtc } = getLocalMonthBounds(month);
 
     // Get monthly plan
     const { data: planData } = await supabase
@@ -32,8 +32,8 @@ export const checkBudgetStatus = async (month: string) => {
       .select("*")
       .eq("user_id", userId)
       .eq("type", "expense")
-      .gte("occurred_at", `${startDate}T00:00:00Z`)
-      .lte("occurred_at", `${endDate}T23:59:59Z`);
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc);
 
     const totalSpending = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
     const remaining = income - totalSpending;
@@ -73,14 +73,16 @@ export const checkDailyBudget = async (date: string) => {
     // Daily budget = monthly income / days in month
     const dailyBudget = planData.income / daysInMonth;
 
+    const { startUtc, endUtc } = getLocalDayBounds(date);
+
     // Get spending today from wallet_transactions
     const { data: todayExpenses } = await supabase
       .from("wallet_transactions")
       .select("*")
       .eq("user_id", userId)
       .eq("type", "expense")
-      .gte("occurred_at", `${date}T00:00:00Z`)
-      .lte("occurred_at", `${date}T23:59:59Z`);
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc);
 
     const todaySpending = todayExpenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
     const remaining = dailyBudget - todaySpending;
@@ -113,7 +115,7 @@ export const checkCategoryBudget = async (categoryId: string | number, month: st
 
     if (!categoryData) return null;
 
-    const { startDate, endDate } = getMonthDateRange(month);
+    const { startUtc, endUtc } = getLocalMonthBounds(month);
 
     // Get category spending this month from wallet_transactions
     const { data: expenses } = await supabase
@@ -122,8 +124,8 @@ export const checkCategoryBudget = async (categoryId: string | number, month: st
       .eq("user_id", userId)
       .eq("category_id", categoryId)
       .eq("type", "expense")
-      .gte("occurred_at", `${startDate}T00:00:00Z`)
-      .lte("occurred_at", `${endDate}T23:59:59Z`);
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc);
 
     const spending = expenses?.reduce((sum, exp) => sum + exp.amount, 0) || 0;
     const budget = categoryData.budget_amount;
@@ -149,19 +151,54 @@ export const checkCategoryBudget = async (categoryId: string | number, month: st
 export const getAllCategoriesBudgetStatus = async (month: string) => {
   try {
     const userId = await getCurrentUserId();
+    const { startUtc, endUtc } = getLocalMonthBounds(month);
+
+    // 1. Get all active categories
     const { data: categories } = await supabase
       .from("budget_categories")
       .select("*")
       .eq("user_id", userId)
       .eq("is_active", true);
 
-    if (!categories) return [];
+    if (!categories || categories.length === 0) return [];
 
-    const statuses = await Promise.all(
-      categories.map((cat) => checkCategoryBudget(cat.id, month)),
-    );
+    // 2. Get all transaction expenses for this month in a single query
+    const { data: expenses } = await supabase
+      .from("wallet_transactions")
+      .select("category_id, amount")
+      .eq("user_id", userId)
+      .eq("type", "expense")
+      .gte("occurred_at", startUtc)
+      .lte("occurred_at", endUtc);
 
-    return statuses.filter((s) => s !== null) as any[];
+    // 3. Aggregate spending by category ID in-memory
+    const spendingMap: Record<string | number, number> = {};
+    if (expenses) {
+      for (const exp of expenses) {
+        if (exp.category_id) {
+          spendingMap[exp.category_id] = (spendingMap[exp.category_id] || 0) + exp.amount;
+        }
+      }
+    }
+
+    // 4. Construct status list in-memory
+    return categories.map((cat) => {
+      const spending = spendingMap[cat.id] || 0;
+      const budget = cat.budget_amount;
+      const remaining = budget - spending;
+      const percentUsed = budget > 0 ? (spending / budget) * 100 : 0;
+
+      return {
+        categoryName: cat.name,
+        categoryColor: cat.color,
+        budget,
+        spending,
+        remaining: Math.round(remaining),
+        percentUsed,
+        isOverBudget: remaining < 0,
+        alertLevel: getAlertLevel(percentUsed),
+      };
+    });
   } catch (err) {
     console.error("Error getting categories budget status:", err);
     throw err;

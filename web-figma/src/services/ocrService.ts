@@ -30,6 +30,10 @@ export const extractTextFromImage = async (
   const Tesseract = await getTesseract();
 
   const worker = await Tesseract.createWorker("ind+eng", 1, {
+    workerPath: "/tesseract/tesseract-worker.min.js",
+    langPath: "/tesseract/lang-data",
+    corePath: "/tesseract",
+    gzip: false,
     logger: (m: any) => {
       if (onProgress && m.status === "recognizing text") {
         onProgress(Math.round(m.progress * 100), m.status);
@@ -168,10 +172,19 @@ export const parseReceiptImage = async (
 
   // Merchant: usually one of the first lines with meaningful text
   let merchant: string | undefined;
-  for (let i = 0; i < Math.min(MERCHANT_POSITION_LINES, lines.length); i++) {
-    const line = lines[i];
-    // Skip lines that look like addresses, phone numbers, or short codes
-    if (line.length > 3 && !/^\d+$/.test(line) && !/^\+62/.test(line)) {
+  for (let i = 0; i < Math.min(10, lines.length); i++) {
+    let line = lines[i];
+    // Clean up trailing/leading noise
+    line = line.replace(/^[^\w\s]+|[^\w\s]+$/g, '').trim();
+    
+    // Skip lines that look like addresses, phone numbers, pure numbers, or gibberish
+    if (
+      line.length > 3 &&
+      !/^\d/.test(line) && // Doesn't start with a number
+      !/(?:jl|jalan|ruko|plaza|blok)\.?\s/i.test(line) && // Not an address
+      /[aeiou]/i.test(line) && // Contains vowels
+      line.replace(/[^0-9]/g, "").length < 5 // Doesn't contain many numbers (like a phone/NPWP)
+    ) {
       merchant = line;
       break;
     }
@@ -198,15 +211,16 @@ export const parseReceiptImage = async (
     }
   }
 
-  // Fallback: take the last (largest) currency amount seen
+  // Fallback: take the largest currency amount seen in the entire text
   if (!totalAmount) {
     const amounts: number[] = [];
-    const pattern = /Rp\s*([\d.,]+)/gi;
+    // Match standard Indonesian currency patterns like 50.000, 50,000, or Rp50.000
+    const pattern = /(?:Rp\s*)?(\d{1,3}(?:[.,]\d{3})+)/gi;
     let match;
     while ((match = pattern.exec(rawText)) !== null) {
-      const raw = match[1].replace(/\./g, "").replace(",", ".");
-      const num = parseFloat(raw);
-      if (!isNaN(num) && num > 0) amounts.push(num);
+      const raw = match[1].replace(/[.,]/g, ""); // Strip all separators
+      const num = parseInt(raw, 10);
+      if (!isNaN(num) && num > 1000) amounts.push(num); // Minimum 1000 for a receipt
     }
     if (amounts.length > 0) totalAmount = Math.max(...amounts);
   }
