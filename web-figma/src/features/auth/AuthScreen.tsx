@@ -75,37 +75,7 @@ export default function AuthScreen() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FEF9F4] px-6 py-10 relative overflow-hidden flex items-center justify-center">
-      {/* Dynamic Animated Background Circles */}
-      <style>{`
-        @keyframes float-1 {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.95); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        @keyframes float-2 {
-          0% { transform: translate(0px, 0px) scale(1); }
-          50% { transform: translate(-40px, 40px) scale(1.15); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        @keyframes float-3 {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(-15px, -30px) scale(0.9); }
-          66% { transform: translate(30px, 15px) scale(1.1); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        @keyframes float-4 {
-          0% { transform: translate(0px, 0px) scale(1); }
-          50% { transform: translate(40px, -20px) scale(0.85); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        .animate-float-1 { animation: float-1 20s infinite ease-in-out; }
-        .animate-float-2 { animation: float-2 24s infinite ease-in-out; }
-        .animate-float-3 { animation: float-3 18s infinite ease-in-out; }
-        .animate-float-4 { animation: float-4 22s infinite ease-in-out; }
-      `}</style>
-      
+    <div className="min-h-screen bg-[#FEF9F4] px-6 py-8 relative overflow-hidden flex items-center justify-center">
       {/* Background Blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         {/* Coral Blob */}
@@ -144,13 +114,13 @@ export default function AuthScreen() {
           </div>
         </section>
 
-        <section className="rounded-[36px] border border-black/10 bg-white/75 backdrop-blur-xl p-8 shadow-[0_24px_64px_rgba(255,107,88,0.12)] flex flex-col justify-center w-full max-w-md mx-auto lg:max-w-none">
+        <section className="rounded-[36px] border border-black/10 bg-white/40 backdrop-blur-2xl p-6 shadow-[0_24px_64px_rgba(255,107,88,0.12)] flex flex-col justify-center w-full max-w-md mx-auto lg:max-w-none">
           {/* Logo / Branding on Mobile */}
-          <div className="mb-6 flex flex-col items-center justify-center lg:hidden">
+          <div className="mb-4 flex flex-col items-center justify-center lg:hidden">
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#FF6B58]">Budget Flow</p>
           </div>
 
-          <div className="mb-6 flex rounded-full bg-[#F3EDE8] p-1">
+          <div className="mb-5 flex rounded-full bg-[#F3EDE8] p-1">
             <button
               onClick={() => switchMode(false)}
               className={`flex-1 flex items-center justify-center gap-2 rounded-full px-4 py-3 text-sm font-semibold transition-colors ${!isSignUp ? "bg-white text-[#FF6B58]" : "text-[#7B6E67]"}`}
@@ -169,12 +139,12 @@ export default function AuthScreen() {
 
           <h2 className="text-2xl font-bold text-[#1A2B38]">{isSignUp ? "Bikin akun baru" : "Masuk dan lanjutkan pencatatanmu"}</h2>
           {successMessage ? (
-            <div className="mt-4 rounded-2xl border border-[#BEE8E4] bg-[#EBF7F6] px-4 py-3 text-sm leading-6 text-[#136B62]">
+            <div className="mt-3 rounded-2xl border border-[#BEE8E4] bg-[#EBF7F6] px-4 py-3 text-sm leading-6 text-[#136B62]">
               {successMessage}
             </div>
           ) : null}
 
-          <div className="mt-8 space-y-5">
+          <div className="mt-5 space-y-3.5">
             <input
               type="email"
               placeholder="nama@email.com"
@@ -203,7 +173,7 @@ export default function AuthScreen() {
           <button
             onClick={handleSubmit}
             disabled={busy}
-            className="mt-8 w-full rounded-2xl bg-[#29B9AA] px-4 py-4 text-sm font-semibold text-white transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
+            className="mt-5 w-full rounded-2xl bg-[#29B9AA] px-4 py-4 text-sm font-semibold text-white transition-opacity disabled:opacity-60 flex items-center justify-center gap-2"
           >
             {busy ? (
               <span>Mohon tunggu...</span>
@@ -221,13 +191,12 @@ export default function AuthScreen() {
           </button>
 
           {/* Divider */}
-          <div className="relative my-6 flex items-center justify-center">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-black/5"></div>
-            </div>
-            <span className="relative bg-white px-3 text-xs text-[#7B6E67]">
+          <div className="my-4 flex items-center gap-3">
+            <div className="flex-1 border-t border-black/5"></div>
+            <span className="text-xs text-[#7B6E67]/60">
               atau {isSignUp ? "daftar" : "masuk"} dengan
             </span>
+            <div className="flex-1 border-t border-black/5"></div>
           </div>
 
           {/* Google Login Button */}
@@ -258,7 +227,7 @@ export default function AuthScreen() {
             <span>Google</span>
           </button>
 
-          <p className="mt-6 text-center text-sm leading-6 text-[#7B6E67]">
+          <p className="mt-4 text-center text-sm leading-6 text-[#7B6E67]">
             {isSignUp ? "Sudah punya akun? " : "Belum punya akun? "}
             <button
               onClick={() => switchMode(!isSignUp)}
