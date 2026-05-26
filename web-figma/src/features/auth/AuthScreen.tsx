@@ -2,6 +2,7 @@ import { useState } from "react";
 import { toast } from "../../utils/toast";
 import { useAuth } from "../../contexts/AuthContext";
 import { LogIn, UserPlus, ArrowRight } from "lucide-react";
+import supabase from "../../lib/supabase";
 
 export default function AuthScreen() {
   const { signIn, signUp, isLoading } = useAuth();
@@ -56,9 +57,68 @@ export default function AuthScreen() {
 
   const busy = isLoading || isSubmitting;
 
+  const handleGoogleSignIn = async () => {
+    try {
+      setIsSubmitting(true);
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
+        },
+      });
+      if (error) throw error;
+    } catch (err: any) {
+      toast.error(err.message || "Gagal masuk dengan Google.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[#FEF9F4] px-6 py-10">
-      <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
+    <div className="min-h-screen bg-[#FEF9F4] px-6 py-10 relative overflow-hidden flex items-center justify-center">
+      {/* Dynamic Animated Background Circles */}
+      <style>{`
+        @keyframes float-1 {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.95); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        @keyframes float-2 {
+          0% { transform: translate(0px, 0px) scale(1); }
+          50% { transform: translate(-40px, 40px) scale(1.15); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        @keyframes float-3 {
+          0% { transform: translate(0px, 0px) scale(1); }
+          33% { transform: translate(-15px, -30px) scale(0.9); }
+          66% { transform: translate(30px, 15px) scale(1.1); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        @keyframes float-4 {
+          0% { transform: translate(0px, 0px) scale(1); }
+          50% { transform: translate(40px, -20px) scale(0.85); }
+          100% { transform: translate(0px, 0px) scale(1); }
+        }
+        .animate-float-1 { animation: float-1 20s infinite ease-in-out; }
+        .animate-float-2 { animation: float-2 24s infinite ease-in-out; }
+        .animate-float-3 { animation: float-3 18s infinite ease-in-out; }
+        .animate-float-4 { animation: float-4 22s infinite ease-in-out; }
+      `}</style>
+      
+      {/* Background Blobs */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
+        {/* Coral Blob */}
+        <div className="absolute top-10 left-10 w-72 h-72 rounded-full bg-[#FF6B58]/10 blur-3xl animate-float-1" />
+        {/* Teal Blob */}
+        <div className="absolute bottom-10 right-10 w-80 h-80 rounded-full bg-[#29B9AA]/10 blur-3xl animate-float-2" />
+        {/* Orange Blob */}
+        <div className="absolute top-1/3 right-12 w-64 h-64 rounded-full bg-[#FFB347]/10 blur-3xl animate-float-3" />
+        {/* Blue Blob */}
+        <div className="absolute bottom-1/3 left-12 w-64 h-64 rounded-full bg-[#5BAEE8]/10 blur-3xl animate-float-4" />
+      </div>
+
+      <div className="relative z-10 w-full mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
         <section className="hidden lg:flex relative overflow-hidden rounded-[36px] border border-black/10 bg-white p-8 shadow-[0_24px_64px_rgba(41,185,170,0.15)] lg:min-h-[560px] lg:flex-col lg:justify-center lg:p-12">
           <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-[#FFB347]/30" />
           <div className="absolute bottom-0 right-24 h-28 w-28 rounded-full bg-[#29B9AA]/15" />
@@ -84,7 +144,7 @@ export default function AuthScreen() {
           </div>
         </section>
 
-        <section className="rounded-[36px] border border-black/10 bg-white p-8 shadow-[0_24px_64px_rgba(255,107,88,0.12)] lg:flex lg:min-h-[560px] lg:flex-col lg:justify-center">
+        <section className="rounded-[36px] border border-black/10 bg-white p-8 shadow-[0_24px_64px_rgba(255,107,88,0.12)] flex flex-col justify-center min-h-[520px] lg:min-h-[560px]">
           {/* Logo / Branding on Mobile */}
           <div className="mb-6 flex flex-col items-center justify-center lg:hidden">
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#FF6B58]">Budget Flow</p>
@@ -158,6 +218,44 @@ export default function AuthScreen() {
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
+          </button>
+
+          {/* Divider */}
+          <div className="relative my-6 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-black/5"></div>
+            </div>
+            <span className="relative bg-white px-3 text-xs text-[#7B6E67]">
+              atau {isSignUp ? "daftar" : "masuk"} dengan
+            </span>
+          </div>
+
+          {/* Google Login Button */}
+          <button
+            type="button"
+            disabled={busy}
+            onClick={handleGoogleSignIn}
+            className="flex w-full items-center justify-center gap-3 rounded-2xl border border-black/10 bg-white py-3.5 text-sm font-semibold text-[#1A2B38] transition-colors hover:bg-[#FEF9F4] disabled:opacity-60"
+          >
+            <svg className="h-5 w-5" viewBox="0 0 24 24">
+              <path
+                fill="#EA4335"
+                d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.54 15.02 1 12 1 7.24 1 3.2 3.73 1.24 7.7l3.83 2.97C6.01 7.42 8.78 5.04 12 5.04z"
+              />
+              <path
+                fill="#4285F4"
+                d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.28 1.46-1.1 2.69-2.34 3.51l3.63 2.82c2.13-1.97 3.74-4.86 3.74-8.48z"
+              />
+              <path
+                fill="#FBBC05"
+                d="M5.07 14.73c-.24-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29L1.24 7.18C.45 8.77 0 10.54 0 12.44c0 1.9.45 3.67 1.24 5.26l3.83-2.97z"
+              />
+              <path
+                fill="#34A853"
+                d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.63-2.82c-1.01.68-2.3 1.09-3.96 1.09-3.22 0-5.99-2.38-6.96-5.63l-3.83 2.97C3.2 20.27 7.24 23 12 23z"
+              />
+            </svg>
+            <span>Google</span>
           </button>
 
           <p className="mt-6 text-center text-sm leading-6 text-[#7B6E67]">
