@@ -79,13 +79,13 @@ export default function AuthScreen() {
       {/* Background Blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         {/* Coral Blob */}
-        <div className="absolute top-10 left-10 w-80 h-80 rounded-full bg-[#FF6B58]/45 blur-sm animate-float-1" />
+        <div className="absolute top-10 left-10 w-80 h-80 rounded-full bg-[#FF6B58]/45 animate-float-1" />
         {/* Teal Blob */}
-        <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-[#29B9AA]/45 blur-sm animate-float-2" />
+        <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-[#29B9AA]/45 animate-float-2" />
         {/* Orange Blob */}
-        <div className="absolute top-1/3 right-12 w-72 h-72 rounded-full bg-[#FFB347]/45 blur-sm animate-float-3" />
+        <div className="absolute top-1/3 right-12 w-72 h-72 rounded-full bg-[#FFB347]/45 animate-float-3" />
         {/* Blue Blob */}
-        <div className="absolute bottom-1/3 left-12 w-72 h-72 rounded-full bg-[#5BAEE8]/45 blur-sm animate-float-4" />
+        <div className="absolute bottom-1/3 left-12 w-72 h-72 rounded-full bg-[#5BAEE8]/45 animate-float-4" />
       </div>
 
       <div className="relative z-10 w-full mx-auto grid min-h-0 lg:min-h-[calc(100vh-5rem)] max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
