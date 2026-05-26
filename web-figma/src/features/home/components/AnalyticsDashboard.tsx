@@ -1,4 +1,4 @@
-import { Activity, Sparkles, PieChart as PieIcon } from "lucide-react";
+import { Activity, Sparkles, PieChart as PieIcon, ArrowUpRight } from "lucide-react";
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -157,12 +157,15 @@ export default function AnalyticsDashboard({
               return (
                 <div 
                   key={i} 
-                  onClick={() => onNavigateTab?.("budget")}
+                  onClick={() => onNavigateTab?.("history", { search: `?category=${encodeURIComponent(cat.name)}` })}
                   className="space-y-1 cursor-pointer group hover:bg-[#FEF9F4]/40 p-1.5 rounded-xl -mx-1.5 transition-all text-left"
                 >
                   <div className="flex items-center justify-between text-xs font-semibold">
-                    <span className="text-[#1A2B38] group-hover:text-[#29B9AA] group-hover:underline transition-colors">{cat.name}</span>
-                    <div className="text-right">
+                    <div className="flex items-center gap-1 min-w-0">
+                      <span className="text-[#1A2B38] group-hover:text-[#29B9AA] group-hover:underline transition-colors truncate">{cat.name}</span>
+                      <ArrowUpRight className="w-3.5 h-3.5 text-[#29B9AA] opacity-50 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+                    </div>
+                    <div className="text-right shrink-0">
                       <span className="text-[#1A2B38] font-bold">Rp {cat.amount.toLocaleString("id-ID")}</span>
                       <span className="ml-1.5 text-xs text-[#7B6E67]">({Math.round(percent)}%)</span>
                     </div>

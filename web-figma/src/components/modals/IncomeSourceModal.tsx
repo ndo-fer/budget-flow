@@ -3,6 +3,8 @@ import { toast } from "../../utils/toast";
 import type { IncomeSource } from "../../types/models";
 import { createIncomeSource, updateIncomeSource } from "../../services/incomeService";
 import ModalShell from "./ModalShell";
+import Dropdown from "../Dropdown";
+import { Clock } from "lucide-react";
 
 export default function IncomeSourceModal({
   open,
@@ -64,6 +66,12 @@ export default function IncomeSourceModal({
     }
   };
 
+  const frequencyOptions = [
+    { value: "monthly", label: "Monthly (Bulanan)" },
+    { value: "weekly", label: "Weekly (Mingguan)" },
+    { value: "one-time", label: "One-time (Sekali)" },
+  ];
+
   return (
     <ModalShell
       open={open}
@@ -104,18 +112,16 @@ export default function IncomeSourceModal({
             className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#29B9AA]"
           />
         </label>
-        <label className="block">
+        <div className="block">
           <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Frekuensi</span>
-          <select
+          <Dropdown
+            options={frequencyOptions}
             value={frequency}
-            onChange={(event) => setFrequency(event.target.value)}
-            className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#29B9AA]"
-          >
-            <option value="monthly">monthly</option>
-            <option value="weekly">weekly</option>
-            <option value="one-time">one-time</option>
-          </select>
-        </label>
+            onChange={setFrequency}
+            placeholder="Pilih Frekuensi"
+            icon={<Clock className="h-4 w-4" />}
+          />
+        </div>
       </div>
     </ModalShell>
   );

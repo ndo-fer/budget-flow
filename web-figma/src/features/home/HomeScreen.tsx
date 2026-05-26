@@ -12,20 +12,17 @@ import {
 import { getCurrentPlan } from "../../services/planService";
 import { getCurrentMonth, getToday } from "../../utils/date";
 import { toast } from "../../utils/toast";
-import ExpenseModal from "../../components/modals/ExpenseModal";
 
 // Sub-components
 import NativePermissionAlert from "./components/NativePermissionAlert";
 import SafeToSpendCard from "./components/SafeToSpendCard";
 import DailyBudgetLimitCard from "./components/DailyBudgetLimitCard";
-import QuickChecklistActions from "./components/QuickChecklistActions";
 import ProgressRencanaCard from "./components/ProgressRencanaCard";
 import AnalyticsDashboard from "./components/AnalyticsDashboard";
+import ModalShell from "../../components/modals/ModalShell";
 
 interface HomeScreenProps {
   onNavigateTab: (tabId: any, options?: { replace?: boolean; search?: string }) => void;
-  openExpenseComposerTick: number;
-  onClearExpenseComposerTick?: () => void;
   activeTab?: string;
   searchParams?: string;
   clearSearchParams?: () => void;
@@ -33,8 +30,6 @@ interface HomeScreenProps {
 
 export default function HomeScreen({ 
   onNavigateTab, 
-  openExpenseComposerTick, 
-  onClearExpenseComposerTick,
   activeTab, 
   searchParams, 
   clearSearchParams 
@@ -63,7 +58,26 @@ export default function HomeScreen({
   }, [activeTab, searchParams, clearSearchParams]);
   
   // Modals state
-  const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
+  const [showPaydayModal, setShowPaydayModal] = useState(false);
+  const [paydayInput, setPaydayInput] = useState(() => {
+    try {
+      return localStorage.getItem("bf_payday_day_of_month") || "25";
+    } catch {
+      return "25";
+    }
+  });
+
+  const handleSavePayday = () => {
+    let day = parseInt(paydayInput, 10);
+    if (isNaN(day) || day < 1 || day > 31) {
+      toast.error("Tanggal gajian harus bernilai 1 - 31.");
+      return;
+    }
+    localStorage.setItem("bf_payday_day_of_month", String(day));
+    toast.success(`Tanggal gajian berhasil diubah ke tanggal ${day} setiap bulan.`);
+    setShowPaydayModal(false);
+    loadData(true); // silent reload
+  };
   
   // Safe to Spend metrics
   const [safeToSpend, setSafeToSpend] = useState<any>(null);
@@ -78,8 +92,8 @@ export default function HomeScreen({
   const [isLoading, setIsLoading] = useState(true);
   const [androidNotifEnabled, setAndroidNotifEnabled] = useState<boolean | null>(null);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  const loadData = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const dateStr = getToday();
       const [
@@ -115,12 +129,20 @@ export default function HomeScreen({
       console.error("Error loading home dashboard data:", err);
       toast.error("Gagal memuat data dashboard.");
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
+
+    const handleTransactionAdded = () => {
+      loadData(true);
+    };
+    window.addEventListener("wallet-transaction-added", handleTransactionAdded);
+    return () => {
+      window.removeEventListener("wallet-transaction-added", handleTransactionAdded);
+    };
   }, [month]);
 
   useEffect(() => {
@@ -154,12 +176,7 @@ export default function HomeScreen({
     };
   }, []);
 
-  useEffect(() => {
-    if (openExpenseComposerTick > 0) {
-      setIsExpenseModalOpen(true);
-      onClearExpenseComposerTick?.();
-    }
-  }, [openExpenseComposerTick, onClearExpenseComposerTick]);
+  // Removed openExpenseComposerTick handler
 
   if (isLoading) {
     return (
@@ -185,10 +202,10 @@ export default function HomeScreen({
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Beranda</p>
           <h1 className="mt-1 text-3xl font-bold text-[#1A2B38]">Estimated Financials</h1>
         </div>
-        <div className="flex rounded-2xl bg-[#F3EDE8] p-1 shadow-inner">
+        <div className="flex w-full sm:w-auto sm:inline-flex rounded-2xl bg-[#F3EDE8] p-1 shadow-inner">
           <button
             onClick={() => setActiveSubTab("overview")}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`flex-1 sm:flex-initial justify-center rounded-xl px-4 py-2 text-xs font-bold transition-all active:scale-[0.97] flex items-center gap-1.5 ${
               activeSubTab === "overview" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
             }`}
           >
@@ -197,7 +214,7 @@ export default function HomeScreen({
           </button>
           <button
             onClick={() => setActiveSubTab("analytics")}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`flex-1 sm:flex-initial justify-center rounded-xl px-4 py-2 text-xs font-bold transition-all active:scale-[0.97] flex items-center gap-1.5 ${
               activeSubTab === "analytics" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
             }`}
           >
@@ -209,9 +226,17 @@ export default function HomeScreen({
 
       {activeSubTab === "overview" ? (
         <div className="grid gap-6 md:grid-cols-3">
-          <SafeToSpendCard safeToSpend={safeToSpend} onNavigateTab={onNavigateTab} />
+          <SafeToSpendCard 
+            safeToSpend={safeToSpend} 
+            onNavigateTab={onNavigateTab} 
+            onEditPayday={() => {
+              try {
+                setPaydayInput(localStorage.getItem("bf_payday_day_of_month") || "25");
+              } catch {}
+              setShowPaydayModal(true);
+            }} 
+          />
           <DailyBudgetLimitCard safeToSpend={safeToSpend} onNavigateTab={onNavigateTab} />
-          <QuickChecklistActions onNavigateTab={onNavigateTab} />
           <ProgressRencanaCard month={month} monthlyPlan={monthlyPlan} />
         </div>
       ) : (
@@ -225,12 +250,44 @@ export default function HomeScreen({
         />
       )}
 
-      {/* Expense Modal */}
-      <ExpenseModal 
-        isOpen={isExpenseModalOpen} 
-        onClose={() => setIsExpenseModalOpen(false)} 
-        onSuccess={loadData} 
-      />
+      <ModalShell
+        open={showPaydayModal}
+        title="Ubah Tanggal Gajian"
+        subtitle="Sesuaikan siklus perhitungan Safe-To-Spend harian Anda."
+        onClose={() => setShowPaydayModal(false)}
+        footer={
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setShowPaydayModal(false)}
+              className="rounded-2xl border border-black/10 px-5 py-3 text-sm font-semibold text-[#7B6E67]"
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleSavePayday}
+              className="rounded-2xl bg-[#29B9AA] px-5 py-3 text-sm font-semibold text-white"
+            >
+              Simpan
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wider text-[#7B6E67]">Tanggal Gajian (1 - 31)</label>
+            <p className="text-xs text-[#7B6E67] mt-1 mb-2">Siklus belanja aman harian (Safe-to-Spend) Anda akan dihitung ulang berdasarkan sisa hari menuju tanggal gajian ini.</p>
+            <input
+              type="number"
+              min="1"
+              max="31"
+              required
+              className="w-full rounded-2xl border border-[#FEF9F4] bg-[#FEF9F4] px-4 py-3.5 text-sm font-semibold text-[#1A2B38] outline-none focus:border-[#29B9AA] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+              value={paydayInput}
+              onChange={(e) => setPaydayInput(e.target.value)}
+            />
+          </div>
+        </div>
+      </ModalShell>
     </div>
   );
 }

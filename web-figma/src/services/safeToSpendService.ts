@@ -47,11 +47,56 @@ export const getDaysUntilNextIncome = (month: string): number => {
   today.setHours(0, 0, 0, 0);
 
   const [year, mon] = month.split("-").map(Number);
-  // Default to last day of the current month
-  const endOfMonth = new Date(year, mon, 0);
-  endOfMonth.setHours(0, 0, 0, 0);
 
-  const diffMs = endOfMonth.getTime() - today.getTime();
+  let paydayDay = 25;
+  let useEndOfMonth = false;
+  try {
+    const stored = localStorage.getItem("bf_payday_day_of_month");
+    if (stored) {
+      const parsed = parseInt(stored, 10);
+      if (!isNaN(parsed) && parsed >= 1 && parsed <= 31) {
+        paydayDay = parsed;
+      }
+    } else {
+      // Default to 25th of the month to match the edit modal UI default
+      paydayDay = 25;
+      useEndOfMonth = false;
+    }
+  } catch {
+    paydayDay = 25;
+    useEndOfMonth = false;
+  }
+
+  let targetDate: Date;
+  if (useEndOfMonth) {
+    targetDate = new Date(year, mon, 0);
+  } else {
+    targetDate = new Date(year, mon - 1, paydayDay);
+    if (targetDate.getMonth() !== mon - 1) {
+      targetDate = new Date(year, mon, 0);
+    }
+  }
+  targetDate.setHours(0, 0, 0, 0);
+
+  if (today.getTime() > targetDate.getTime()) {
+    if (useEndOfMonth) {
+      return 1;
+    } else {
+      let nextMonth = mon + 1;
+      let nextYear = year;
+      if (nextMonth > 12) {
+        nextMonth = 1;
+        nextYear++;
+      }
+      targetDate = new Date(nextYear, nextMonth - 1, paydayDay);
+      if (targetDate.getMonth() !== nextMonth - 1) {
+        targetDate = new Date(nextYear, nextMonth, 0);
+      }
+      targetDate.setHours(0, 0, 0, 0);
+    }
+  }
+
+  const diffMs = targetDate.getTime() - today.getTime();
   const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
   return Math.max(diffDays, 1);
 };

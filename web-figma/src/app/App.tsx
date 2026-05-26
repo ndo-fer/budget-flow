@@ -1,19 +1,28 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Toaster } from "./components/ui/sonner";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { OnboardingProvider, useOnboarding } from "../contexts/OnboardingContext";
 import AuthScreen from "../features/auth/AuthScreen";
 import OnboardingOverlay from "../features/onboarding/OnboardingOverlay";
 import AppShell from "../layouts/AppShell";
+import DesignPreviewScreen from "../features/design-preview/DesignPreviewScreen";
+import VersionSwitcher from "../components/VersionSwitcher";
 import { initNativeUI } from "../services/capacitorService";
 import { registerServiceWorker, scheduleHourlyCheck, tryRegisterPeriodicSync } from "../services/notificationService";
 
 function RootNavigator() {
   const { user, isLoading } = useAuth();
   const { isLoading: onboardingLoading } = useOnboarding();
+  const [path, setPath] = useState(() => typeof window !== "undefined" ? window.location.pathname : "/home");
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    const sync = () => setPath(window.location.pathname);
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || isLoading) return;
 
     if (!user && window.location.pathname !== "/auth") {
       window.history.replaceState({}, "", "/auth");
@@ -22,7 +31,7 @@ function RootNavigator() {
     if (user && (window.location.pathname === "/" || window.location.pathname === "/auth")) {
       window.history.replaceState({}, "", "/home");
     }
-  }, [user]);
+  }, [user, isLoading]);
 
   // Initialize notifications when user is authenticated
   useEffect(() => {
@@ -48,10 +57,23 @@ function RootNavigator() {
     return <AuthScreen />;
   }
 
+  const isPreview = path === "/design-preview";
+
   return (
     <>
-      <AppShell />
-      {!onboardingLoading ? <OnboardingOverlay /> : null}
+      {isPreview
+        ? <DesignPreviewScreen onBack={() => {
+            window.history.pushState({}, "", "/home");
+            setPath("/home");
+          }} />
+        : (
+          <>
+            <AppShell />
+            {!onboardingLoading ? <OnboardingOverlay /> : null}
+          </>
+        )
+      }
+      <VersionSwitcher />
     </>
   );
 }

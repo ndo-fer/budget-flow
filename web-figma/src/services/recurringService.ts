@@ -1,5 +1,5 @@
 import supabase from "../lib/supabase";
-import { getMonthDateRange } from "../utils/date";
+import { getMonthDateRange, toLocalDateString } from "../utils/date";
 import { getCurrentUserId } from "./queryUtils";
 
 export const getRecurringExpenses = async () => {
@@ -131,7 +131,7 @@ export const generateMonthlyRecurringExpenses = async (month: string) => {
             d >= startDate &&
             (!recurring.end_date || d <= new Date(recurring.end_date))
           ) {
-            const dateStr = d.toISOString().split("T")[0];
+            const dateStr = toLocalDateString(d);
             generatedExpenses.push({
               date: dateStr,
               category_id: recurring.category_id,
@@ -153,7 +153,7 @@ export const generateMonthlyRecurringExpenses = async (month: string) => {
           d.setDate(d.getDate() + 1)
         ) {
           if (!recurring.end_date || d <= new Date(recurring.end_date)) {
-            const dateStr = d.toISOString().split("T")[0];
+            const dateStr = toLocalDateString(d);
             generatedExpenses.push({
               date: dateStr,
               category_id: recurring.category_id,

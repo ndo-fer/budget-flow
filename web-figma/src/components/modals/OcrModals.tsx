@@ -49,6 +49,7 @@ export function ScreenshotBalanceModal({
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editedBalance, setEditedBalance] = useState("");
+  const [activeMode, setActiveMode] = useState<"screenshot" | "manual">("screenshot");
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -69,6 +70,16 @@ export function ScreenshotBalanceModal({
       setSelectedWalletId(wallets[0].id);
     }
   }, [wallets]);
+
+  // Prefill current wallet balance when switching to manual mode or changing wallet
+  useEffect(() => {
+    if (activeMode === "manual" && selectedWalletId) {
+      const wallet = wallets.find((w) => w.id === selectedWalletId);
+      if (wallet) {
+        setEditedBalance(wallet.estimated_balance.toString());
+      }
+    }
+  }, [activeMode, selectedWalletId, wallets]);
 
   const handleFile = useCallback(async (file: File) => {
     setImageFile(file);
@@ -113,8 +124,10 @@ export function ScreenshotBalanceModal({
 
     setIsSaving(true);
     try {
-      await adjustWalletBalance(selectedWalletId, balance, "Update dari screenshot", "screenshot");
-      toast.success("Saldo berhasil diperbarui dari screenshot.");
+      const description = activeMode === "manual" ? "Koreksi saldo manual" : "Update dari screenshot";
+      const source = activeMode === "manual" ? "manual" : "screenshot";
+      await adjustWalletBalance(selectedWalletId, balance, description, source);
+      toast.success(activeMode === "manual" ? "Saldo berhasil dikoreksi." : "Saldo berhasil diperbarui dari screenshot.");
       onSaved();
       onClose();
     } catch (e: any) {
@@ -135,14 +148,49 @@ export function ScreenshotBalanceModal({
         <div className="mb-5 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-1.5 text-[#29B9AA] mb-0.5">
-              <Upload className="w-4 h-4 animate-bounce" />
-              <span className="text-[10px] font-bold uppercase tracking-[0.28em] leading-none">Automated Sync</span>
+              {activeMode === "screenshot" ? (
+                <>
+                  <Upload className="w-4 h-4 animate-bounce" />
+                  <span className="text-[10px] font-bold uppercase tracking-[0.28em] leading-none">Automated Sync</span>
+                </>
+              ) : (
+                <>
+                  <Edit3 className="w-4 h-4" />
+                  <span className="text-[10px] font-bold uppercase tracking-[0.28em] leading-none">Manual Correction</span>
+                </>
+              )}
             </div>
-            <h2 className="text-xl font-bold text-[#1A2B38]">Update dari Screenshot</h2>
-            <p className="mt-1 text-xs text-[#7B6E67]">Upload screenshot saldo dari aplikasi finansialmu.</p>
+            <h2 className="text-xl font-bold text-[#1A2B38]">
+              {activeMode === "screenshot" ? "Update dari Screenshot" : "Koreksi Saldo Manual"}
+            </h2>
+            <p className="mt-1 text-xs text-[#7B6E67]">
+              {activeMode === "screenshot" 
+                ? "Upload screenshot saldo dari aplikasi finansialmu." 
+                : "Masukkan nominal saldo terbaru wallet Anda secara langsung."}
+            </p>
           </div>
           <button onClick={onClose} className="rounded-full bg-[#F3EDE8] hover:bg-[#EADFD8] p-2 text-[#7B6E67]">
             <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Mode Selector Tabs */}
+        <div className="mb-5 flex rounded-2xl bg-[#F3EDE8] p-1 shadow-inner">
+          <button
+            onClick={() => setActiveMode("screenshot")}
+            className={`flex-1 rounded-xl py-2 text-center text-xs font-bold transition-all active:scale-[0.98] ${
+              activeMode === "screenshot" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
+            }`}
+          >
+            Upload Screenshot
+          </button>
+          <button
+            onClick={() => setActiveMode("manual")}
+            className={`flex-1 rounded-xl py-2 text-center text-xs font-bold transition-all active:scale-[0.98] ${
+              activeMode === "manual" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
+            }`}
+          >
+            Input Manual
           </button>
         </div>
 
@@ -160,97 +208,132 @@ export function ScreenshotBalanceModal({
           </select>
         </div>
 
-        {/* Drop zone */}
-        {!imageUrl ? (
-          <div
-            className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[#29B9AA]/40 bg-[#EBF7F6]/50 px-6 py-12 text-center"
-            onDrop={handleDrop}
-            onDragOver={(e) => e.preventDefault()}
-            onClick={() => inputRef.current?.click()}
-          >
-            <Upload className="h-8 w-8 text-[#29B9AA]" />
-            <p className="text-sm font-semibold text-[#1A2B38]">Drop screenshot di sini atau klik untuk pilih</p>
-            <p className="text-xs text-[#7B6E67]">JPG, PNG, WebP — screenshot langsung dari aplikasi</p>
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              className="hidden"
-              onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
-            />
+        {activeMode === "manual" ? (
+          <div className="space-y-4">
+            <div>
+              <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Saldo Baru Wallet (Rp)</label>
+              <input
+                type="number"
+                placeholder="Masukkan nominal saldo terbaru"
+                className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3.5 text-sm font-semibold text-[#1A2B38] outline-none focus:border-[#29B9AA]"
+                value={editedBalance}
+                onChange={(e) => setEditedBalance(e.target.value)}
+              />
+              <p className="mt-1.5 text-[10px] text-[#7B6E67]">
+                Saldo wallet akan diperbarui ke nominal ini secara instan. Selisih saldo akan otomatis dihitung dan disesuaikan.
+              </p>
+            </div>
+            
+            <button
+              onClick={handleSave}
+              disabled={isSaving}
+              className="mt-5 w-full rounded-2xl bg-[#29B9AA] hover:bg-[#229A8E] py-3.5 text-sm font-bold text-white disabled:opacity-50 flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
+            >
+              {isSaving ? (
+                "Menyimpan..."
+              ) : (
+                <>
+                  <Check className="w-4 h-4" />
+                  Simpan Saldo Terkoreksi
+                </>
+              )}
+            </button>
           </div>
         ) : (
-          <div className="space-y-4">
-            <div className="relative overflow-hidden rounded-2xl">
-              <img src={imageUrl} alt="screenshot" className="max-h-48 w-full object-contain bg-[#F3EDE8]" />
-              <button
-                onClick={() => { setImageUrl(null); setImageFile(null); setOcrResult(null); }}
-                className="absolute right-2 top-2 rounded-full bg-white/80 p-1.5"
+          <>
+            {/* Drop zone */}
+            {!imageUrl ? (
+              <div
+                className="flex cursor-pointer flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-[#29B9AA]/40 bg-[#EBF7F6]/50 px-6 py-12 text-center"
+                onDrop={handleDrop}
+                onDragOver={(e) => e.preventDefault()}
+                onClick={() => inputRef.current?.click()}
               >
-                <X className="h-3 w-3 text-[#7B6E67]" />
-              </button>
-            </div>
+                <Upload className="h-8 w-8 text-[#29B9AA]" />
+                <p className="text-sm font-semibold text-[#1A2B38]">Drop screenshot di sini atau klik untuk pilih</p>
+                <p className="text-xs text-[#7B6E67]">JPG, PNG, WebP — screenshot langsung dari aplikasi</p>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+                />
+              </div>
+            ) : (
+              <div className="space-y-4">
+                <div className="relative overflow-hidden rounded-2xl">
+                  <img src={imageUrl} alt="screenshot" className="max-h-48 w-full object-contain bg-[#F3EDE8]" />
+                  <button
+                    onClick={() => { setImageUrl(null); setImageFile(null); setOcrResult(null); }}
+                    className="absolute right-2 top-2 rounded-full bg-white/80 p-1.5"
+                  >
+                    <X className="h-3 w-3 text-[#7B6E67]" />
+                  </button>
+                </div>
 
-            {isProcessing && (
-              <OcrProgress progress={progress} status={progressStatus} />
-            )}
+                {isProcessing && (
+                  <OcrProgress progress={progress} status={progressStatus} />
+                )}
 
-            {ocrResult && !isProcessing && (
-              <div className="rounded-2xl bg-[#EBF7F6] p-4">
-                <p className="text-xs font-bold uppercase tracking-widest text-[#7B6E67]">Hasil OCR</p>
-                <div className="mt-3 space-y-3">
-                  {ocrResult.walletCandidate && (
-                    <div className="flex items-center justify-between">
-                      <p className="text-xs text-[#7B6E67]">Wallet terdeteksi</p>
-                      <p className="text-sm font-semibold text-[#1A2B38]">{ocrResult.walletCandidate}</p>
+                {ocrResult && !isProcessing && (
+                  <div className="rounded-2xl bg-[#EBF7F6] p-4">
+                    <p className="text-xs font-bold uppercase tracking-widest text-[#7B6E67]">Hasil OCR</p>
+                    <div className="mt-3 space-y-3">
+                      {ocrResult.walletCandidate && (
+                        <div className="flex items-center justify-between">
+                          <p className="text-xs text-[#7B6E67]">Wallet terdeteksi</p>
+                          <p className="text-sm font-semibold text-[#1A2B38]">{ocrResult.walletCandidate}</p>
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-[#7B6E67]">Saldo yang ditemukan</p>
+                        <p className="text-sm font-semibold text-[#1A2B38]">
+                          {ocrResult.balanceCandidate ? formatCurrency(ocrResult.balanceCandidate) : "Tidak terdeteksi"}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-[#7B6E67]">Confidence</p>
+                        <p className="text-sm font-semibold text-[#29B9AA]">{Math.round(ocrResult.confidence * 100)}%</p>
+                      </div>
                     </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-[#7B6E67]">Saldo yang ditemukan</p>
-                    <p className="text-sm font-semibold text-[#1A2B38]">
-                      {ocrResult.balanceCandidate ? formatCurrency(ocrResult.balanceCandidate) : "Tidak terdeteksi"}
+                  </div>
+                )}
+
+                {ocrResult && !isProcessing && (
+                  <div>
+                    <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Konfirmasi nominal saldo (Rp)</label>
+                    <input
+                      type="number"
+                      className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm font-semibold text-[#1A2B38] outline-none focus:border-[#29B9AA]"
+                      value={editedBalance}
+                      onChange={(e) => setEditedBalance(e.target.value)}
+                    />
+                    <p className="mt-1.5 text-[10px] text-[#7B6E67]">
+                      Review dulu sebelum simpan. Selisih akan dicatat sebagai untracked gap.
                     </p>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <p className="text-xs text-[#7B6E67]">Confidence</p>
-                    <p className="text-sm font-semibold text-[#29B9AA]">{Math.round(ocrResult.confidence * 100)}%</p>
-                  </div>
-                </div>
+                )}
               </div>
             )}
 
             {ocrResult && !isProcessing && (
-              <div>
-                <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Konfirmasi nominal saldo (Rp)</label>
-                <input
-                  type="number"
-                  className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm font-semibold text-[#1A2B38] outline-none focus:border-[#29B9AA]"
-                  value={editedBalance}
-                  onChange={(e) => setEditedBalance(e.target.value)}
-                />
-                <p className="mt-1.5 text-[10px] text-[#7B6E67]">
-                  Review dulu sebelum simpan. Selisih akan dicatat sebagai untracked gap.
-                </p>
-              </div>
+              <button
+                onClick={handleSave}
+                disabled={isSaving}
+                className="mt-5 w-full rounded-2xl bg-[#29B9AA] hover:bg-[#229A8E] py-3 text-sm font-bold text-white disabled:opacity-50 flex items-center justify-center gap-1.5"
+              >
+                {isSaving ? (
+                  "Menyimpan..."
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Simpan sebagai saldo terkonfirmasi
+                  </>
+                )}
+              </button>
             )}
-          </div>
-        )}
-
-        {ocrResult && !isProcessing && (
-          <button
-            onClick={handleSave}
-            disabled={isSaving}
-            className="mt-5 w-full rounded-2xl bg-[#29B9AA] hover:bg-[#229A8E] py-3 text-sm font-bold text-white disabled:opacity-50 flex items-center justify-center gap-1.5"
-          >
-            {isSaving ? (
-              "Menyimpan..."
-            ) : (
-              <>
-                <Check className="w-4 h-4" />
-                Simpan sebagai saldo terkonfirmasi
-              </>
-            )}
-          </button>
+          </>
         )}
       </div>
     </div>

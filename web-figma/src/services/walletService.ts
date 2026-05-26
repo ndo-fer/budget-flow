@@ -91,40 +91,14 @@ export const adjustWalletBalance = async (
   reason?: string,
   source: "manual" | "screenshot" | "csv" = "manual",
 ): Promise<void> => {
-  const userId = await getCurrentUserId();
+  const { error } = await supabase.rpc("adjust_wallet_balance", {
+    p_wallet_id: walletId,
+    p_new_balance: newConfirmedBalance,
+    p_reason: reason || null,
+    p_source: source,
+  });
 
-  // Fetch current estimated balance
-  const wallet = await getWalletById(walletId);
-  const difference = newConfirmedBalance - wallet.estimated_balance;
-
-  // Insert adjustment record
-  const { error: adjError } = await supabase.from("balance_adjustments").insert([
-    {
-      user_id: userId,
-      wallet_id: walletId,
-      previous_estimated_balance: wallet.estimated_balance,
-      new_confirmed_balance: newConfirmedBalance,
-      difference,
-      reason,
-      source,
-    },
-  ]);
-  if (adjError) throw adjError;
-
-  // Update wallet confirmed_balance + reset estimated + update last_confirmed_at
-  const { error: walletError } = await supabase
-    .from("wallets")
-    .update({
-      confirmed_balance: newConfirmedBalance,
-      estimated_balance: newConfirmedBalance,
-      last_confirmed_at: new Date().toISOString(),
-      confidence: 1.0,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("user_id", userId)
-    .eq("id", walletId);
-
-  if (walletError) throw walletError;
+  if (error) throw error;
 };
 
 // ── Helpers ───────────────────────────────────────────────────

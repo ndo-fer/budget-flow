@@ -46,7 +46,14 @@ export const parseRawCsv = (raw: string): { headers: string[]; rows: Record<stri
     return result;
   };
 
-  const headers = parseLine(lines[0]).map((h) => h.replace(/^\uFEFF/, "")); // strip BOM
+  const headers = parseLine(lines[0])
+    .map((h) => h.replace(/^\uFEFF/, "").trim())
+    .filter(Boolean);
+
+  if (headers.length === 0) {
+    throw new Error("File CSV tidak valid atau header kosong.");
+  }
+
   const rows: Record<string, string>[] = [];
 
   for (let i = 1; i < lines.length; i++) {
@@ -55,7 +62,7 @@ export const parseRawCsv = (raw: string): { headers: string[]; rows: Record<stri
     const values = parseLine(line);
     const row: Record<string, string> = {};
     headers.forEach((header, idx) => {
-      row[header] = values[idx] || "";
+      row[header] = (values[idx] || "").trim();
     });
     rows.push(row);
   }
@@ -93,10 +100,41 @@ export const autoDetectMapping = (headers: string[]): Partial<CsvColumnMapping> 
 
 const parseCsvAmount = (raw: string): number | null => {
   if (!raw) return null;
-  const cleaned = raw
-    .replace(/[Rp\s]/gi, "")
-    .replace(/\./g, "") // remove thousand separators (Indonesian)
-    .replace(",", "."); // decimal comma -> dot
+  
+  // Clean prefix like Rp or currency symbols
+  let cleaned = raw.replace(/[Rp$\s]/gi, "").trim();
+
+  // Auto-detect format
+  const lastDot = cleaned.lastIndexOf(".");
+  const lastComma = cleaned.lastIndexOf(",");
+
+  if (lastDot !== -1 && lastComma !== -1) {
+    if (lastDot > lastComma) {
+      // English format: 1,234.56 -> remove commas, keep dot
+      cleaned = cleaned.replace(/,/g, "");
+    } else {
+      // Indonesian format: 1.234,56 -> remove dots, replace comma with dot
+      cleaned = cleaned.replace(/\./g, "").replace(",", ".");
+    }
+  } else if (lastComma !== -1) {
+    // Only comma present: could be 1,234 (English thousand) or 123,45 (Indonesian decimal)
+    const parts = cleaned.split(",");
+    if (parts[parts.length - 1].length === 3) {
+      // Thousand separator
+      cleaned = cleaned.replace(/,/g, "");
+    } else {
+      // Decimal comma
+      cleaned = cleaned.replace(",", ".");
+    }
+  } else if (lastDot !== -1) {
+    // Only dot present: could be 1.234 (Indonesian thousand) or 123.45 (English decimal)
+    const parts = cleaned.split(".");
+    if (parts[parts.length - 1].length === 3) {
+      // Thousand separator
+      cleaned = cleaned.replace(/\./g, "");
+    }
+  }
+
   const num = parseFloat(cleaned);
   return isNaN(num) ? null : Math.abs(num);
 };

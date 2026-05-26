@@ -13,7 +13,8 @@ import {
   List,
   Clock,
   Repeat2,
-  Trash2
+  Trash2,
+  ArrowUpRight
 } from "lucide-react";
 import { toast } from "../../utils/toast";
 import { getIncomeBySource, getIncomeSources, getIncomeSummary, getIncomeTransactions, deleteIncomeTransaction } from "../../services/incomeService";
@@ -22,14 +23,38 @@ import { formatCurrency } from "../../utils/format";
 import IncomeSourceModal from "../../components/modals/IncomeSourceModal";
 import IncomeTransactionModal from "../../components/modals/IncomeTransactionModal";
 
-export default function IncomeScreen() {
+const formatFrequencySubtitle = (freq: string, count?: number) => {
+  if (!freq) return "";
+  const f = freq.toLowerCase().replace("-", "_");
+  let typeText = "";
+  if (f === "monthly") typeText = "Pemasukan Bulanan";
+  else if (f === "weekly") typeText = "Pemasukan Mingguan";
+  else if (f === "one_time" || f === "one-time") typeText = "Pemasukan Sekali (Non-rutin)";
+  else typeText = freq;
+
+  if (count !== undefined) {
+    return `${typeText} · ${count}x diterima`;
+  }
+  return typeText;
+};
+
+interface IncomeScreenProps {
+  onNavigateTab?: (tab: any) => void;
+}
+
+export default function IncomeScreen({ onNavigateTab }: IncomeScreenProps) {
   const [month, setMonth] = useState(getCurrentMonth());
   const [sources, setSources] = useState<any[]>([]);
   const [transactions, setTransactions] = useState<any[]>([]);
   const [summary, setSummary] = useState<any>(null);
   const [breakdown, setBreakdown] = useState<any[]>([]);
   const [showSourceModal, setShowSourceModal] = useState(false);
-  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [showTransactionModal, setShowTransactionModal] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !!localStorage.getItem("bf_income_draft");
+    }
+    return false;
+  });
   const [selectedSource, setSelectedSource] = useState<any>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<any>(null);
   const [prefillSourceId, setPrefillSourceId] = useState<string | null>(null);
@@ -69,10 +94,38 @@ export default function IncomeScreen() {
   return (
     <>
       <div className="mx-auto max-w-6xl space-y-5 px-4 py-5 md:px-8">
-        <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Income tracking</p>
-          <h1 className="mt-3 text-3xl font-bold text-[#1A2B38]">Pantau pemasukanmu biar tabungan terasa lebih kebayang.</h1>
-          <p className="mt-3 text-sm text-[#7B6E67]">Sumber income, transaksi masuk, dan savings bulan ini semua bisa dilihat dari satu tempat.</p>
+        {/* Unified Title & Sub-tabs Header */}
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-[#29B9AA] flex-shrink-0" />
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">Buku Kas</p>
+            </div>
+            <h1 className="mt-2 text-3xl font-bold text-[#1A2B38]">Ledger & Pemasukan</h1>
+          </div>
+
+          <div className="flex rounded-2xl bg-[#F3EDE8] p-1 shadow-inner self-start sm:self-auto overflow-x-auto max-w-full">
+            <button
+              onClick={() => onNavigateTab?.("history")}
+              className="rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 text-[#7B6E67] hover:text-[#1A2B38] shrink-0"
+            >
+              <Clock className="w-3.5 h-3.5" />
+              Semua Transaksi
+            </button>
+            <button
+              onClick={() => onNavigateTab?.("recurring")}
+              className="rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 text-[#7B6E67] hover:text-[#1A2B38] shrink-0"
+            >
+              <Repeat2 className="w-3.5 h-3.5" />
+              Tagihan Rutin
+            </button>
+            <button
+              className="rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 bg-white text-[#1A2B38] shadow-sm shrink-0"
+            >
+              <ArrowUpRight className="w-3.5 h-3.5 text-[#29B9AA]" />
+              Sumber Pemasukan
+            </button>
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -163,7 +216,7 @@ export default function IncomeScreen() {
                   <div key={item.sourceId} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[#FEF9F4] px-4 py-4">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-[#1A2B38]">{item.sourceName}</p>
-                      <p className="mt-1 text-xs text-[#7B6E67]">{item.frequency} - {item.transactionCount} transaction(s)</p>
+                      <p className="mt-1 text-xs text-[#7B6E67]">{formatFrequencySubtitle(item.frequency, item.transactionCount)}</p>
                     </div>
                     <p className="text-sm font-bold text-[#29B9AA]">{formatCurrency(item.actualAmount)}</p>
                     <div className="flex items-center gap-2">
@@ -213,7 +266,7 @@ export default function IncomeScreen() {
                   <div key={source.id} className="flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-[#FEF9F4] px-4 py-4">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-[#1A2B38]">{source.source_name}</p>
-                      <p className="mt-1 text-xs text-[#7B6E67]">{source.frequency}</p>
+                      <p className="mt-1 text-xs text-[#7B6E67]">{formatFrequencySubtitle(source.frequency)}</p>
                     </div>
                     <p className="text-sm font-bold text-[#1A2B38]">{formatCurrency(source.amount)}</p>
                     <button
@@ -278,13 +331,11 @@ export default function IncomeScreen() {
 
       <IncomeSourceModal open={showSourceModal} source={selectedSource} onClose={() => setShowSourceModal(false)} onSaved={loadData} />
       <IncomeTransactionModal
-        open={showTransactionModal}
+        isOpen={showTransactionModal}
         transaction={selectedTransaction}
         selectedSourceId={prefillSourceId}
-        initialMonth={month}
-        incomeSources={sources}
         onClose={() => setShowTransactionModal(false)}
-        onSaved={loadData}
+        onSuccess={loadData}
       />
     </>
   );

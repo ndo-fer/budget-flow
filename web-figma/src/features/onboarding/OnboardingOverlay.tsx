@@ -276,13 +276,13 @@ export default function OnboardingOverlay() {
                       <div 
                         key={cat.name}
                         onClick={() => handleCategoryToggle(cat.name)}
-                        className={`flex items-center justify-between p-3 rounded-xl border transition-all cursor-pointer ${
+                        className={`flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl border transition-all cursor-pointer gap-2 sm:gap-4 ${
                           isChecked 
                             ? "bg-white border-[#29B9AA]/30 shadow-sm" 
                             : "bg-black/[0.02] border-transparent opacity-60"
                         }`}
                       >
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-3 w-full sm:w-auto">
                           <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all ${
                             isChecked ? "bg-[#29B9AA] border-[#29B9AA] text-white" : "border-black/20 bg-white"
                           }`}>
@@ -296,7 +296,7 @@ export default function OnboardingOverlay() {
                         </div>
 
                         {isChecked && (
-                          <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          <div className="flex items-center justify-between sm:justify-end gap-2 w-full sm:w-auto pl-8 sm:pl-0" onClick={(e) => e.stopPropagation()}>
                             <span className="text-xs text-[#7B6E67]">Budget:</span>
                             <div className="relative">
                               <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs font-bold text-[#7B6E67]">Rp</span>

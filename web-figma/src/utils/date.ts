@@ -52,12 +52,12 @@ export const shiftMonth = (monthStr: string, delta: number) => {
 
 // ── Timezone-Aware Bounds & Formatting ────────────────────────
 
-export const toLocalDateString = (isoString: string): string => {
-  if (!isoString) return "";
-  const d = new Date(isoString);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
+export const toLocalDateString = (d: Date | string): string => {
+  if (!d) return "";
+  const dateObj = typeof d === "string" ? new Date(d) : d;
+  const year = dateObj.getFullYear();
+  const month = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 };
 

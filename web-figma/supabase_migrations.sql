@@ -133,3 +133,54 @@ BEGIN
   DELETE FROM auth.users WHERE id = auth.uid();
 END;
 $$;
+
+-- 8. FUNCTION: adjust wallet balance atomically
+CREATE OR REPLACE FUNCTION adjust_wallet_balance(
+  p_wallet_id UUID,
+  p_new_balance NUMERIC,
+  p_reason TEXT,
+  p_source TEXT
+)
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  v_old_balance NUMERIC;
+BEGIN
+  -- Fetch the current balance of the wallet
+  SELECT estimated_balance INTO v_old_balance FROM wallets WHERE id = p_wallet_id AND user_id = auth.uid() FOR UPDATE;
+  
+  IF v_old_balance IS NULL THEN
+    RAISE EXCEPTION 'Wallet not found or access denied';
+  END IF;
+
+  -- Log the balance adjustment
+  INSERT INTO balance_adjustments (
+    user_id,
+    wallet_id,
+    previous_estimated_balance,
+    new_confirmed_balance,
+    difference,
+    reason,
+    source
+  ) VALUES (
+    auth.uid(),
+    p_wallet_id,
+    v_old_balance,
+    p_new_balance,
+    p_new_balance - v_old_balance,
+    p_reason,
+    p_source
+  );
+
+  -- Update confirmed_balance and estimated_balance on the wallet
+  UPDATE wallets
+  SET 
+    confirmed_balance = p_new_balance,
+    estimated_balance = p_new_balance,
+    last_confirmed_at = now(),
+    confidence = 1.0
+  WHERE id = p_wallet_id AND user_id = auth.uid();
+END;
+$$;

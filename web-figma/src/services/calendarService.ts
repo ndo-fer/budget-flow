@@ -9,6 +9,8 @@
  *  4. exportRecurringToCalendar() → one-click export all recurring to .ics
  */
 
+import { toLocalDateString } from "../utils/date";
+
 export interface CalendarEvent {
   uid: string;
   title: string;
@@ -119,7 +121,7 @@ export const recurringToCalendarEvent = (item: any): CalendarEvent => {
   const targetDay = Math.min(dayOfMonth, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate());
   const nextDate = new Date(now.getFullYear(), now.getMonth(), targetDay);
   if (nextDate < now) nextDate.setMonth(nextDate.getMonth() + 1);
-  const startDate = nextDate.toISOString().slice(0, 10);
+  const startDate = toLocalDateString(nextDate);
 
   return {
     uid: item.id ?? Math.random().toString(36).slice(2),

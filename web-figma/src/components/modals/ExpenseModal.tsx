@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { X, Calendar, AlignLeft, Tag, CreditCard, ArrowDownLeft, Check } from "lucide-react";
+import { X, Calendar, AlignLeft, Tag, CreditCard, ArrowDownLeft, Check, ChevronDown } from "lucide-react";
 import { getCategories } from "../../services/categoryService";
 import { getWallets } from "../../services/walletService";
 import { addExpense } from "../../services/expenseService";
 import { toast } from "../../utils/toast";
 import type { BudgetCategory, Wallet } from "../../types/models";
 import { getToday } from "../../utils/date";
+import Dropdown from "../Dropdown";
 
 const suggestCategoryFromNote = (noteText: string, categoryList: BudgetCategory[]): string | null => {
   const text = noteText.toLowerCase();
@@ -49,13 +50,28 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, defaultWallet
   const [note, setNote] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Load draft on mount / open
   useEffect(() => {
     if (isOpen) {
-      setAmount("");
-      setNote("");
-      setDate(getToday());
-      setCategoryId("");
-      setWalletId(defaultWalletId || "");
+      const draftJson = localStorage.getItem("bf_expense_draft");
+      if (draftJson) {
+        try {
+          const draft = JSON.parse(draftJson);
+          if (draft.amount) setAmount(draft.amount);
+          if (draft.categoryId) setCategoryId(draft.categoryId);
+          if (draft.walletId) setWalletId(draft.walletId);
+          if (draft.date) setDate(draft.date);
+          if (draft.note) setNote(draft.note);
+        } catch (e) {
+          console.error("Gagal memuat draft pengeluaran:", e);
+        }
+      } else {
+        setAmount("");
+        setNote("");
+        setDate(getToday());
+        setCategoryId("");
+        setWalletId(defaultWalletId || "");
+      }
       
       getCategories()
         .then((cats) => {
@@ -69,7 +85,24 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, defaultWallet
         })
         .catch(() => {});
     }
-  }, [isOpen]);
+  }, [isOpen, defaultWalletId]);
+
+  // Save draft on state changes
+  useEffect(() => {
+    if (isOpen) {
+      if (amount || categoryId || walletId || note || date !== getToday()) {
+        const draft = { amount, categoryId, walletId, date, note };
+        localStorage.setItem("bf_expense_draft", JSON.stringify(draft));
+      } else {
+        localStorage.removeItem("bf_expense_draft");
+      }
+    }
+  }, [amount, categoryId, walletId, date, note, isOpen]);
+
+  const handleClose = () => {
+    localStorage.removeItem("bf_expense_draft");
+    onClose();
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -90,7 +123,9 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, defaultWallet
         note,
         walletId || null,
       );
+      localStorage.removeItem("bf_expense_draft");
       toast.success("Pengeluaran berhasil ditambahkan.");
+      window.dispatchEvent(new CustomEvent("wallet-transaction-added"));
       if (onSuccess) onSuccess();
       onClose();
     } catch (err: any) {
@@ -102,10 +137,23 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, defaultWallet
 
   if (!isOpen) return null;
 
+  const categoryOptions = categories.map((c) => ({
+    value: c.id.toString(),
+    label: c.name,
+  }));
+
+  const walletOptions = [
+    { value: "", label: "— Cash / Manual (Tanpa Wallet) —" },
+    ...wallets.map((w) => ({
+      value: w.id,
+      label: `${w.name} (Rp ${w.estimated_balance?.toLocaleString("id-ID")})`,
+    })),
+  ];
+
   return (
     <div 
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
-      onClick={onClose}
+      onClick={handleClose}
     >
       <div 
         className="relative w-full max-w-md rounded-[32px] border border-black/10 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200"
@@ -114,7 +162,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, defaultWallet
         
         {/* Close Button */}
         <button 
-          onClick={onClose}
+          onClick={handleClose}
           className="absolute right-5 top-5 rounded-full p-2 text-[#7B6E67] hover:bg-[#F3EDE8] hover:text-[#1A2B38]"
         >
           <X className="h-5 w-5" />
@@ -152,51 +200,51 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, defaultWallet
           {/* Category */}
           <div>
             <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Kategori</label>
-            <div className="relative">
-              <Tag className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B6E67]" />
-              <select
-                required
-                className="w-full appearance-none rounded-2xl border border-black/10 bg-[#FEF9F4] py-3 pl-11 pr-4 text-sm font-semibold text-[#1A2B38] outline-none"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-              >
-                <option value="" className="bg-white text-gray-800 font-medium">Pilih Kategori</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id} className="bg-white text-gray-800 font-medium">{c.name}</option>
-                ))}
-              </select>
-            </div>
+            <Dropdown
+              options={categoryOptions}
+              value={categoryId}
+              onChange={setCategoryId}
+              placeholder="Pilih Kategori"
+              icon={<Tag className="h-4 w-4" />}
+            />
           </div>
 
           {/* Wallet Selection (Optional) */}
           <div>
             <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Dompet / Wallet (Opsional)</label>
-            <div className="relative">
-              <CreditCard className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B6E67]" />
-              <select
-                className="w-full appearance-none rounded-2xl border border-black/10 bg-[#FEF9F4] py-3 pl-11 pr-4 text-sm font-semibold text-[#1A2B38] outline-none"
-                value={walletId}
-                onChange={(e) => setWalletId(e.target.value)}
-              >
-                <option value="" className="bg-white text-gray-800 font-medium">— Cash / Manual (Tanpa Wallet) —</option>
-                {wallets.map((w) => (
-                  <option key={w.id} value={w.id} className="bg-white text-gray-800 font-medium">{w.name} (Rp {w.estimated_balance?.toLocaleString("id-ID")})</option>
-                ))}
-              </select>
-            </div>
+            <Dropdown
+              options={walletOptions}
+              value={walletId}
+              onChange={setWalletId}
+              placeholder="— Cash / Manual (Tanpa Wallet) —"
+              icon={<CreditCard className="h-4 w-4" />}
+            />
           </div>
 
           {/* Date */}
           <div>
             <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Tanggal</label>
-            <div className="relative">
-              <Calendar className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#7B6E67]" />
+            <div className="relative w-full">
+              <div className="flex w-full items-center justify-between rounded-2xl border border-black/10 bg-[#FEF9F4] py-3.5 pl-11 pr-4 text-sm font-semibold text-[#1A2B38] transition-colors text-left relative cursor-pointer hover:bg-[#F3EDE8]">
+                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7B6E67]">
+                  <Calendar className="h-4 w-4" />
+                </div>
+                <span>
+                  {date ? new Date(date).toLocaleDateString("id-ID", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : "Pilih Tanggal"}
+                </span>
+                <ChevronDown className="h-4 w-4 text-[#7B6E67]" />
+              </div>
               <input
                 type="date"
                 required
-                className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] py-3 pl-11 pr-4 text-sm font-semibold text-[#1A2B38] outline-none"
+                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
+                onClick={(e) => {
+                  try {
+                    e.currentTarget.showPicker();
+                  } catch (err) {}
+                }}
               />
             </div>
           </div>

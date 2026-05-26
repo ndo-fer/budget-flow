@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { 
   Search, 
   Trash2, 
@@ -16,7 +16,8 @@ import {
   ChevronRight,
   Repeat2,
   SlidersHorizontal,
-  Check
+  Check,
+  ChevronDown
 } from "lucide-react";
 import { 
   getWalletTransactions, 
@@ -40,36 +41,22 @@ import { getAppFriendlyName } from "../../services/notificationParserService";
 import { getCurrentMonth } from "../../utils/date";
 import { toast } from "../../utils/toast";
 import type { WalletTransaction, BudgetCategory } from "../../types/models";
+import Dropdown from "../../components/Dropdown";
 
 interface HistoryScreenProps {
+  onNavigateTab?: (tab: any) => void;
   activeTab?: string;
   searchParams?: string;
   clearSearchParams?: () => void;
 }
 
-export default function HistoryScreen({ activeTab: activeTabProp, searchParams, clearSearchParams }: HistoryScreenProps) {
+export default function HistoryScreen({ onNavigateTab, activeTab: activeTabProp, searchParams, clearSearchParams }: HistoryScreenProps) {
   const [activeTab, setActiveTab] = useState<"all" | "recurring">("all");
   const [searchQuery, setSearchQuery] = useState("");
-
-  useEffect(() => {
-    const query = searchParams || "";
-    const params = new URLSearchParams(query);
-    const tabParam = params.get("tab");
-
-    if (activeTabProp === "recurring" || tabParam === "recurring") {
-      setActiveTab("recurring");
-      clearSearchParams?.();
-      if (typeof window !== "undefined" && window.location.search) {
-        window.history.replaceState({}, "", window.location.pathname);
-      }
-    } else if (activeTabProp === "history" && tabParam === "all") {
-      setActiveTab("all");
-      clearSearchParams?.();
-      if (typeof window !== "undefined" && window.location.search) {
-        window.history.replaceState({}, "", window.location.pathname);
-      }
-    }
-  }, [activeTabProp, searchParams, clearSearchParams]);
+  const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("");
+  const [showCategoryFilterDropdown, setShowCategoryFilterDropdown] = useState(false);
+  const filterDropdownRef = useRef<HTMLDivElement>(null);
+  
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [recurring, setRecurring] = useState<any[]>([]);
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
@@ -88,9 +75,51 @@ export default function HistoryScreen({ activeTab: activeTabProp, searchParams, 
   const [isSavingRecurring, setIsSavingRecurring] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [tempNote, setTempNote] = useState("");
+  
+  const [openCategoryTxId, setOpenCategoryTxId] = useState<string | null>(null);
 
-  const loadData = async () => {
-    setIsLoading(true);
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (filterDropdownRef.current && !filterDropdownRef.current.contains(e.target as Node)) {
+        setShowCategoryFilterDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  useEffect(() => {
+    const query = searchParams || "";
+    const params = new URLSearchParams(query);
+    const tabParam = params.get("tab");
+    const categoryParam = params.get("category");
+
+    if (categoryParam) {
+      setSelectedCategoryFilter(categoryParam);
+      setActiveTab("all");
+      clearSearchParams?.();
+      if (typeof window !== "undefined" && window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+
+    if (activeTabProp === "recurring" || tabParam === "recurring") {
+      setActiveTab("recurring");
+      clearSearchParams?.();
+      if (typeof window !== "undefined" && window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    } else if (activeTabProp === "history" && tabParam === "all") {
+      setActiveTab("all");
+      clearSearchParams?.();
+      if (typeof window !== "undefined" && window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [activeTabProp, searchParams, clearSearchParams]);
+
+  const loadData = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const [txs, recs, cats] = await Promise.all([
         getWalletTransactions(undefined, 100),
@@ -105,12 +134,20 @@ export default function HistoryScreen({ activeTab: activeTabProp, searchParams, 
       console.error("Error loading history screen data:", err);
       toast.error("Gagal memuat data transaksi.");
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     loadData();
+
+    const handleTransactionAdded = () => {
+      loadData(true);
+    };
+    window.addEventListener("wallet-transaction-added", handleTransactionAdded);
+    return () => {
+      window.removeEventListener("wallet-transaction-added", handleTransactionAdded);
+    };
   }, []);
 
   const handleDeleteTx = async (id: string) => {
@@ -205,6 +242,10 @@ export default function HistoryScreen({ activeTab: activeTabProp, searchParams, 
       }
     }
 
+    if (selectedCategoryFilter && t.category !== selectedCategoryFilter) {
+      return false;
+    }
+
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     return (
@@ -283,10 +324,10 @@ export default function HistoryScreen({ activeTab: activeTabProp, searchParams, 
           <h1 className="mt-2 text-3xl font-bold text-[#1A2B38]">Ledger & Tagihan</h1>
         </div>
 
-        <div className="flex rounded-2xl bg-[#F3EDE8] p-1 shadow-inner">
+        <div className="flex rounded-2xl bg-[#F3EDE8] p-1 shadow-inner self-start sm:self-auto overflow-x-auto max-w-full">
           <button
             onClick={() => setActiveTab("all")}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
               activeTab === "all" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
             }`}
           >
@@ -295,12 +336,19 @@ export default function HistoryScreen({ activeTab: activeTabProp, searchParams, 
           </button>
           <button
             onClick={() => setActiveTab("recurring")}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5 ${
+            className={`rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
               activeTab === "recurring" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
             }`}
           >
             <Repeat2 className="w-3.5 h-3.5" />
             Tagihan Rutin
+          </button>
+          <button
+            onClick={() => onNavigateTab?.("income")}
+            className="rounded-xl px-3 py-1.5 text-xs font-bold transition-all flex items-center gap-1.5 text-[#7B6E67] hover:text-[#1A2B38] shrink-0"
+          >
+            <ArrowUpRight className="w-3.5 h-3.5 text-[#29B9AA]" />
+            Sumber Pemasukan
           </button>
         </div>
       </div>
@@ -319,11 +367,63 @@ export default function HistoryScreen({ activeTab: activeTabProp, searchParams, 
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
-            <div className="flex items-center gap-2 border-l border-black/5 pl-2 shrink-0">
-              <SlidersHorizontal className="h-4 w-4 text-[#7B6E67]" />
+            
+            {/* Category Filter Dropdown */}
+            <div className="relative shrink-0" ref={filterDropdownRef}>
+              <button 
+                type="button"
+                onClick={() => setShowCategoryFilterDropdown(!showCategoryFilterDropdown)}
+                className={`flex items-center gap-1.5 rounded-xl border border-black/5 px-2.5 py-1.5 text-xs font-bold transition-all ${
+                  selectedCategoryFilter 
+                    ? "bg-[#29B9AA]/10 text-[#29B9AA] border-[#29B9AA]/20" 
+                    : "bg-[#FEF9F4] text-[#7B6E67] hover:bg-[#F3EDE8]"
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>{selectedCategoryFilter || "Filter Kategori"}</span>
+              </button>
+
+              {showCategoryFilterDropdown && (
+                <div className="absolute right-0 z-50 mt-2 w-48 max-h-60 overflow-y-auto rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategoryFilter("");
+                      setShowCategoryFilterDropdown(false);
+                    }}
+                    className={`w-full rounded-xl px-3 py-2 text-left text-xs font-bold transition-colors ${
+                      selectedCategoryFilter === "" ? "bg-[#29B9AA] text-white" : "text-[#1A2B38] hover:bg-[#FEF9F4]"
+                    }`}
+                  >
+                    Semua Kategori
+                  </button>
+                  {categories.map((c) => (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedCategoryFilter(c.name);
+                        setShowCategoryFilterDropdown(false);
+                      }}
+                      className={`w-full rounded-xl px-3 py-2 text-left text-xs font-bold transition-colors ${
+                        selectedCategoryFilter === c.name ? "bg-[#29B9AA] text-white" : "text-[#1A2B38] hover:bg-[#FEF9F4]"
+                      }`}
+                    >
+                      {c.name}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
-            {searchQuery && (
-              <button onClick={() => setSearchQuery("")} className="text-[#7B6E67] hover:text-[#1A2B38]">
+
+            {(searchQuery || selectedCategoryFilter) && (
+              <button 
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedCategoryFilter("");
+                }} 
+                className="text-[#7B6E67] hover:text-[#1A2B38] border-l border-black/5 pl-2 shrink-0"
+              >
                 <X className="h-4 w-4" />
               </button>
             )}
@@ -462,43 +562,80 @@ export default function HistoryScreen({ activeTab: activeTabProp, searchParams, 
 
                           {/* Bottom Row: Category Selector & Actions */}
                           <div className="flex items-center justify-between border-t border-black/5 pt-2.5 mt-1">
-                            {/* Category Pill Selector */}
+                            {/* Category Pill Selector (Custom overlay dropdown) */}
                             <div className="flex items-center gap-2">
                               <span className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Kategori:</span>
                               <div className="relative">
-                                <select
-                                  value={tx.category || ""}
-                                  onChange={async (e) => {
-                                    const newCat = e.target.value;
-                                    try {
-                                      await updateWalletTransaction(tx.id, { category: newCat || null });
-                                      toast.success("Kategori transaksi berhasil diubah.");
-                                      setTransactions((prev) => 
-                                        prev.map((t) => t.id === tx.id ? { ...t, category: newCat || null } : t)
-                                      );
-                                    } catch (err: any) {
-                                      toast.error("Gagal mengubah kategori.");
-                                    }
-                                  }}
-                                  className={`appearance-none cursor-pointer rounded-full pl-3 pr-7 py-1 text-xs font-bold transition-all focus:outline-none ${
+                                <button
+                                  type="button"
+                                  onClick={() => setOpenCategoryTxId(openCategoryTxId === tx.id ? null : tx.id)}
+                                  className={`rounded-full px-3 py-1 text-xs font-bold transition-all flex items-center gap-1 focus:outline-none ${
                                     tx.category 
                                       ? "bg-[#29B9AA]/10 text-[#29B9AA] hover:bg-[#29B9AA]/20" 
                                       : "bg-amber-50 text-amber-600 hover:bg-amber-100 border border-dashed border-amber-300"
                                   }`}
                                 >
-                                  <option value="" className="bg-white text-gray-800 font-medium">+ Pilih Kategori</option>
-                                  {categories.map((c) => (
-                                    <option key={c.id} value={c.name} className="bg-white text-gray-800 font-medium">
-                                      {c.name}
-                                    </option>
-                                  ))}
-                                </select>
-                                {/* Custom arrow indicator */}
-                                <div className="pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 text-current opacity-70">
-                                  <svg className="h-3.5 w-3.5 fill-current" viewBox="0 0 20 20">
+                                  <span>{tx.category || "+ Pilih Kategori"}</span>
+                                  <svg className={`h-3 w-3 fill-current transition-transform duration-200 ${openCategoryTxId === tx.id ? "rotate-180" : ""}`} viewBox="0 0 20 20">
                                     <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
                                   </svg>
-                                </div>
+                                </button>
+
+                                {openCategoryTxId === tx.id && (
+                                  <>
+                                    <div 
+                                      className="fixed inset-0 z-40" 
+                                      onClick={() => setOpenCategoryTxId(null)}
+                                    />
+                                    <div className="absolute left-0 z-50 mt-1 w-44 max-h-48 overflow-y-auto rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl animate-in fade-in slide-in-from-top-1 duration-150">
+                                      <button
+                                        type="button"
+                                        onClick={async () => {
+                                          try {
+                                            await updateWalletTransaction(tx.id, { category: null });
+                                            toast.success("Kategori transaksi dikosongkan.");
+                                            setTransactions((prev) => 
+                                              prev.map((t) => t.id === tx.id ? { ...t, category: null } : t)
+                                            );
+                                          } catch (err: any) {
+                                            toast.error("Gagal mengubah kategori.");
+                                          } finally {
+                                            setOpenCategoryTxId(null);
+                                          }
+                                        }}
+                                        className={`w-full rounded-xl px-3 py-1.5 text-left text-xs font-bold whitespace-nowrap transition-colors ${
+                                          !tx.category ? "bg-[#29B9AA] text-white" : "text-[#7B6E67] hover:bg-[#FEF9F4]"
+                                        }`}
+                                      >
+                                        — Tanpa Kategori —
+                                      </button>
+                                      {categories.map((c) => (
+                                        <button
+                                          key={c.id}
+                                          type="button"
+                                          onClick={async () => {
+                                            try {
+                                              await updateWalletTransaction(tx.id, { category: c.name });
+                                              toast.success("Kategori transaksi berhasil diubah.");
+                                              setTransactions((prev) => 
+                                                prev.map((t) => t.id === tx.id ? { ...t, category: c.name } : t)
+                                              );
+                                            } catch (err: any) {
+                                              toast.error("Gagal mengubah kategori.");
+                                            } finally {
+                                              setOpenCategoryTxId(null);
+                                            }
+                                          }}
+                                          className={`w-full rounded-xl px-3 py-1.5 text-left text-xs font-bold whitespace-nowrap transition-colors ${
+                                            tx.category === c.name ? "bg-[#29B9AA] text-white" : "text-[#1A2B38] hover:bg-[#FEF9F4]"
+                                          }`}
+                                        >
+                                          {c.name}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
                               </div>
                             </div>
 
@@ -620,17 +757,13 @@ export default function HistoryScreen({ activeTab: activeTabProp, searchParams, 
                 <form onSubmit={handleCreateRecurring} className="space-y-3">
                   <div>
                     <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Kategori</label>
-                    <select
-                      required
-                      className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-3 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
+                    <Dropdown
+                      options={categories.map((c) => ({ value: c.id.toString(), label: c.name }))}
                       value={recCategoryId}
-                      onChange={(e) => setRecCategoryId(e.target.value)}
-                    >
-                      <option value="">Pilih Kategori</option>
-                      {categories.map((c) => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                      onChange={setRecCategoryId}
+                      placeholder="Pilih Kategori"
+                      icon={<CreditCard className="h-4 w-4" />}
+                    />
                   </div>
 
                   <div>
@@ -650,15 +783,17 @@ export default function HistoryScreen({ activeTab: activeTabProp, searchParams, 
 
                   <div>
                     <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Frekuensi</label>
-                    <select
-                      className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-3 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
+                    <Dropdown
+                      options={[
+                        { value: "daily", label: "Daily (Harian)" },
+                        { value: "weekly", label: "Weekly (Mingguan)" },
+                        { value: "monthly", label: "Monthly (Bulanan)" },
+                      ]}
                       value={recFrequency}
-                      onChange={(e: any) => setRecFrequency(e.target.value)}
-                    >
-                      <option value="daily">Daily</option>
-                      <option value="weekly">Weekly</option>
-                      <option value="monthly">Monthly</option>
-                    </select>
+                      onChange={(val) => setRecFrequency(val as any)}
+                      placeholder="Pilih Frekuensi"
+                      icon={<Repeat2 className="h-4 w-4" />}
+                    />
                   </div>
 
                   {recFrequency === "monthly" && (
@@ -678,13 +813,29 @@ export default function HistoryScreen({ activeTab: activeTabProp, searchParams, 
 
                   <div>
                     <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Tanggal Mulai</label>
-                    <input
-                      type="date"
-                      required
-                      className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
-                      value={recStartDate}
-                      onChange={(e) => setRecStartDate(e.target.value)}
-                    />
+                    <div className="relative w-full">
+                      <div className="flex w-full items-center justify-between rounded-2xl border border-black/10 bg-[#FEF9F4] py-2.5 pl-10 pr-4 text-xs font-semibold text-[#1A2B38] transition-colors text-left relative cursor-pointer hover:bg-[#F3EDE8]">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7B6E67]">
+                          <Calendar className="h-3.5 w-3.5" />
+                        </div>
+                        <span>
+                          {recStartDate ? new Date(recStartDate).toLocaleDateString("id-ID", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : "Pilih Tanggal"}
+                        </span>
+                        <ChevronDown className="h-3.5 w-3.5 text-[#7B6E67]" />
+                      </div>
+                      <input
+                        type="date"
+                        required
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        value={recStartDate}
+                        onChange={(e) => setRecStartDate(e.target.value)}
+                        onClick={(e) => {
+                          try {
+                            e.currentTarget.showPicker();
+                          } catch (err) {}
+                        }}
+                      />
+                    </div>
                   </div>
 
                   <div>

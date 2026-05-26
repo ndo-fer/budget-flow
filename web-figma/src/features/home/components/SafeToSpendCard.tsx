@@ -1,4 +1,4 @@
-import { Sparkles, Banknote, AlertCircle, CalendarClock } from "lucide-react";
+import { Sparkles, Banknote, AlertCircle, CalendarClock, ArrowUpRight, Pencil } from "lucide-react";
 
 interface SafeToSpendCardProps {
   safeToSpend: {
@@ -8,9 +8,10 @@ interface SafeToSpendCardProps {
     daysUntilNextIncome: number;
   } | null;
   onNavigateTab?: (tabId: any, options?: { replace?: boolean; search?: string }) => void;
+  onEditPayday?: () => void;
 }
 
-export default function SafeToSpendCard({ safeToSpend, onNavigateTab }: SafeToSpendCardProps) {
+export default function SafeToSpendCard({ safeToSpend, onNavigateTab, onEditPayday }: SafeToSpendCardProps) {
   return (
     <div className="md:col-span-2 rounded-[32px] border border-black/10 bg-white p-6 shadow-sm relative overflow-hidden">
       <div className="absolute right-0 top-0 h-40 w-40 translate-x-10 -translate-y-10 rounded-full bg-gradient-to-br from-[#29B9AA]/10 to-transparent blur-2xl"></div>
@@ -30,33 +31,48 @@ export default function SafeToSpendCard({ safeToSpend, onNavigateTab }: SafeToSp
       <div className="mt-6 grid grid-cols-3 gap-2 border-t border-black/5 pt-4">
         <button
           onClick={() => onNavigateTab?.("wallets")}
-          className="text-left group hover:opacity-85 transition-opacity focus:outline-none"
+          className="text-left group focus:outline-none rounded-2xl hover:bg-[#FEF9F4] active:bg-[#FEF9F4] active:scale-[0.97] p-2 -m-2 transition-all"
+          aria-label="Lihat detail Dana Bersih"
         >
           <div className="flex items-center gap-1 text-[#7B6E67]">
             <Banknote className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0 group-hover:scale-105 transition-transform" />
             <p className="text-[10px] font-bold uppercase tracking-wider group-hover:text-[#1A2B38] transition-colors">Dana Bersih</p>
           </div>
-          <p className="mt-0.5 text-sm font-bold text-[#1A2B38] group-hover:underline">Rp {(safeToSpend?.availableMoney ?? 0).toLocaleString("id-ID")}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <p className="text-sm font-bold text-[#29B9AA] group-hover:underline">Rp {(safeToSpend?.availableMoney ?? 0).toLocaleString("id-ID")}</p>
+            <ArrowUpRight className="w-3.5 h-3.5 text-[#29B9AA] opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+          </div>
         </button>
         
         <button
           onClick={() => onNavigateTab?.("recurring")}
-          className="text-left group hover:opacity-85 transition-opacity focus:outline-none"
+          className="text-left group focus:outline-none rounded-2xl hover:bg-[#FEF9F4] active:bg-[#FEF9F4] active:scale-[0.97] p-2 -m-2 transition-all"
+          aria-label="Lihat detail Tagihan Mendatang"
         >
           <div className="flex items-center gap-1 text-[#7B6E67]">
             <AlertCircle className="w-3.5 h-3.5 text-[#FFB347] flex-shrink-0 group-hover:scale-105 transition-transform" />
             <p className="text-[10px] font-bold uppercase tracking-wider group-hover:text-[#1A2B38] transition-colors">Tagihan Mendatang</p>
           </div>
-          <p className="mt-0.5 text-sm font-bold text-[#FFB347] group-hover:underline">Rp {(safeToSpend?.upcomingBills ?? 0).toLocaleString("id-ID")}</p>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <p className="text-sm font-bold text-[#FFB347] group-hover:underline">Rp {(safeToSpend?.upcomingBills ?? 0).toLocaleString("id-ID")}</p>
+            <ArrowUpRight className="w-3.5 h-3.5 text-[#FFB347] opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all" />
+          </div>
         </button>
         
-        <div>
+        <button
+          onClick={onEditPayday}
+          className="text-left group focus:outline-none rounded-2xl hover:bg-[#FEF9F4] active:bg-[#FEF9F4] active:scale-[0.97] p-2 -m-2 transition-all"
+          aria-label="Ubah Tanggal Gajian"
+        >
           <div className="flex items-center gap-1 text-[#7B6E67]">
-            <CalendarClock className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
-            <p className="text-[10px] font-bold uppercase tracking-wider">Hari ke Gajian</p>
+            <CalendarClock className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0 group-hover:scale-105 transition-transform" />
+            <p className="text-[10px] font-bold uppercase tracking-wider group-hover:text-[#1A2B38] transition-colors">Hari ke Gajian</p>
           </div>
-          <p className="mt-0.5 text-sm font-bold text-[#1A2B38]">{(safeToSpend?.daysUntilNextIncome ?? 0)} hari</p>
-        </div>
+          <div className="flex items-center gap-1.5 mt-0.5">
+            <p className="text-sm font-bold text-[#1A2B38] group-hover:underline">{(safeToSpend?.daysUntilNextIncome ?? 0)} hari</p>
+            <Pencil className="w-3 h-3 text-[#7B6E67] opacity-60 group-hover:opacity-100 transition-opacity" />
+          </div>
+        </button>
       </div>
     </div>
   );

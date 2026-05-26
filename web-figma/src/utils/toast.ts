@@ -1,4 +1,5 @@
 import { toast as sonnerToast } from "sonner";
+import { parseError } from "./errorHandler";
 
 // Navigation helper that coordinates with AppShell's popstate listener
 export const navigateTo = (path: string) => {
@@ -54,7 +55,13 @@ export const toast = {
     });
   },
 
-  error: (message: string, options?: any) => {
+  error: (err: any, options?: any) => {
+    const parsed = parseError(err);
+    const displayMessage = `[${parsed.code}] ${parsed.message}`;
+    const copyContent = parsed.originalMessage 
+      ? `Code: ${parsed.code}\nMessage: ${parsed.message}\nTechnical Details: ${parsed.originalMessage}`
+      : `Code: ${parsed.code}\nMessage: ${parsed.message}`;
+
     let action = options?.action;
 
     // Automatically inject "Salin Error" (Copy Error) button
@@ -62,7 +69,7 @@ export const toast = {
       action = {
         label: "Salin Error",
         onClick: () => {
-          navigator.clipboard.writeText(message).then(() => {
+          navigator.clipboard.writeText(copyContent).then(() => {
             sonnerToast.success("Pesan error disalin ke clipboard.", {
               id: "copy-error-success",
               duration: 2000,
@@ -72,7 +79,7 @@ export const toast = {
       };
     }
 
-    return sonnerToast.error(message, {
+    return sonnerToast.error(displayMessage, {
       ...options,
       action: action || options?.action,
     });

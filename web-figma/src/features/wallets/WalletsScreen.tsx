@@ -48,8 +48,18 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
   const [isCsvOpen, setIsCsvOpen] = useState(false);
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
-  const [isExpenseOpen, setIsExpenseOpen] = useState(false);
-  const [isIncomeOpen, setIsIncomeOpen] = useState(false);
+  const [isExpenseOpen, setIsExpenseOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !!localStorage.getItem("bf_expense_draft");
+    }
+    return false;
+  });
+  const [isIncomeOpen, setIsIncomeOpen] = useState(() => {
+    if (typeof window !== "undefined") {
+      return !!localStorage.getItem("bf_income_draft");
+    }
+    return false;
+  });
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -86,8 +96,8 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
   const [newWalletBalance, setNewWalletBalance] = useState("");
   const [isCreatingWallet, setIsCreatingWallet] = useState(false);
 
-  const fetchWallets = async () => {
-    setIsLoading(true);
+  const fetchWallets = async (silent = false) => {
+    if (!silent) setIsLoading(true);
     try {
       const ws = await getWallets();
       setWallets(ws.filter((w) => w.is_active));
@@ -95,12 +105,20 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
       console.error("Error fetching wallets:", err);
       toast.error("Gagal memuat daftar wallet.");
     } finally {
-      setIsLoading(false);
+      if (!silent) setIsLoading(false);
     }
   };
 
   useEffect(() => {
     fetchWallets();
+
+    const handleTransactionAdded = () => {
+      fetchWallets(true);
+    };
+    window.addEventListener("wallet-transaction-added", handleTransactionAdded);
+    return () => {
+      window.removeEventListener("wallet-transaction-added", handleTransactionAdded);
+    };
   }, []);
 
   const handleCreateWallet = async (e: React.FormEvent) => {
@@ -273,9 +291,9 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                         setActiveWalletId(wallet.id);
                         setIsScreenshotOpen(true);
                       }}
-                      className="flex items-center gap-1 text-[11px] font-bold text-[#29B9AA] hover:text-[#229A8E] transition-colors"
+                      className="flex items-center gap-1.5 rounded-lg bg-[#FEF9F4] border border-[#29B9AA]/20 hover:border-[#29B9AA]/50 hover:bg-[#EBF7F6] px-2.5 py-1 text-[10px] font-bold text-[#29B9AA] transition-all active:scale-[0.96]"
                     >
-                      <RefreshCw className="h-3 w-3" />
+                      <RefreshCw className="h-2.5 w-2.5 text-[#29B9AA]" />
                       Koreksi Saldo
                     </button>
                   </div>
@@ -286,7 +304,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                         setActiveWalletId(wallet.id);
                         setIsExpenseOpen(true);
                       }}
-                      className="flex-1 rounded-xl bg-red-50 hover:bg-red-100 py-1.5 text-center text-[10px] font-bold text-[#FF6B58] transition-colors"
+                      className="flex-1 rounded-xl bg-red-50 hover:bg-red-100 active:scale-[0.97] py-1.5 text-center text-[10px] font-bold text-[#FF6B58] transition-all"
                     >
                       + Expense
                     </button>
@@ -295,7 +313,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                         setActiveWalletId(wallet.id);
                         setIsIncomeOpen(true);
                       }}
-                      className="flex-1 rounded-xl bg-[#EBF7F6] hover:bg-[#D5EFEF] py-1.5 text-center text-[10px] font-bold text-[#29B9AA] transition-colors"
+                      className="flex-1 rounded-xl bg-[#EBF7F6] hover:bg-[#D5EFEF] active:scale-[0.97] py-1.5 text-center text-[10px] font-bold text-[#29B9AA] transition-all"
                     >
                       + Income
                     </button>

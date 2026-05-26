@@ -239,8 +239,8 @@ export default function BudgetScreen() {
                       <p className="mt-1 text-sm font-semibold text-[#1A2B38]">{formatCurrency(item.actual)}</p>
                     </div>
                     <div>
-                      <p className="text-[11px] uppercase tracking-[0.18em] text-[#7B6E67]">Variance</p>
-                      <p className={`mt-1 text-sm font-semibold ${item.variance >= 0 ? "text-[#1A2B38]" : "text-[#FF6B58]"}`}>{formatCurrency(item.variance)}</p>
+                      <p className="text-[11px] uppercase tracking-[0.18em] text-[#7B6E67]">{item.variance >= 0 ? "Sisa Budget" : "Over Budget"}</p>
+                      <p className={`mt-1 text-sm font-semibold ${item.variance >= 0 ? "text-[#1A2B38]" : "text-[#FF6B58]"}`}>{item.variance >= 0 ? formatCurrency(item.variance) : formatCurrency(Math.abs(item.variance))}</p>
                     </div>
                   </div>
                 </div>

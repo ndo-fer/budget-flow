@@ -12,7 +12,7 @@ interface ProgressRencanaCardProps {
 
 export default function ProgressRencanaCard({ month, monthlyPlan }: ProgressRencanaCardProps) {
   return (
-    <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm md:col-span-2">
+    <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm md:col-span-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <CalendarRange className="w-4 h-4 text-[#29B9AA] flex-shrink-0" />
