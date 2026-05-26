@@ -5,7 +5,7 @@ import { adjustWalletBalance } from "../../services/walletService";
 import { addWalletTransaction } from "../../services/walletTransactionService";
 import { getWallets } from "../../services/walletService";
 import { formatCurrency, parseRawCurrencyInput } from "../../utils/format";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import type { Wallet, BalanceOcrResult, ReceiptOcrResult } from "../../types/models";
 import { toLocalDateString } from "../../utils/date";
 
@@ -129,6 +129,7 @@ export function ScreenshotBalanceModal({
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => e.preventDefault()}
+      onClick={onClose}
     >
       <div className="w-full max-w-lg rounded-t-[32px] bg-white p-6 shadow-xl sm:rounded-[32px] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-center justify-between">
@@ -357,6 +358,7 @@ export function ReceiptScanModal({
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center"
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => e.preventDefault()}
+      onClick={onClose}
     >
       <div className="w-full max-w-lg rounded-t-[32px] bg-white p-6 shadow-xl sm:rounded-[32px] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-center justify-between">

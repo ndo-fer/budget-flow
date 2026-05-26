@@ -22,6 +22,7 @@ interface AnalyticsDashboardProps {
   safeToSpend: {
     safeToSpendPerDay: number;
   } | null;
+  onNavigateTab?: (tabId: any, options?: { replace?: boolean; search?: string }) => void;
 }
 
 const CHART_COLORS = ["#FF6B58", "#29B9AA", "#FFB347", "#8A9A86", "#B388FF", "#FF8A80", "#82B1FF", "#A1887F"];
@@ -31,7 +32,8 @@ export default function AnalyticsDashboard({
   monthlyPlan,
   dailyTrend,
   categoryBreakdown,
-  safeToSpend
+  safeToSpend,
+  onNavigateTab
 }: AnalyticsDashboardProps) {
   return (
     <div className="space-y-6">
@@ -153,15 +155,19 @@ export default function AnalyticsDashboard({
               const total = categoryBreakdown.reduce((sum, c) => sum + c.amount, 0);
               const percent = total > 0 ? (cat.amount / total) * 100 : 0;
               return (
-                <div key={i} className="space-y-1">
+                <div 
+                  key={i} 
+                  onClick={() => onNavigateTab?.("budget")}
+                  className="space-y-1 cursor-pointer group hover:bg-[#FEF9F4]/40 p-1.5 rounded-xl -mx-1.5 transition-all text-left"
+                >
                   <div className="flex items-center justify-between text-xs font-semibold">
-                    <span className="text-[#1A2B38]">{cat.name}</span>
+                    <span className="text-[#1A2B38] group-hover:text-[#29B9AA] group-hover:underline transition-colors">{cat.name}</span>
                     <div className="text-right">
                       <span className="text-[#1A2B38] font-bold">Rp {cat.amount.toLocaleString("id-ID")}</span>
                       <span className="ml-1.5 text-xs text-[#7B6E67]">({Math.round(percent)}%)</span>
                     </div>
                   </div>
-                  <div className="h-2 w-full rounded-full bg-[#F3EDE8] overflow-hidden">
+                  <div className="h-2 w-full rounded-full bg-[#F3EDE8] overflow-hidden group-hover:scale-y-110 transition-all">
                     <div 
                       className="h-full rounded-full" 
                       style={{ 

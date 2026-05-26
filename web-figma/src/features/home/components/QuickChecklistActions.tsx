@@ -1,7 +1,7 @@
 import { Zap, Receipt, Smartphone, FileSpreadsheet, ChevronRight } from "lucide-react";
 
 interface QuickChecklistActionsProps {
-  onNavigateTab: (tabId: string) => void;
+  onNavigateTab: (tabId: any, options?: { replace?: boolean; search?: string }) => void;
 }
 
 export default function QuickChecklistActions({ onNavigateTab }: QuickChecklistActionsProps) {
@@ -13,7 +13,7 @@ export default function QuickChecklistActions({ onNavigateTab }: QuickChecklistA
       </div>
       <div className="space-y-2">
         <button 
-          onClick={() => onNavigateTab("wallets")}
+          onClick={() => onNavigateTab("wallets", { search: "?action=upload-receipt" })}
           className="flex w-full items-center justify-between rounded-2xl border border-black/5 bg-[#FEF9F4] px-4 py-3 text-xs font-bold text-[#1A2B38] hover:bg-[#F3EDE8] transition-colors"
         >
           <span className="flex items-center gap-2">
@@ -23,7 +23,7 @@ export default function QuickChecklistActions({ onNavigateTab }: QuickChecklistA
           <ChevronRight className="h-3.5 w-3.5 text-[#7B6E67]" />
         </button>
         <button 
-          onClick={() => onNavigateTab("wallets")}
+          onClick={() => onNavigateTab("wallets", { search: "?action=screenshot-balance" })}
           className="flex w-full items-center justify-between rounded-2xl border border-black/5 bg-[#FEF9F4] px-4 py-3 text-xs font-bold text-[#1A2B38] hover:bg-[#F3EDE8] transition-colors"
         >
           <span className="flex items-center gap-2">
@@ -33,7 +33,7 @@ export default function QuickChecklistActions({ onNavigateTab }: QuickChecklistA
           <ChevronRight className="h-3.5 w-3.5 text-[#7B6E67]" />
         </button>
         <button 
-          onClick={() => onNavigateTab("wallets")}
+          onClick={() => onNavigateTab("wallets", { search: "?action=import-csv" })}
           className="flex w-full items-center justify-between rounded-2xl border border-black/5 bg-[#FEF9F4] px-4 py-3 text-xs font-bold text-[#1A2B38] hover:bg-[#F3EDE8] transition-colors"
         >
           <span className="flex items-center gap-2">

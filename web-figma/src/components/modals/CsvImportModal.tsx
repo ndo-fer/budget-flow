@@ -4,7 +4,7 @@ import { parseRawCsv, autoDetectMapping, buildTransactionCandidates, buildImport
 import { addBulkWalletTransactions } from "../../services/walletTransactionService";
 import { getWallets } from "../../services/walletService";
 import { formatCurrency } from "../../utils/format";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import type { Wallet, CsvColumnMapping, CsvImportPreview } from "../../types/models";
 
 type Step = "upload" | "map" | "preview" | "done";
@@ -106,8 +106,14 @@ export default function CsvImportModal({ isOpen, onClose, walletId, onImportSucc
   const stepIdx = steps.findIndex((s) => s.id === step);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[32px] border border-black/10 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div 
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[32px] border border-black/10 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Close Button */}
         <button 

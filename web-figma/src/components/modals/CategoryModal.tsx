@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import type { BudgetCategory } from "../../types/models";
 import { createCategory, deleteCategory, updateCategory } from "../../services/categoryService";
 import ModalShell from "./ModalShell";

@@ -43,6 +43,7 @@ export const getBudgetVsActual = async (month: string) => {
         categoryName: cat.name,
         categoryColor: cat.color,
         budget,
+        priority: cat.priority,
         actual,
         variance,
         variancePercent,

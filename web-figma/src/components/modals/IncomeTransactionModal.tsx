@@ -3,7 +3,7 @@ import { X, Calendar, AlignLeft, ArrowUpRight, CreditCard } from "lucide-react";
 import { getIncomeSources } from "../../services/incomeService";
 import { getWallets } from "../../services/walletService";
 import { recordIncomeTransaction } from "../../services/incomeService";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import type { IncomeSource, Wallet } from "../../types/models";
 import { getToday } from "../../utils/date";
 
@@ -11,9 +11,10 @@ interface IncomeTransactionModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  defaultWalletId?: string | null;
 }
 
-export default function IncomeTransactionModal({ isOpen, onClose, onSuccess }: IncomeTransactionModalProps) {
+export default function IncomeTransactionModal({ isOpen, onClose, onSuccess, defaultWalletId }: IncomeTransactionModalProps) {
   const [sources, setSources] = useState<IncomeSource[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [amount, setAmount] = useState("");
@@ -28,11 +29,12 @@ export default function IncomeTransactionModal({ isOpen, onClose, onSuccess }: I
       setAmount("");
       setNote("");
       setDate(getToday());
+      setIncomeSourceId("");
+      setWalletId(defaultWalletId || "");
       
       getIncomeSources()
         .then((srcs) => {
           setSources(srcs.filter((s) => s.is_active));
-          if (srcs.length > 0) setIncomeSourceId(srcs[0].id.toString());
         })
         .catch(() => {});
 
@@ -76,8 +78,14 @@ export default function IncomeTransactionModal({ isOpen, onClose, onSuccess }: I
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md rounded-[32px] border border-black/10 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div 
+        className="relative w-full max-w-md rounded-[32px] border border-black/10 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Close Button */}
         <button 

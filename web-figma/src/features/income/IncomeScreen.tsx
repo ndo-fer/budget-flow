@@ -15,7 +15,7 @@ import {
   Repeat2,
   Trash2
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import { getIncomeBySource, getIncomeSources, getIncomeSummary, getIncomeTransactions, deleteIncomeTransaction } from "../../services/incomeService";
 import { formatMonthLabel, getCurrentMonth, shiftMonth } from "../../utils/date";
 import { formatCurrency } from "../../utils/format";

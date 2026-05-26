@@ -38,12 +38,38 @@ import {
 import { formatCurrency } from "../../utils/format";
 import { getAppFriendlyName } from "../../services/notificationParserService";
 import { getCurrentMonth } from "../../utils/date";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import type { WalletTransaction, BudgetCategory } from "../../types/models";
 
-export default function HistoryScreen() {
+interface HistoryScreenProps {
+  activeTab?: string;
+  searchParams?: string;
+  clearSearchParams?: () => void;
+}
+
+export default function HistoryScreen({ activeTab: activeTabProp, searchParams, clearSearchParams }: HistoryScreenProps) {
   const [activeTab, setActiveTab] = useState<"all" | "recurring">("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    const query = searchParams || "";
+    const params = new URLSearchParams(query);
+    const tabParam = params.get("tab");
+
+    if (activeTabProp === "recurring" || tabParam === "recurring") {
+      setActiveTab("recurring");
+      clearSearchParams?.();
+      if (typeof window !== "undefined" && window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    } else if (activeTabProp === "history" && tabParam === "all") {
+      setActiveTab("all");
+      clearSearchParams?.();
+      if (typeof window !== "undefined" && window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [activeTabProp, searchParams, clearSearchParams]);
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [recurring, setRecurring] = useState<any[]>([]);
   const [categories, setCategories] = useState<BudgetCategory[]>([]);

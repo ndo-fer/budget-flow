@@ -229,3 +229,14 @@ $$ LANGUAGE plpgsql;
 CREATE TRIGGER trg_recalc_balance_after_tx
 AFTER INSERT OR UPDATE OR DELETE ON wallet_transactions
 FOR EACH ROW EXECUTE FUNCTION recalculate_wallet_estimated_balance();
+
+-- Function: delete current user (for account self-deletion)
+CREATE OR REPLACE FUNCTION delete_user()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  DELETE FROM auth.users WHERE id = auth.uid();
+END;
+$$;

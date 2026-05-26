@@ -3,17 +3,43 @@ import { X, Calendar, AlignLeft, Tag, CreditCard, ArrowDownLeft, Check } from "l
 import { getCategories } from "../../services/categoryService";
 import { getWallets } from "../../services/walletService";
 import { addExpense } from "../../services/expenseService";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import type { BudgetCategory, Wallet } from "../../types/models";
 import { getToday } from "../../utils/date";
+
+const suggestCategoryFromNote = (noteText: string, categoryList: BudgetCategory[]): string | null => {
+  const text = noteText.toLowerCase();
+  
+  const rules = [
+    { keywords: ["makan", "minum", "kopi", "coffee", "nasi", "bakso", "mie", "cafe", "restoran", "dinner", "lunch", "starbucks", "indomaret", "alfamart", "snack", "warung", "burger", "pizza", "sushi", "teh", "susu", "kuliner", "jajan"], categoryKeywords: ["makan", "kuliner", "food", "dining", "cafe"] },
+    { keywords: ["gojek", "grab", "maxim", "bensin", "parkir", "tol", "mrt", "lrt", "bus", "tiket", "ojek", "shell", "pertamina", "transport", "krl", "ojol", "kai", "penerbangan", "travel", "mobil", "motor"], categoryKeywords: ["trans", "travel", "kendaraan", "motor", "mobil"] },
+    { keywords: ["baju", "sepatu", "tokopedia", "shopee", "mall", "kaos", "celana", "belanja", "lazada", "kebutuhan", "supermarket", "minimarket", "sabun", "odol", "shampoo", "sembako"], categoryKeywords: ["belanja", "shop", "kebutuhan", "bulanan", "grocer"] },
+    { keywords: ["nonton", "bioskop", "netflix", "spotify", "game", "steam", "topup game", "wisata", "liburan", "karaoke", "konser", "tiket nonton", "hobi", "playstation", "nintendo"], categoryKeywords: ["hiburan", "entertain", "rekreasi", "hobby", "hobi", "fun"] },
+    { keywords: ["listrik", "air", "pdam", "wifi", "indihome", "pulsa", "kuota", "internet", "asuransi", "bpjs", "kos", "kontrakan", "bill", "tagihan", "pln"], categoryKeywords: ["tagihan", "bill", "utilit", "rutin"] },
+    { keywords: ["obat", "apotek", "dokter", "sakit", "klinik", "rs", "vitamin", "sakit", "puskesmas", "lab"], categoryKeywords: ["sehat", "health", "medis", "obat"] },
+    { keywords: ["buku", "kursus", "sekolah", "kuliah", "spp", "seminar", "udemy", "sertifikasi", "tutorial"], categoryKeywords: ["didik", "educat", "belajar", "buku"] }
+  ];
+
+  for (const rule of rules) {
+    if (rule.keywords.some(kw => text.includes(kw))) {
+      const matched = categoryList.find(c => 
+        rule.categoryKeywords.some(ckw => c.name.toLowerCase().includes(ckw))
+      );
+      if (matched) return matched.id.toString();
+    }
+  }
+
+  return null;
+};
 
 interface ExpenseModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: () => void;
+  defaultWalletId?: string | null;
 }
 
-export default function ExpenseModal({ isOpen, onClose, onSuccess }: ExpenseModalProps) {
+export default function ExpenseModal({ isOpen, onClose, onSuccess, defaultWalletId }: ExpenseModalProps) {
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [amount, setAmount] = useState("");
@@ -28,11 +54,12 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess }: ExpenseModa
       setAmount("");
       setNote("");
       setDate(getToday());
+      setCategoryId("");
+      setWalletId(defaultWalletId || "");
       
       getCategories()
         .then((cats) => {
           setCategories(cats.filter((c) => c.is_active));
-          if (cats.length > 0) setCategoryId(cats[0].id.toString());
         })
         .catch(() => {});
 
@@ -76,8 +103,14 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess }: ExpenseModa
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-md rounded-[32px] border border-black/10 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      <div 
+        className="relative w-full max-w-md rounded-[32px] border border-black/10 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         
         {/* Close Button */}
         <button 
@@ -177,7 +210,16 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess }: ExpenseModa
                 placeholder="Makan siang nasi goreng..."
                 className="w-full min-h-[80px] rounded-2xl border border-black/10 bg-[#FEF9F4] py-3 pl-11 pr-4 text-sm font-semibold text-[#1A2B38] outline-none"
                 value={note}
-                onChange={(e) => setNote(e.target.value)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setNote(val);
+                  if (!categoryId && val) {
+                    const suggestedId = suggestCategoryFromNote(val, categories);
+                    if (suggestedId) {
+                      setCategoryId(suggestedId);
+                    }
+                  }
+                }}
               />
             </div>
           </div>

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import type { BudgetCategory, RecurringExpense } from "../../types/models";
 import { createRecurringExpense, updateRecurringExpense } from "../../services/recurringService";
 import { getToday } from "../../utils/date";

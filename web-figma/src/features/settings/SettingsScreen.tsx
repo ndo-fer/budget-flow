@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import { 
   Bell, 
   BellOff, 
@@ -26,6 +26,7 @@ import supabase from "../../lib/supabase";
 import { getCurrentUserId } from "../../services/queryUtils";
 import { formatCurrency } from "../../utils/format";
 import CategoryModal from "../../components/modals/CategoryModal";
+import ModalShell from "../../components/modals/ModalShell";
 import { getPermissionStatus, requestNotificationPermission } from "../../services/notificationService";
 import { exportAllRecurringToICS } from "../../services/calendarService";
 import { getRecurringExpenses } from "../../services/recurringService";
@@ -212,29 +213,71 @@ export default function SettingsScreen({
     }
   };
 
-  const handleChangePassword = async () => {
-    const password = window.prompt("Masukkan password baru (minimal 6 karakter)");
-    if (!password) return;
-    if (password.length < 6) {
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+
+  const handleOpenPasswordModal = () => {
+    setNewPassword("");
+    setConfirmNewPassword("");
+    setShowPasswordModal(true);
+  };
+
+  const handleConfirmPasswordChange = async () => {
+    if (!newPassword) {
+      toast.error("Password baru wajib diisi.");
+      return;
+    }
+    if (newPassword.length < 6) {
       toast.error("Password minimal 6 karakter.");
       return;
     }
+    if (newPassword !== confirmNewPassword) {
+      toast.error("Konfirmasi password baru tidak cocok.");
+      return;
+    }
+
     try {
-      const { error } = await supabase.auth.updateUser({ password });
+      setIsChangingPassword(true);
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
       if (error) throw error;
       toast.success("Password berhasil diganti.");
+      setShowPasswordModal(false);
     } catch (err: any) {
       toast.error(err.message || "Gagal mengganti password.");
+    } finally {
+      setIsChangingPassword(false);
     }
   };
 
-  const handleLogout = async () => {
-    if (!window.confirm("Logout dari akun ini?")) return;
+  const handleConfirmLogout = async () => {
     try {
       await signOut();
       toast.success("Berhasil logout.");
+      setShowLogoutModal(false);
     } catch (err: any) {
       toast.error(err.message || "Gagal logout.");
+    }
+  };
+
+  const [showDeleteAccountModal, setShowDeleteAccountModal] = useState(false);
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
+
+  const handleConfirmDeleteAccount = async () => {
+    setIsDeletingAccount(true);
+    try {
+      const { error } = await supabase.rpc("delete_user");
+      if (error) throw error;
+      toast.success("Akun dan data Anda berhasil dihapus.");
+      await signOut();
+      setShowDeleteAccountModal(false);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Gagal menghapus akun.");
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -274,17 +317,17 @@ export default function SettingsScreen({
                     <p className="text-xs text-[#7B6E67]">Budget Flow account</p>
                   </div>
                 </div>
-                <button onClick={handleChangePassword} className="flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left hover:bg-[#F3EDE8] transition-colors">
+                <button onClick={handleOpenPasswordModal} className="flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left hover:bg-[#F3EDE8] transition-colors">
                   <div className="flex items-start gap-3">
                     <Lock className="w-5 h-5 text-[#7B6E67] flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-semibold text-[#1A2B38]">Change Password</p>
-                      <p className="mt-1 text-xs text-[#7B6E67]">Web implementation memakai prompt sederhana untuk sekarang.</p>
+                      <p className="mt-1 text-xs text-[#7B6E67]">Ubah password Anda untuk keamanan tambahan.</p>
                     </div>
                   </div>
                   <span className="text-xs font-bold text-[#29B9AA] shrink-0">Open</span>
                 </button>
-                <button onClick={handleLogout} className="flex w-full items-center justify-between rounded-2xl bg-red-50 px-4 py-4 text-left hover:bg-red-100 transition-colors">
+                <button onClick={() => setShowLogoutModal(true)} className="flex w-full items-center justify-between rounded-2xl bg-red-50 px-4 py-4 text-left hover:bg-red-100 transition-colors">
                   <div className="flex items-start gap-3">
                     <Trash2 className="w-5 h-5 text-[#FF6B58] flex-shrink-0 mt-0.5" />
                     <div>
@@ -293,6 +336,16 @@ export default function SettingsScreen({
                     </div>
                   </div>
                   <span className="text-xs font-bold text-[#FF6B58] shrink-0">Now</span>
+                </button>
+                <button onClick={() => setShowDeleteAccountModal(true)} className="flex w-full items-center justify-between rounded-2xl bg-red-50/50 border border-red-200/60 px-4 py-4 text-left hover:bg-red-100 transition-colors">
+                  <div className="flex items-start gap-3">
+                    <Trash2 className="w-5 h-5 text-[#FF6B58] flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold text-[#FF6B58]">Hapus Akun</p>
+                      <p className="mt-1 text-xs text-[#7B6E67]">Hapus permanen seluruh data dan akun Anda dari database.</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-[#FF6B58] shrink-0">Hapus</span>
                 </button>
               </div>
             </div>
@@ -529,6 +582,110 @@ export default function SettingsScreen({
       </div>
 
       <CategoryModal open={showCategoryModal} category={selectedCategory} onClose={() => setShowCategoryModal(false)} onSaved={loadCategories} />
+
+      {/* Change Password Modal */}
+      <ModalShell
+        open={showPasswordModal}
+        title="Ganti Password"
+        subtitle="Buat password baru yang aman untuk akun Anda"
+        onClose={() => setShowPasswordModal(false)}
+        footer={
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setShowPasswordModal(false)}
+              className="rounded-2xl border border-black/10 px-5 py-3 text-sm font-semibold text-[#7B6E67]"
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleConfirmPasswordChange}
+              disabled={isChangingPassword}
+              className="rounded-2xl bg-[#29B9AA] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {isChangingPassword ? "Memproses..." : "Ganti Password"}
+            </button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wider text-[#7B6E67]">Password Baru</label>
+            <input
+              type="password"
+              placeholder="Minimal 6 karakter"
+              value={newPassword}
+              onChange={(e) => setNewPassword(e.target.value)}
+              className="mt-2 w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#FF6B58]"
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold uppercase tracking-wider text-[#7B6E67]">Konfirmasi Password Baru</label>
+            <input
+              type="password"
+              placeholder="Ulangi password baru"
+              value={confirmNewPassword}
+              onChange={(e) => setConfirmNewPassword(e.target.value)}
+              className="mt-2 w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#FF6B58]"
+            />
+          </div>
+        </div>
+      </ModalShell>
+
+      {/* Logout Confirmation Modal */}
+      <ModalShell
+        open={showLogoutModal}
+        title="Keluar dari Akun?"
+        onClose={() => setShowLogoutModal(false)}
+        footer={
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setShowLogoutModal(false)}
+              className="rounded-2xl border border-black/10 px-5 py-3 text-sm font-semibold text-[#7B6E67]"
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleConfirmLogout}
+              className="rounded-2xl bg-[#FF6B58] px-5 py-3 text-sm font-semibold text-white"
+            >
+              Keluar Sekarang
+            </button>
+          </div>
+        }
+      >
+        <p className="text-sm text-[#7B6E67] leading-relaxed">
+          Apakah Anda yakin ingin keluar dari akun Anda? Anda harus masuk kembali untuk mengakses data pencatatan transaksi Anda.
+        </p>
+      </ModalShell>
+
+      {/* Delete Account Confirmation Modal */}
+      <ModalShell
+        open={showDeleteAccountModal}
+        title="Hapus Akun Permanen?"
+        onClose={() => setShowDeleteAccountModal(false)}
+        footer={
+          <div className="flex justify-end gap-3">
+            <button
+              onClick={() => setShowDeleteAccountModal(false)}
+              disabled={isDeletingAccount}
+              className="rounded-2xl border border-black/10 px-5 py-3 text-sm font-semibold text-[#7B6E67]"
+            >
+              Batal
+            </button>
+            <button
+              onClick={handleConfirmDeleteAccount}
+              disabled={isDeletingAccount}
+              className="rounded-2xl bg-[#FF6B58] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
+            >
+              {isDeletingAccount ? "Menghapus..." : "Hapus Permanen"}
+            </button>
+          </div>
+        }
+      >
+        <p className="text-sm text-[#7B6E67] leading-relaxed">
+          Apakah Anda yakin ingin menghapus akun Anda? Seluruh kategori, wallet, transaksi, dan data lainnya akan dihapus secara permanen dari database dan tidak dapat dipulihkan.
+        </p>
+      </ModalShell>
     </>
   );
 }

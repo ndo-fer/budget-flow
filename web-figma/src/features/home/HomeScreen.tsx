@@ -11,7 +11,7 @@ import {
 } from "../../services/analyticsService";
 import { getCurrentPlan } from "../../services/planService";
 import { getCurrentMonth, getToday } from "../../utils/date";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import ExpenseModal from "../../components/modals/ExpenseModal";
 
 // Sub-components
@@ -23,13 +23,44 @@ import ProgressRencanaCard from "./components/ProgressRencanaCard";
 import AnalyticsDashboard from "./components/AnalyticsDashboard";
 
 interface HomeScreenProps {
-  onNavigateTab: (tabId: string) => void;
+  onNavigateTab: (tabId: any, options?: { replace?: boolean; search?: string }) => void;
   openExpenseComposerTick: number;
+  onClearExpenseComposerTick?: () => void;
+  activeTab?: string;
+  searchParams?: string;
+  clearSearchParams?: () => void;
 }
 
-export default function HomeScreen({ onNavigateTab, openExpenseComposerTick }: HomeScreenProps) {
+export default function HomeScreen({ 
+  onNavigateTab, 
+  openExpenseComposerTick, 
+  onClearExpenseComposerTick,
+  activeTab, 
+  searchParams, 
+  clearSearchParams 
+}: HomeScreenProps) {
   const [activeSubTab, setActiveSubTab] = useState<"overview" | "analytics">("overview");
   const [month] = useState(getCurrentMonth());
+
+  useEffect(() => {
+    const query = searchParams || "";
+    const params = new URLSearchParams(query);
+    const tabParam = params.get("tab");
+
+    if (activeTab === "analytics" || tabParam === "analytics") {
+      setActiveSubTab("analytics");
+      clearSearchParams?.();
+      if (typeof window !== "undefined" && window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    } else if (activeTab === "home" && tabParam === "overview") {
+      setActiveSubTab("overview");
+      clearSearchParams?.();
+      if (typeof window !== "undefined" && window.location.search) {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [activeTab, searchParams, clearSearchParams]);
   
   // Modals state
   const [isExpenseModalOpen, setIsExpenseModalOpen] = useState(false);
@@ -90,7 +121,7 @@ export default function HomeScreen({ onNavigateTab, openExpenseComposerTick }: H
 
   useEffect(() => {
     loadData();
-  }, [month, openExpenseComposerTick]);
+  }, [month]);
 
   useEffect(() => {
     if (!Capacitor.isNativePlatform()) return;
@@ -126,8 +157,9 @@ export default function HomeScreen({ onNavigateTab, openExpenseComposerTick }: H
   useEffect(() => {
     if (openExpenseComposerTick > 0) {
       setIsExpenseModalOpen(true);
+      onClearExpenseComposerTick?.();
     }
-  }, [openExpenseComposerTick]);
+  }, [openExpenseComposerTick, onClearExpenseComposerTick]);
 
   if (isLoading) {
     return (
@@ -177,8 +209,8 @@ export default function HomeScreen({ onNavigateTab, openExpenseComposerTick }: H
 
       {activeSubTab === "overview" ? (
         <div className="grid gap-6 md:grid-cols-3">
-          <SafeToSpendCard safeToSpend={safeToSpend} />
-          <DailyBudgetLimitCard safeToSpend={safeToSpend} />
+          <SafeToSpendCard safeToSpend={safeToSpend} onNavigateTab={onNavigateTab} />
+          <DailyBudgetLimitCard safeToSpend={safeToSpend} onNavigateTab={onNavigateTab} />
           <QuickChecklistActions onNavigateTab={onNavigateTab} />
           <ProgressRencanaCard month={month} monthlyPlan={monthlyPlan} />
         </div>
@@ -189,6 +221,7 @@ export default function HomeScreen({ onNavigateTab, openExpenseComposerTick }: H
           dailyTrend={dailyTrend}
           categoryBreakdown={categoryBreakdown}
           safeToSpend={safeToSpend}
+          onNavigateTab={onNavigateTab}
         />
       )}
 

@@ -20,10 +20,12 @@ import {
 } from "lucide-react";
 import { getWallets, createWallet } from "../../services/walletService";
 import { formatCurrency } from "../../utils/format";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import type { Wallet } from "../../types/models";
 import CsvImportModal from "../../components/modals/CsvImportModal";
 import { ScreenshotBalanceModal, ReceiptScanModal } from "../../components/modals/OcrModals";
+import ExpenseModal from "../../components/modals/ExpenseModal";
+import IncomeTransactionModal from "../../components/modals/IncomeTransactionModal";
 
 const walletTypeIcon = {
   bank: Building2,
@@ -32,7 +34,13 @@ const walletTypeIcon = {
   other: CreditCard,
 } as const;
 
-export default function WalletsScreen() {
+interface WalletsScreenProps {
+  activeTab?: string;
+  searchParams?: string;
+  clearSearchParams?: () => void;
+}
+
+export default function WalletsScreen({ activeTab, searchParams, clearSearchParams }: WalletsScreenProps) {
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -40,7 +48,35 @@ export default function WalletsScreen() {
   const [isCsvOpen, setIsCsvOpen] = useState(false);
   const [isScreenshotOpen, setIsScreenshotOpen] = useState(false);
   const [isReceiptOpen, setIsReceiptOpen] = useState(false);
+  const [isExpenseOpen, setIsExpenseOpen] = useState(false);
+  const [isIncomeOpen, setIsIncomeOpen] = useState(false);
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const query = searchParams || "";
+    const params = new URLSearchParams(query);
+    const action = params.get("action");
+
+    if (activeTab === "csv-import" || action === "import-csv") {
+      setIsCsvOpen(true);
+      clearSearchParams?.();
+      if (typeof window !== "undefined") {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    } else if (action === "upload-receipt" || action === "upload-struk") {
+      setIsReceiptOpen(true);
+      clearSearchParams?.();
+      if (typeof window !== "undefined") {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    } else if (action === "screenshot-balance" || action === "update-saldo") {
+      setIsScreenshotOpen(true);
+      clearSearchParams?.();
+      if (typeof window !== "undefined") {
+        window.history.replaceState({}, "", window.location.pathname);
+      }
+    }
+  }, [activeTab, searchParams, clearSearchParams]);
 
   // New Wallet form state
   const [showAddWallet, setShowAddWallet] = useState(false);
@@ -225,22 +261,45 @@ export default function WalletsScreen() {
                   </div>
                 </div>
 
-                <div className="mt-6 flex items-center justify-between border-t border-black/5 pt-4">
-                  <span className="text-[10px] text-[#7B6E67] font-semibold flex items-center gap-1">
-                    <Clock className="w-3 h-3 text-[#7B6E67]" />
-                    Last confirmed: {wallet.last_confirmed_at ? new Date(wallet.last_confirmed_at).toLocaleDateString("id-ID", { day: "numeric", month: "long" }) : "Belum pernah"}
-                  </span>
-                  
-                  <button
-                    onClick={() => {
-                      setActiveWalletId(wallet.id);
-                      setIsScreenshotOpen(true);
-                    }}
-                    className="flex items-center gap-1 text-[11px] font-bold text-[#29B9AA] hover:text-[#229A8E] transition-colors"
-                  >
-                    <RefreshCw className="h-3 w-3" />
-                    Koreksi Saldo
-                  </button>
+                <div className="mt-6 border-t border-black/5 pt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-[#7B6E67] font-semibold flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-[#7B6E67]" />
+                      Last confirmed: {wallet.last_confirmed_at ? new Date(wallet.last_confirmed_at).toLocaleDateString("id-ID", { day: "numeric", month: "long" }) : "Belum pernah"}
+                    </span>
+                    
+                    <button
+                      onClick={() => {
+                        setActiveWalletId(wallet.id);
+                        setIsScreenshotOpen(true);
+                      }}
+                      className="flex items-center gap-1 text-[11px] font-bold text-[#29B9AA] hover:text-[#229A8E] transition-colors"
+                    >
+                      <RefreshCw className="h-3 w-3" />
+                      Koreksi Saldo
+                    </button>
+                  </div>
+
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={() => {
+                        setActiveWalletId(wallet.id);
+                        setIsExpenseOpen(true);
+                      }}
+                      className="flex-1 rounded-xl bg-red-50 hover:bg-red-100 py-1.5 text-center text-[10px] font-bold text-[#FF6B58] transition-colors"
+                    >
+                      + Expense
+                    </button>
+                    <button
+                      onClick={() => {
+                        setActiveWalletId(wallet.id);
+                        setIsIncomeOpen(true);
+                      }}
+                      className="flex-1 rounded-xl bg-[#EBF7F6] hover:bg-[#D5EFEF] py-1.5 text-center text-[10px] font-bold text-[#29B9AA] transition-colors"
+                    >
+                      + Income
+                    </button>
+                  </div>
                 </div>
               </div>
             ))
@@ -367,6 +426,22 @@ export default function WalletsScreen() {
           onSaved={fetchWallets}
         />
       )}
+
+      {/* Expense Modal */}
+      <ExpenseModal
+        isOpen={isExpenseOpen}
+        onClose={() => setIsExpenseOpen(false)}
+        onSuccess={fetchWallets}
+        defaultWalletId={activeWalletId}
+      />
+
+      {/* Income Transaction Modal */}
+      <IncomeTransactionModal
+        isOpen={isIncomeOpen}
+        onClose={() => setIsIncomeOpen(false)}
+        onSuccess={fetchWallets}
+        defaultWalletId={activeWalletId}
+      />
 
     </div>
   );

@@ -14,7 +14,7 @@ import {
   User,
   LogOut,
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "../utils/toast";
 import type { TabId } from "../types/models";
 import { useAuth } from "../contexts/AuthContext";
 import { useOnboarding } from "../contexts/OnboardingContext";
@@ -133,21 +133,33 @@ export default function AppShell() {
     if (typeof window === "undefined") return "home";
     return resolveTabFromPath(window.location.pathname) || "home";
   });
+  const [searchParams, setSearchParams] = useState(() => {
+    if (typeof window === "undefined") return "";
+    return window.location.search;
+  });
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [openExpenseComposerTick, setOpenExpenseComposerTick] = useState(0);
 
   const activeNavItem = useMemo(() => NAV_ITEMS.find((item) => item.id === activeTab) || NAV_ITEMS[0], [activeTab]);
 
-  const navigateToTab = (tab: TabId, options?: { replace?: boolean }) => {
+  const navigateToTab = (tab: TabId, options?: { replace?: boolean; search?: string }) => {
     setActiveTab(tab);
+    setSearchParams(options?.search || "");
     setShowProfileMenu(false);
 
     if (typeof window === "undefined") return;
-    const nextPath = TAB_PATHS[tab];
-    if (window.location.pathname !== nextPath) {
+    let nextPath = TAB_PATHS[tab];
+    if (options?.search) {
+      nextPath += options.search;
+    }
+    if (window.location.pathname !== nextPath || (options?.search && window.location.search !== options.search)) {
       window.history[options?.replace ? "replaceState" : "pushState"]({}, "", nextPath);
     }
     window.scrollTo({ top: 0, behavior: "auto" });
+  };
+
+  const clearSearchParams = () => {
+    setSearchParams("");
   };
 
 
@@ -190,6 +202,7 @@ export default function AppShell() {
     const syncFromLocation = () => {
       const nextTab = resolveTabFromPath(window.location.pathname) || "home";
       setActiveTab(nextTab);
+      setSearchParams(window.location.search);
     };
 
     if (!resolveTabFromPath(window.location.pathname)) {
@@ -202,14 +215,14 @@ export default function AppShell() {
   }, []);
 
   const renderScreen = () => {
-    if (activeTab === "home") return <HomeScreen onNavigateTab={navigateToTab} openExpenseComposerTick={openExpenseComposerTick} />;
-    if (activeTab === "wallets") return <WalletsScreen />;
-    if (activeTab === "csv-import") return <WalletsScreen />;
+    if (activeTab === "home") return <HomeScreen onNavigateTab={navigateToTab} openExpenseComposerTick={openExpenseComposerTick} onClearExpenseComposerTick={() => setOpenExpenseComposerTick(0)} activeTab={activeTab} searchParams={searchParams} clearSearchParams={clearSearchParams} />;
+    if (activeTab === "wallets") return <WalletsScreen activeTab={activeTab} searchParams={searchParams} clearSearchParams={clearSearchParams} />;
+    if (activeTab === "csv-import") return <WalletsScreen activeTab={activeTab} searchParams={searchParams} clearSearchParams={clearSearchParams} />;
     if (activeTab === "budget") return <BudgetScreen />;
     if (activeTab === "income") return <IncomeScreen />;
-    if (activeTab === "history") return <HistoryScreen />;
-    if (activeTab === "recurring") return <HistoryScreen />;
-    if (activeTab === "analytics") return <HomeScreen onNavigateTab={navigateToTab} openExpenseComposerTick={openExpenseComposerTick} />;
+    if (activeTab === "history") return <HistoryScreen activeTab={activeTab} searchParams={searchParams} clearSearchParams={clearSearchParams} />;
+    if (activeTab === "recurring") return <HistoryScreen activeTab={activeTab} searchParams={searchParams} clearSearchParams={clearSearchParams} />;
+    if (activeTab === "analytics") return <HomeScreen onNavigateTab={navigateToTab} openExpenseComposerTick={openExpenseComposerTick} onClearExpenseComposerTick={() => setOpenExpenseComposerTick(0)} activeTab={activeTab} searchParams={searchParams} clearSearchParams={clearSearchParams} />;
     return <SettingsScreen onOpenTutorial={openOnboarding} />;
   };
 
@@ -285,7 +298,7 @@ export default function AppShell() {
             onClick={() => setShowProfileMenu((current) => !current)}
             className="flex w-full items-center gap-3 rounded-[24px] border border-black/5 bg-[#FEF9F4] px-3 py-3 hover:bg-[#F3EDE8]"
           >
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#29B9AA] text-sm font-bold text-white">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#29B9AA] to-[#5BAEE8] text-sm font-bold text-white shadow-sm">
               {(user?.email || "B").slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1 text-left">
@@ -307,23 +320,13 @@ export default function AppShell() {
             </div>
           </button>
           <button
-            onClick={() => {
-              navigateToTab("home");
-              setOpenExpenseComposerTick((current) => current + 1);
-            }}
-            className="inline-flex h-10 items-center gap-2 rounded-full bg-[#FF6B58] px-4 text-xs font-semibold text-white shadow-sm"
-          >
-            <Plus className="h-4 w-4" />
-            Add
-          </button>
-          <button
             onClick={() => navigateToTab("settings")}
-            className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#EBF7F6] text-sm font-bold text-[#29B9AA] shadow-sm"
+            className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#29B9AA] to-[#5BAEE8] text-sm font-extrabold text-white shadow-md active:scale-95 transition-transform"
             aria-label="Open settings"
           >
             {(user?.email || "B").slice(0, 1).toUpperCase()}
-            <span className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full bg-white border border-black/10 shadow-sm flex items-center justify-center">
-              <Settings className="w-3 h-3 text-[#29B9AA]" />
+            <span className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full bg-[#1A2B38] border border-white shadow-sm flex items-center justify-center">
+              <Settings className="w-3 h-3 text-white" />
             </span>
           </button>
         </div>
@@ -352,6 +355,18 @@ export default function AppShell() {
           })}
         </div>
       </nav>
+
+      {/* Floating Add Button for Mobile */}
+      <button
+        onClick={() => {
+          navigateToTab("home");
+          setOpenExpenseComposerTick((current) => current + 1);
+        }}
+        className="fixed bottom-[72px] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-gradient-to-r from-[#FF6B58] to-[#E8503F] text-white shadow-[0_8px_30px_rgba(255,107,88,0.35)] hover:scale-105 active:scale-95 transition-all lg:hidden"
+        aria-label="Tambah Transaksi"
+      >
+        <Plus className="h-6 w-6 stroke-[3]" />
+      </button>
     </div>
   );
 }

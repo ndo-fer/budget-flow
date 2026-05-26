@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { Toaster } from "sonner";
+import { Toaster } from "./components/ui/sonner";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { OnboardingProvider, useOnboarding } from "../contexts/OnboardingContext";
 import AuthScreen from "../features/auth/AuthScreen";

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import { useAuth } from "../../contexts/AuthContext";
 import { LogIn, UserPlus, ArrowRight } from "lucide-react";
 
@@ -59,7 +59,7 @@ export default function AuthScreen() {
   return (
     <div className="min-h-screen bg-[#FEF9F4] px-6 py-10">
       <div className="mx-auto grid min-h-[calc(100vh-5rem)] max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
-        <section className="relative overflow-hidden rounded-[36px] border border-black/10 bg-white p-8 shadow-[0_24px_64px_rgba(41,185,170,0.15)] lg:flex lg:min-h-[560px] lg:flex-col lg:justify-center lg:p-12">
+        <section className="hidden lg:flex relative overflow-hidden rounded-[36px] border border-black/10 bg-white p-8 shadow-[0_24px_64px_rgba(41,185,170,0.15)] lg:min-h-[560px] lg:flex-col lg:justify-center lg:p-12">
           <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-[#FFB347]/30" />
           <div className="absolute bottom-0 right-24 h-28 w-28 rounded-full bg-[#29B9AA]/15" />
           <p className="relative text-xs font-bold uppercase tracking-[0.28em] text-[#FF6B58]">Budget Flow</p>
@@ -85,6 +85,11 @@ export default function AuthScreen() {
         </section>
 
         <section className="rounded-[36px] border border-black/10 bg-white p-8 shadow-[0_24px_64px_rgba(255,107,88,0.12)] lg:flex lg:min-h-[560px] lg:flex-col lg:justify-center">
+          {/* Logo / Branding on Mobile */}
+          <div className="mb-6 flex flex-col items-center justify-center lg:hidden">
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#FF6B58]">Budget Flow</p>
+          </div>
+
           <div className="mb-6 flex rounded-full bg-[#F3EDE8] p-1">
             <button
               onClick={() => switchMode(false)}

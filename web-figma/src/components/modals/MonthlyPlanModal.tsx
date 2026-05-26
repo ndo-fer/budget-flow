@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import { createPlan, getCurrentPlan } from "../../services/planService";
 import { getDaysInMonth } from "../../utils/date";
 import { formatCurrency } from "../../utils/format";

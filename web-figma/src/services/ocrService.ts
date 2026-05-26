@@ -21,6 +21,48 @@ const getTesseract = async () => {
 
 export type OcrProgressCallback = (progress: number, status: string) => void;
 
+// ── Canvas Image Preprocessing ────────────────────────────────
+
+const preprocessImageIfNeeded = (imageSource: File | Blob | string): Promise<File | Blob | string> => {
+  if (typeof imageSource === "string") {
+    return Promise.resolve(imageSource);
+  }
+
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(imageSource);
+          return;
+        }
+
+        canvas.width = img.width;
+        canvas.height = img.height;
+
+        // Apply contrast and grayscale to make text pop against colored gradients
+        ctx.filter = "contrast(1.6) grayscale(1) brightness(1.05)";
+        ctx.drawImage(img, 0, 0);
+
+        canvas.toBlob(
+          (blob) => {
+            resolve(blob || imageSource);
+          },
+          "image/jpeg",
+          0.9
+        );
+      };
+      img.onerror = () => resolve(imageSource);
+      img.src = e.target?.result as string;
+    };
+    reader.onerror = () => resolve(imageSource);
+    reader.readAsDataURL(imageSource);
+  });
+};
+
 // ── Core OCR ──────────────────────────────────────────────────
 
 export const extractTextFromImage = async (
@@ -28,6 +70,13 @@ export const extractTextFromImage = async (
   onProgress?: OcrProgressCallback,
 ): Promise<string> => {
   const Tesseract = await getTesseract();
+
+  let processedSource = imageSource;
+  try {
+    processedSource = await preprocessImageIfNeeded(imageSource);
+  } catch (err) {
+    console.warn("[OCR] Image preprocessing failed, using original:", err);
+  }
 
   const worker = await Tesseract.createWorker("ind+eng", 1, {
     workerPath: "/tesseract/tesseract-worker.min.js",
@@ -42,8 +91,14 @@ export const extractTextFromImage = async (
     errorHandler: (e: any) => console.warn("[OCR] Worker error:", e),
   });
 
+  // 15 second timeout to prevent infinite loader hangs
+  const recognizePromise = worker.recognize(processedSource);
+  const timeoutPromise = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error("OCR scan timed out. Pastikan file asset tesseract tersedia dan koneksi stabil.")), 15000)
+  );
+
   try {
-    const { data } = await worker.recognize(imageSource);
+    const { data } = await Promise.race([recognizePromise, timeoutPromise]);
     return data.text;
   } finally {
     await worker.terminate();
@@ -71,22 +126,33 @@ const WALLET_HINTS: Record<string, string[]> = {
 };
 
 const extractCurrencyAmount = (text: string): number | null => {
-  // Multiple patterns for Indonesian currency
+  const cleanOcrDigits = (raw: string): string => {
+    return raw
+      .replace(/[Oo]/g, "0")
+      .replace(/[Ii|l]/g, "1")
+      .replace(/[Ss]/g, "5")
+      .replace(/[Bb]/g, "8")
+      .replace(/[Zz]/g, "2")
+      .replace(/[Tt]/g, "7");
+  };
+
+  // Patterns that allow common OCR letter substitutions in place of digits
   const patterns = [
-    /Rp\s*([\d.,]+)/gi,
-    /IDR\s*([\d.,]+)/gi,
-    /(?:saldo|balance|available)[:\s]+Rp?\s*([\d.,]+)/gi,
-    /([\d]{1,3}(?:[.,][\d]{3})+)/g, // e.g. 1.234.567 or 1,234,567
+    /Rp\s*([0-9OoIi|lSsbBtZz.,]+)/gi,
+    /IDR\s*([0-9OoIi|lSsbBtZz.,]+)/gi,
+    /(?:saldo|balance|available)[:\s]+Rp?\s*([0-9OoIi|lSsbBtZz.,]+)/gi,
+    /([0-9OoIi|lSsbBtZz]{1,3}(?:[.,][0-9OoIi|lSsbBtZz]{3})+)/gi,
   ];
 
   for (const pattern of patterns) {
     let match;
     while ((match = pattern.exec(text)) !== null) {
-      const raw = match[1]
-        .replace(/\./g, "") // remove thousand separators (Indonesian style)
+      const cleanedDigits = cleanOcrDigits(match[1]);
+      const raw = cleanedDigits
+        .replace(/\./g, "") // remove thousand separators
         .replace(",", "."); // comma -> decimal
       const num = parseFloat(raw);
-      if (!isNaN(num) && num > 100) return num; // filter out very small spurious numbers
+      if (!isNaN(num) && num > 100) return num;
     }
     pattern.lastIndex = 0;
   }
@@ -95,10 +161,26 @@ const extractCurrencyAmount = (text: string): number | null => {
 
 const detectWalletFromText = (text: string): string | undefined => {
   const lower = text.toLowerCase();
+  let bestWallet: string | undefined = undefined;
+  let earliestIndex = Infinity;
+
   for (const [wallet, hints] of Object.entries(WALLET_HINTS)) {
-    if (hints.some((h) => lower.includes(h))) return wallet;
+    for (const hint of hints) {
+      const idx = lower.indexOf(hint);
+      if (idx !== -1 && idx < earliestIndex) {
+        earliestIndex = idx;
+        bestWallet = wallet;
+      }
+    }
   }
-  return undefined;
+
+  // If the wallet name was only found deep in the text (e.g. past the first 300 characters),
+  // it is likely a false positive from transaction details.
+  if (bestWallet && earliestIndex > 300) {
+    return undefined;
+  }
+
+  return bestWallet;
 };
 
 export const parseBalanceScreenshot = async (
@@ -125,34 +207,90 @@ export const parseBalanceScreenshot = async (
     }
   }
 
-  // Fallback: find the largest currency amount in the entire text
+  // Fallback: find currency amounts, prioritizing top area and excluding transaction-like lines
   if (!balanceCandidate) {
-    const amounts: number[] = [];
-    const pattern = /Rp\s*([\d.,]+)/gi;
-    let match;
-    while ((match = pattern.exec(rawText)) !== null) {
-      const raw = match[1].replace(/\./g, "").replace(",", ".");
-      const num = parseFloat(raw);
-      if (!isNaN(num)) amounts.push(num);
+    const amounts: { value: number; lineIndex: number }[] = [];
+    const TRANSACTION_KEYWORDS = [
+      "transfer", "bayar", "pembayaran", "qris", "bi fast", "top-up", "topup", 
+      "deposit", "credit", "debit", "mutasi", "rekening sumber", "tujuan", "fee"
+    ];
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const lowerLine = line.toLowerCase();
+      
+      // Skip lines that look like transactions or contain +/- indicating mutasi
+      const isTransactionLine = 
+        /[-+]\s*Rp/i.test(line) || 
+        /Rp\s*[-+]/i.test(line) ||
+        /[-+]\s*[\d.,]+/i.test(line) ||
+        TRANSACTION_KEYWORDS.some(kw => lowerLine.includes(kw));
+        
+      if (isTransactionLine) continue;
+      
+      // Try to extract currency amount
+      const num = extractCurrencyAmount(line);
+      if (num && num > 100) {
+        amounts.push({ value: num, lineIndex: i });
+      }
     }
+    
     if (amounts.length > 0) {
-      // Take the largest amount (likely the balance display)
-      balanceCandidate = Math.max(...amounts);
+      // Prioritize amounts found in the first 8 lines (header/summary area)
+      const topAmounts = amounts.filter(a => a.lineIndex < 8);
+      if (topAmounts.length > 0) {
+        balanceCandidate = topAmounts[0].value;
+      } else {
+        // Fallback to the largest overall non-transaction amount
+        balanceCandidate = Math.max(...amounts.map(a => a.value));
+      }
     }
   }
 
   const walletCandidate = detectWalletFromText(rawText);
 
-  // Confidence based on how much we found
+  // Confidence based on location and validity of elements
   let confidence = 0.4;
-  if (balanceCandidate) confidence += 0.3;
-  if (walletCandidate) confidence += 0.2;
-  if (BALANCE_KEYWORDS.some((kw) => lower.includes(kw))) confidence += 0.1;
+  
+  if (walletCandidate) {
+    // If wallet candidate is in the header area (first 250 chars), it's highly confident
+    const walletIndex = lower.indexOf(walletCandidate.toLowerCase());
+    const isTopWallet = walletIndex !== -1 && walletIndex < 250;
+    confidence += isTopWallet ? 0.25 : 0.1;
+  }
+
+  if (balanceCandidate) {
+    // If balance was found near a keyword, it's highly confident
+    const foundWithKeyword = lines.some((line, i) => {
+      if (BALANCE_KEYWORDS.some((kw) => line.toLowerCase().includes(kw))) {
+        const searchText = lines.slice(i, i + 3).join(" ").toLowerCase();
+        const found = extractCurrencyAmount(searchText);
+        return found === balanceCandidate;
+      }
+      return false;
+    });
+    confidence += foundWithKeyword ? 0.3 : 0.15;
+  }
+
+  if (BALANCE_KEYWORDS.some((kw) => lower.includes(kw))) {
+    confidence += 0.1;
+  }
+
+  // Penalty if multiple conflicting wallets are mentioned (indicates a transfer/transaction list screenshot)
+  let walletCount = 0;
+  for (const [wallet, hints] of Object.entries(WALLET_HINTS)) {
+    if (hints.some((h) => lower.includes(h))) {
+      walletCount++;
+    }
+  }
+  if (walletCount > 1) {
+    confidence -= 0.15;
+  }
 
   return {
     walletCandidate,
     balanceCandidate: balanceCandidate ?? undefined,
-    confidence: Math.min(confidence, 0.95),
+    confidence: Math.max(0.1, Math.min(confidence, 0.95)),
     rawText,
     capturedAt: new Date().toISOString(),
   };

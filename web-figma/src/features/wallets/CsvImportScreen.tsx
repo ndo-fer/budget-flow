@@ -4,7 +4,7 @@ import { parseRawCsv, autoDetectMapping, buildTransactionCandidates, buildImport
 import { addBulkWalletTransactions } from "../../services/walletTransactionService";
 import { getWallets } from "../../services/walletService";
 import { formatCurrency } from "../../utils/format";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import type { Wallet, CsvColumnMapping, CsvImportPreview } from "../../types/models";
 
 type Step = "upload" | "map" | "preview" | "done";

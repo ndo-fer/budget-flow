@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarPlus, Download, Pencil, RefreshCcw } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import { getCategories } from "../../services/categoryService";
 import { deleteRecurringExpense, getRecurringExpenses, syncRecurringExpensesForMonth } from "../../services/recurringService";
 import { formatCurrency } from "../../utils/format";

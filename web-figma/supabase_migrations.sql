@@ -122,3 +122,14 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE TRIGGER trg_wallets_updated_at
 BEFORE UPDATE ON wallets
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+-- 7. FUNCTION: delete current user (for account self-deletion)
+CREATE OR REPLACE FUNCTION delete_user()
+RETURNS void
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+BEGIN
+  DELETE FROM auth.users WHERE id = auth.uid();
+END;
+$$;

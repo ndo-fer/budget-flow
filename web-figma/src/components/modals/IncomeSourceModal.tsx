@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import type { IncomeSource } from "../../types/models";
 import { createIncomeSource, updateIncomeSource } from "../../services/incomeService";
 import ModalShell from "./ModalShell";

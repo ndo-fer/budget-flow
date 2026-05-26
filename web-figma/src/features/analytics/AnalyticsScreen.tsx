@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
 import { ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid } from "recharts";
 import { calculateMonthlySummary, getCategoryBreakdown, getDailyAverage, getDailySpendingTrend, getTopCategories } from "../../services/analyticsService";
 import { getQrisInsight, getDailyBurnRate, getTopMerchants, detectRecurringPatterns } from "../../services/walletAnalyticsService";

@@ -11,9 +11,11 @@ import {
   TrendingDown, 
   AlertTriangle, 
   Lightbulb, 
-  BarChart3 
+  BarChart3,
+  Pencil
 } from "lucide-react";
-import { toast } from "sonner";
+import { toast } from "../../utils/toast";
+import CategoryModal from "../../components/modals/CategoryModal";
 import { getBudgetVsActual, getBudgetVsActualSummary, getSpendingRecommendations } from "../../services/comparisonService";
 import { formatMonthLabel, getCurrentMonth, shiftMonth } from "../../utils/date";
 import { formatCompactCurrency, formatCurrency } from "../../utils/format";
@@ -24,6 +26,8 @@ export default function BudgetScreen() {
   const [summary, setSummary] = useState<any>(null);
   const [recommendations, setRecommendations] = useState<any[]>([]);
   const [showAllRecommendations, setShowAllRecommendations] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState<any>(null);
 
   const loadData = async () => {
     try {
@@ -190,7 +194,26 @@ export default function BudgetScreen() {
                 <div key={item.categoryId} className="rounded-2xl bg-[#FEF9F4] p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <p className="text-sm font-semibold text-[#1A2B38]">{item.categoryName}</p>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-[#1A2B38]">{item.categoryName}</p>
+                        <button
+                          onClick={() => {
+                            setSelectedCategory({
+                              id: item.categoryId,
+                              name: item.categoryName,
+                              budget_amount: item.budget,
+                              color: item.categoryColor,
+                              priority: item.priority,
+                              is_active: true
+                            });
+                            setShowCategoryModal(true);
+                          }}
+                          className="rounded-full p-1 text-[#7B6E67] hover:bg-[#F3EDE8] hover:text-[#1A2B38] transition-colors"
+                          title="Edit Budget"
+                        >
+                          <Pencil className="h-3 w-3" />
+                        </button>
+                      </div>
                       <p className="mt-1 text-xs text-[#7B6E67]">{item.transactionCount} transaksi</p>
                     </div>
                     <p className={`text-sm font-bold ${item.status === "over" ? "text-[#FF6B58]" : item.status === "under" ? "text-[#29B9AA]" : "text-[#5BAEE8]"}`}>
@@ -226,6 +249,16 @@ export default function BudgetScreen() {
           )}
         </div>
       </div>
+
+      <CategoryModal
+        open={showCategoryModal}
+        category={selectedCategory}
+        onClose={() => {
+          setShowCategoryModal(false);
+          setSelectedCategory(null);
+        }}
+        onSaved={loadData}
+      />
     </div>
   );
 }

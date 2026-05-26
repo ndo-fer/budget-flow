@@ -8,16 +8,20 @@ interface DailyBudgetLimitCardProps {
     safeToSpendToday: number;
     overAmount: number;
   } | null;
+  onNavigateTab?: (tabId: any, options?: { replace?: boolean; search?: string }) => void;
 }
 
-export default function DailyBudgetLimitCard({ safeToSpend }: DailyBudgetLimitCardProps) {
+export default function DailyBudgetLimitCard({ safeToSpend, onNavigateTab }: DailyBudgetLimitCardProps) {
   return (
-    <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm flex flex-col justify-between">
+    <div 
+      onClick={() => onNavigateTab?.("history")}
+      className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-[#29B9AA]/30 hover:shadow-md transition-all group text-left"
+    >
       <div>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-1.5 text-[#7B6E67]">
-            <Target className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
-            <span className="text-xs font-bold uppercase tracking-wider">Batas Harian</span>
+            <Target className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0 group-hover:scale-105 transition-transform" />
+            <span className="text-xs font-bold uppercase tracking-wider group-hover:text-[#1A2B38] transition-colors">Batas Harian</span>
           </div>
           <span className={`inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider ${
             safeToSpend?.isOverDailyLimit ? "bg-red-50 text-[#FF6B58]" : "bg-[#EBF7F6] text-[#29B9AA]"
@@ -38,7 +42,7 @@ export default function DailyBudgetLimitCard({ safeToSpend }: DailyBudgetLimitCa
 
         <div className="mt-4">
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold text-[#1A2B38]">Rp {(safeToSpend?.todaySpent ?? 0).toLocaleString("id-ID")}</span>
+            <span className="text-2xl font-bold text-[#1A2B38] group-hover:underline">Rp {(safeToSpend?.todaySpent ?? 0).toLocaleString("id-ID")}</span>
             <span className="text-xs text-[#7B6E67]">terpakai</span>
           </div>
           <p className="text-xs text-[#7B6E67] mt-0.5">Batas aman harian: Rp {safeToSpend?.safeToSpendPerDay ? Math.round(safeToSpend.safeToSpendPerDay).toLocaleString("id-ID") : "0"}</p>

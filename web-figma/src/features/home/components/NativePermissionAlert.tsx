@@ -1,6 +1,6 @@
 import { BellRing, AlertTriangle } from "lucide-react";
 import { registerPlugin, Capacitor } from "@capacitor/core";
-import { toast } from "sonner";
+import { toast } from "../../../utils/toast";
 
 const NotificationReceiver = registerPlugin<any>("NotificationReceiver");
 
