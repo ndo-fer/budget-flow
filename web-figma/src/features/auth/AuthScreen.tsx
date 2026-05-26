@@ -57,39 +57,22 @@ export default function AuthScreen() {
 
   const busy = isLoading || isSubmitting;
 
-  const handleGoogleSignIn = async () => {
-    try {
-      setIsSubmitting(true);
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: typeof window !== "undefined" ? window.location.origin : undefined,
-        },
-      });
-      if (error) throw error;
-    } catch (err: any) {
-      toast.error(err.message || "Gagal masuk dengan Google.");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-[#FEF9F4] px-6 py-8 relative overflow-hidden flex items-center justify-center">
       {/* Background Blobs */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
         {/* Coral Blob */}
-        <div className="absolute top-10 left-10 w-80 h-80 rounded-full bg-[#FF6B58]/45 animate-float-1" />
+        <div className="absolute top-10 left-10 w-56 h-56 rounded-full bg-[#FF6B58]/60 animate-float-1" />
         {/* Teal Blob */}
-        <div className="absolute bottom-10 right-10 w-96 h-96 rounded-full bg-[#29B9AA]/45 animate-float-2" />
+        <div className="absolute bottom-10 right-10 w-64 h-64 rounded-full bg-[#29B9AA]/60 animate-float-2" />
         {/* Orange Blob */}
-        <div className="absolute top-1/3 right-12 w-72 h-72 rounded-full bg-[#FFB347]/45 animate-float-3" />
+        <div className="absolute top-1/3 right-12 w-40 h-40 rounded-full bg-[#FFB347]/60 animate-float-3" />
         {/* Blue Blob */}
-        <div className="absolute bottom-1/3 left-12 w-72 h-72 rounded-full bg-[#5BAEE8]/45 animate-float-4" />
+        <div className="absolute bottom-1/3 left-12 w-48 h-48 rounded-full bg-[#5BAEE8]/60 animate-float-4" />
       </div>
 
-      <div className="relative z-10 w-full mx-auto grid min-h-0 lg:min-h-[calc(100vh-5rem)] max-w-6xl gap-8 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
-        <section className="hidden lg:flex relative overflow-hidden rounded-[36px] border border-black/10 bg-white/20 backdrop-blur-2xl p-8 shadow-[0_24px_64px_rgba(41,185,170,0.15)] lg:min-h-[560px] lg:flex-col lg:justify-center lg:p-12">
+      <div className="relative z-10 w-full mx-auto grid min-h-0 lg:min-h-[calc(100vh-5rem)] max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
+        <section className="hidden lg:flex relative overflow-hidden rounded-[36px] border border-black/10 bg-white/65 backdrop-blur-2xl p-8 shadow-[0_24px_64px_rgba(41,185,170,0.15)] lg:min-h-[560px] lg:flex-col lg:justify-center lg:p-12">
           <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-[#FFB347]/30" />
           <div className="absolute bottom-0 right-24 h-28 w-28 rounded-full bg-[#29B9AA]/15" />
           <p className="relative text-xs font-bold uppercase tracking-[0.28em] text-[#FF6B58]">Budget Flow</p>
@@ -114,10 +97,10 @@ export default function AuthScreen() {
           </div>
         </section>
 
-        <section className="rounded-[36px] border border-black/10 bg-white/20 backdrop-blur-2xl p-6 shadow-[0_24px_64px_rgba(255,107,88,0.12)] flex flex-col justify-center w-full max-w-md mx-auto lg:max-w-none">
-          {/* Logo / Branding on Mobile */}
-          <div className="mb-4 flex flex-col items-center justify-center lg:hidden">
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#FF6B58]">Budget Flow</p>
+        <section className="rounded-[36px] border border-black/10 bg-white/65 backdrop-blur-2xl p-6 shadow-[0_24px_64px_rgba(255,107,88,0.12)] flex flex-col justify-center w-full max-w-md mx-auto lg:max-w-none">
+          {/* Logo / Branding */}
+          <div className="mb-4 flex flex-col items-center justify-center">
+            <img src="/logo-horizontal.png" alt="Budget Flow Logo" className="h-14 w-auto object-contain" />
           </div>
 
           <div className="mb-5 flex rounded-full bg-[#F3EDE8] p-1">
@@ -189,44 +172,6 @@ export default function AuthScreen() {
               </>
             )}
           </button>
-
-          {/* Divider */}
-          <div className="my-4 flex items-center gap-3">
-            <div className="flex-1 border-t border-black/5"></div>
-            <span className="text-xs text-[#7B6E67]/60">
-              atau {isSignUp ? "daftar" : "masuk"} dengan
-            </span>
-            <div className="flex-1 border-t border-black/5"></div>
-          </div>
-
-          {/* Google Login Button */}
-          <button
-            type="button"
-            disabled={busy}
-            onClick={handleGoogleSignIn}
-            className="flex w-full items-center justify-center gap-3 rounded-2xl border border-black/10 bg-white py-3.5 text-sm font-semibold text-[#1A2B38] transition-colors hover:bg-[#FEF9F4] disabled:opacity-60"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24">
-              <path
-                fill="#EA4335"
-                d="M12 5.04c1.66 0 3.2.57 4.38 1.69l3.27-3.27C17.67 1.54 15.02 1 12 1 7.24 1 3.2 3.73 1.24 7.7l3.83 2.97C6.01 7.42 8.78 5.04 12 5.04z"
-              />
-              <path
-                fill="#4285F4"
-                d="M23.49 12.27c0-.81-.07-1.59-.2-2.36H12v4.51h6.46c-.28 1.46-1.1 2.69-2.34 3.51l3.63 2.82c2.13-1.97 3.74-4.86 3.74-8.48z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.07 14.73c-.24-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29L1.24 7.18C.45 8.77 0 10.54 0 12.44c0 1.9.45 3.67 1.24 5.26l3.83-2.97z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c3.24 0 5.97-1.07 7.96-2.91l-3.63-2.82c-1.01.68-2.3 1.09-3.96 1.09-3.22 0-5.99-2.38-6.96-5.63l-3.83 2.97C3.2 20.27 7.24 23 12 23z"
-              />
-            </svg>
-            <span>Google</span>
-          </button>
-
           <p className="mt-4 text-center text-sm leading-6 text-[#7B6E67]">
             {isSignUp ? "Sudah punya akun? " : "Belum punya akun? "}
             <button
