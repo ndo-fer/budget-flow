@@ -29,23 +29,24 @@
 }
 
 .animate-float-1 {
-  animation: float-1 22s infinite ease-in-out;
+  animation: float-1 12s infinite ease-in-out;
   will-change: transform;
 }
 
 .animate-float-2 {
-  animation: float-2 26s infinite ease-in-out;
+  animation: float-2 16s infinite ease-in-out;
   will-change: transform;
 }
 
 .animate-float-3 {
-  animation: float-3 20s infinite ease-in-out;
+  animation: float-3 10s infinite ease-in-out;
   will-change: transform;
 }
 
 .animate-float-4 {
-  animation: float-4 24s infinite ease-in-out;
+  animation: float-4 14s infinite ease-in-out;
   will-change: transform;
 }
+
 
 
