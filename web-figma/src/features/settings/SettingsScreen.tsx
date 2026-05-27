@@ -21,15 +21,11 @@ import {
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useOnboarding } from "../../contexts/OnboardingContext";
-import { getCategories } from "../../services/categoryService";
 import supabase from "../../lib/supabase";
 import { getCurrentUserId } from "../../services/queryUtils";
 import { formatCurrency } from "../../utils/format";
-import CategoryModal from "../../components/modals/CategoryModal";
 import ModalShell from "../../components/modals/ModalShell";
 import { getPermissionStatus, requestNotificationPermission } from "../../services/notificationService";
-import { exportAllRecurringToICS } from "../../services/calendarService";
-import { getRecurringExpenses } from "../../services/recurringService";
 import { DEFAULT_ALLOWLIST_APPS } from "../../services/notificationParserService";
 
 const ALLOWLIST_KEY = "bf_notification_allowlist";
@@ -51,13 +47,9 @@ export default function SettingsScreen({
 }) {
   const { user, signOut } = useAuth();
   const { showChecklist } = useOnboarding();
-  const [categories, setCategories] = useState<any[]>([]);
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
   const [isEnablingNotif, setIsEnablingNotif] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<any>(null);
-  const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
-  const [isExportingCalendar, setIsExportingCalendar] = useState(false);
 
   // Android Notification access state
   const [androidNotifEnabled, setAndroidNotifEnabled] = useState<boolean | null>(null);
@@ -80,26 +72,7 @@ export default function SettingsScreen({
     });
   };
 
-  const categorySummary = useMemo(() => {
-    const totalBudget = categories.reduce((sum, category) => sum + (category.budget_amount || 0), 0);
-    const topCategory = categories.reduce((highest, current) => {
-      if (!highest || (current.priority || 0) > (highest.priority || 0)) return current;
-      return highest;
-    }, null);
-    return { count: categories.length, totalBudget, topCategory };
-  }, [categories]);
-
-  const loadCategories = async () => {
-    try {
-      const data = await getCategories();
-      setCategories(data);
-    } catch (err: any) {
-      toast.error(err.message || "Gagal memuat kategori.");
-    }
-  };
-
   useEffect(() => {
-    loadCategories();
     setNotifPermission(getPermissionStatus());
 
     if (!Capacitor.isNativePlatform()) return;
@@ -154,22 +127,6 @@ export default function SettingsScreen({
     }
   };
 
-  const handleExportCalendar = async () => {
-    setIsExportingCalendar(true);
-    try {
-      const recurring = await getRecurringExpenses();
-      if (recurring.length === 0) {
-        toast.error("Belum ada recurring expense untuk diekspor.");
-        return;
-      }
-      const count = exportAllRecurringToICS(recurring);
-      toast.success(`${count} recurring expense berhasil diekspor ke kalender (.ics)`);
-    } catch (err: any) {
-      toast.error(err.message || "Gagal ekspor kalender.");
-    } finally {
-      setIsExportingCalendar(false);
-    }
-  };
 
   const handleExport = async () => {
     try {
@@ -301,7 +258,7 @@ export default function SettingsScreen({
           <h1 className="mt-3 text-3xl font-bold text-[#1A2B38]">Biar app ini terasa makin pas dengan ritmemu.</h1>
           <p className="mt-3 text-sm text-[#7B6E67] flex items-center gap-1">
             <Sparkles className="w-3.5 h-3.5 text-[#FFB347]" />
-            <span>{categorySummary.count} kategori aktif dengan total budget {formatCurrency(categorySummary.totalBudget)}.</span>
+            <span>Atur preferensi akun, izin notifikasi, dan kelola ekspor data Anda di sini.</span>
           </p>
         </div>
 
@@ -429,42 +386,9 @@ export default function SettingsScreen({
                 </button>
               </div>
             </div>
+          </div>
 
-            {/* Calendar integration */}
-            <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EBF7F6] text-[#29B9AA]">
-                  <Calendar className="h-4 w-4" />
-                </div>
-                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Kalender</p>
-              </div>
-              <div className="mt-4 space-y-3">
-                <button
-                  id="btn-export-calendar"
-                  onClick={handleExportCalendar}
-                  disabled={isExportingCalendar}
-                  className="flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left disabled:opacity-60"
-                >
-                  <div>
-                    <p className="text-sm font-semibold text-[#1A2B38]">Export Recurring ke Kalender</p>
-                    <p className="mt-1 text-xs text-[#7B6E67]">
-                      Download file .ics — bisa dibuka di Google Calendar, Apple Calendar, atau Outlook.
-                    </p>
-                  </div>
-                  <Download className="h-4 w-4 shrink-0 text-[#29B9AA]" />
-                </button>
-                <div className="rounded-2xl bg-[#FEF9F4] px-4 py-4">
-                  <p className="text-xs font-semibold text-[#1A2B38]">Cara pakai file .ics</p>
-                  <ol className="mt-2 space-y-1 text-xs text-[#7B6E67] list-decimal list-inside">
-                    <li>Klik "Export Recurring ke Kalender"</li>
-                    <li>Buka file .ics yang terdownload</li>
-                    <li>Pilih "Tambah ke Google Calendar / Apple Calendar"</li>
-                    <li>Semua recurring expense otomatis masuk sebagai event berulang ✅</li>
-                  </ol>
-                </div>
-              </div>
-            </div>
-
+          <div className="space-y-5">
             {/* Notification Allowlist */}
             <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-3">
@@ -500,60 +424,6 @@ export default function SettingsScreen({
                 Aktif saat Budget Flow berjalan sebagai APK Android.
               </p>
             </div>
-          </div>
-
-          <div className="space-y-5">
-            <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-              <div className="mb-4 flex items-start justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-1.5 text-[#7B6E67]">
-                    <Layers className="w-3.5 h-3.5 text-[#7B6E67] flex-shrink-0" />
-                    <p className="text-xs font-bold uppercase tracking-[0.28em]">Categories</p>
-                  </div>
-                  <h2 className="mt-2 text-xl font-bold text-[#1A2B38]">Kelola kategori</h2>
-                </div>
-                <button
-                  onClick={() => {
-                    setSelectedCategory(null);
-                    setShowCategoryModal(true);
-                  }}
-                  className="rounded-full bg-[#29B9AA] px-4 py-2 text-xs font-semibold text-white flex items-center gap-1"
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  Add
-                </button>
-              </div>
-              <div className="space-y-3">
-                {categories.length === 0 ? (
-                  <div className="rounded-2xl bg-[#FEF9F4] px-5 py-8 text-center text-sm text-[#7B6E67]">Belum ada kategori aktif.</div>
-                ) : (
-                  categories.map((category) => (
-                    <button
-                      key={category.id}
-                      onClick={() => {
-                        setSelectedCategory(category);
-                        setShowCategoryModal(true);
-                      }}
-                      className="flex w-full items-center justify-between gap-4 rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left hover:bg-[#F3EDE8] transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="h-4 w-4 rounded-full" style={{ backgroundColor: category.color }} />
-                        <div>
-                          <p className="text-sm font-semibold text-[#1A2B38]">{category.name}</p>
-                          <p className="mt-1 text-xs text-[#7B6E67]">
-                            {formatCurrency(category.budget_amount)} • Priority {category.priority || 3}
-                          </p>
-                        </div>
-                      </div>
-                      <span className="rounded-full bg-white px-3 py-1 text-xs font-bold text-[#29B9AA] shadow-sm flex items-center gap-1">
-                        <Pencil className="w-3 h-3" />
-                        Edit
-                      </span>
-                    </button>
-                  ))
-                )}
-              </div>
-            </div>
 
             <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
               <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Data</p>
@@ -580,8 +450,6 @@ export default function SettingsScreen({
           </div>
         </div>
       </div>
-
-      <CategoryModal open={showCategoryModal} category={selectedCategory} onClose={() => setShowCategoryModal(false)} onSaved={loadCategories} />
 
       {/* Change Password Modal */}
       <ModalShell

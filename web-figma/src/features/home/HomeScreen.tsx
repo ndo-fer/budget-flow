@@ -20,6 +20,8 @@ import DailyBudgetLimitCard from "./components/DailyBudgetLimitCard";
 import ProgressRencanaCard from "./components/ProgressRencanaCard";
 import AnalyticsDashboard from "./components/AnalyticsDashboard";
 import ModalShell from "../../components/modals/ModalShell";
+import FirstRunGuide from "../../components/FirstRunGuide";
+import StarterChecklist from "./components/StarterChecklist";
 
 interface HomeScreenProps {
   onNavigateTab: (tabId: any, options?: { replace?: boolean; search?: string }) => void;
@@ -194,6 +196,17 @@ export default function HomeScreen({
       <NativePermissionAlert 
         androidNotifEnabled={androidNotifEnabled} 
         setAndroidNotifEnabled={setAndroidNotifEnabled} 
+      />
+
+      <FirstRunGuide
+        guideKey="home"
+        title="Selamat Datang di Beranda Budget Flow!"
+        description="Di sini Anda dapat memantau estimasi kondisi keuangan harian (Safe-To-Spend), batas belanja aman hari ini, dan alokasi anggaran bulanan. Selesaikan setup awal keuangan Anda lewat Starter Checklist di bawah agar perhitungan saldo Anda akurat."
+      />
+
+      <StarterChecklist 
+        onNavigateTab={onNavigateTab} 
+        onOpenRecordHub={() => window.dispatchEvent(new CustomEvent("bf-open-record-sheet"))}
       />
 
       {/* Upper Title and SubTabs */}
