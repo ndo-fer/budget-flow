@@ -28,6 +28,7 @@ import { getWallets } from "../services/walletService";
 import ExpenseModal from "../components/modals/ExpenseModal";
 import IncomeTransactionModal from "../components/modals/IncomeTransactionModal";
 import RecordActionSheet from "../components/modals/RecordActionSheet";
+import { getUserSetupStatus, type UserSetupStatus } from "../services/guidanceService";
 
 const NotificationReceiver = registerPlugin<any>("NotificationReceiver");
 
@@ -138,6 +139,7 @@ export default function AppShell() {
     return window.location.search;
   });
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [setupStatus, setSetupStatus] = useState<UserSetupStatus | null>(null);
   
   // Modals state
   const [isRecordSheetOpen, setIsRecordSheetOpen] = useState(false);
@@ -153,6 +155,16 @@ export default function AppShell() {
     }
     return false;
   });
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchStatus = () => {
+      getUserSetupStatus().then(setSetupStatus).catch(err => console.warn("Failed to load setup status:", err));
+    };
+    fetchStatus();
+    window.addEventListener("wallet-transaction-added", fetchStatus);
+    return () => window.removeEventListener("wallet-transaction-added", fetchStatus);
+  }, [user]);
 
   const navigateToTab = (tab: TabId, options?: { replace?: boolean; search?: string }) => {
     setActiveTab(tab);
@@ -182,6 +194,28 @@ export default function AppShell() {
     };
     window.addEventListener("bf-open-record-sheet", handleOpenRecordSheet);
     return () => window.removeEventListener("bf-open-record-sheet", handleOpenRecordSheet);
+  }, []);
+
+  useEffect(() => {
+    if (isExpenseModalOpen) {
+      window.dispatchEvent(new CustomEvent("expense-modal-opened"));
+    }
+  }, [isExpenseModalOpen]);
+
+  useEffect(() => {
+    if (isRecordSheetOpen) {
+      window.dispatchEvent(new CustomEvent("record-sheet-opened"));
+    }
+  }, [isRecordSheetOpen]);
+
+  useEffect(() => {
+    const handleCloseAll = () => {
+      setIsRecordSheetOpen(false);
+      setIsExpenseModalOpen(false);
+      setIsIncomeModalOpen(false);
+    };
+    window.addEventListener("bf-close-modals", handleCloseAll);
+    return () => window.removeEventListener("bf-close-modals", handleCloseAll);
   }, []);
 
   useEffect(() => {
@@ -265,6 +299,7 @@ export default function AppShell() {
         {/* Unified "Catat Baru" FAB for Desktop */}
         <div className="px-4 py-4">
           <button
+            data-tour-id="sidebar-record-button"
             onClick={() => setIsRecordSheetOpen(true)}
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#29B9AA] to-[#209F92] px-4 py-3 text-sm font-bold text-white shadow-md shadow-teal-500/10 hover:brightness-95 active:scale-[0.98] transition-all"
           >
@@ -280,8 +315,9 @@ export default function AppShell() {
             return (
               <button
                 key={item.id}
+                data-tour-id={`sidebar-${item.id}-button`}
                 onClick={() => navigateToTab(item.id)}
-                className={`flex w-full items-center gap-3 rounded-[24px] px-4 py-3.5 text-sm font-bold transition-all ${
+                className={`flex w-full items-center gap-3 rounded-2xl px-4 py-3.5 text-sm font-bold transition-all ${
                   isActive
                     ? "bg-[#29B9AA] text-white shadow-md shadow-teal-500/10"
                     : "text-[#7B6E67] hover:bg-[#FEF9F4] hover:text-[#1A2B38]"
@@ -296,7 +332,7 @@ export default function AppShell() {
         
         <div className="relative border-t border-black/5 p-3">
           {showProfileMenu ? (
-            <div className="absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-[24px] border border-black/10 bg-white shadow-lg">
+            <div className="absolute bottom-full left-3 right-3 mb-2 overflow-hidden rounded-2xl border border-black/10 bg-white shadow-lg">
               <div className="flex items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-[#1A2B38] border-b border-black/5">
                 <User className="w-4 h-4 text-[#7B6E67] flex-shrink-0" />
                 <span className="truncate">{user?.email}</span>
@@ -306,7 +342,7 @@ export default function AppShell() {
                 className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-[#1A2B38] hover:bg-[#FEF9F4] transition-colors"
               >
                 <Settings className="h-4 w-4 text-[#7B6E67] flex-shrink-0" />
-                <span>Settings</span>
+                <span>Pengaturan</span>
               </button>
               <button
                 onClick={() => {
@@ -330,14 +366,14 @@ export default function AppShell() {
           ) : null}
           <button
             onClick={() => setShowProfileMenu((current) => !current)}
-            className="flex w-full items-center gap-3 rounded-[24px] border border-black/5 bg-[#FEF9F4] px-3 py-3 hover:bg-[#F3EDE8]"
+            className="flex w-full items-center gap-3 rounded-2xl border border-black/5 bg-[#FEF9F4] px-3 py-3 hover:bg-[#F3EDE8]"
           >
             <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#29B9AA] to-[#5BAEE8] text-sm font-bold text-white shadow-sm">
               {(user?.email || "B").slice(0, 1).toUpperCase()}
             </div>
             <div className="min-w-0 flex-1 text-left">
               <p className="truncate text-sm font-semibold text-[#1A2B38]">{user?.email}</p>
-              <p className="text-xs text-[#7B6E67]">Account & app settings</p>
+              <p className="text-xs text-[#7B6E67]">Akun & Pengaturan</p>
             </div>
             <ChevronDown className={`h-4 w-4 shrink-0 text-[#7B6E67] transition-transform ${showProfileMenu ? "rotate-180" : ""}`} />
           </button>
@@ -435,6 +471,7 @@ export default function AppShell() {
 
             {/* Slot 2: Rencana */}
             <button
+              data-tour-id="nav-plan"
               onClick={() => navigateToTab("budget")}
               className={`flex min-w-0 flex-col items-center justify-end w-full h-full pb-1.5 text-[9.5px] font-bold ${
                 activeTab === "budget" || activeTab === "income" || activeTab === "recurring" ? "text-[#29B9AA]" : "text-[#7B6E67]"
@@ -447,17 +484,24 @@ export default function AppShell() {
             {/* Slot 3: Central Catat Hub Button */}
             <div className="relative flex flex-col items-center justify-end w-full h-full pb-1.5 text-[9.5px] font-bold">
               <button
+                data-tour-id="nav-record"
                 onClick={() => setIsRecordSheetOpen(true)}
-                className="absolute -top-5 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-r from-[#29B9AA] to-[#209F92] text-white border-4 border-white shadow-[0_4px_12px_rgba(41,185,170,0.3)] active:scale-95 transition-all animate-quick-pulse shimmer-element"
+                className="absolute -top-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#29B9AA] text-white border-2 border-white shadow-sm active:scale-[0.98] transition-all"
                 aria-label="Catat Baru"
               >
                 <Plus className="h-6 w-6 stroke-[3]" />
+                {setupStatus && !setupStatus.has_expense_transaction && (
+                  <span className="absolute -top-1.5 -right-1.5 flex h-5 px-1.5 min-w-[20px] items-center justify-center rounded-full bg-[#FF6B58] text-[9px] font-black text-white border border-white">
+                    Mulai
+                  </span>
+                )}
               </button>
               <span className="leading-none text-[#29B9AA] uppercase tracking-wider">Catat</span>
             </div>
 
             {/* Slot 4: Riwayat */}
             <button
+              data-tour-id="nav-history"
               onClick={() => navigateToTab("history")}
               className={`flex min-w-0 flex-col items-center justify-end w-full h-full pb-1.5 text-[9.5px] font-bold ${
                 activeTab === "history" ? "text-[#29B9AA]" : "text-[#7B6E67]"
@@ -469,6 +513,7 @@ export default function AppShell() {
 
             {/* Slot 5: Dompet */}
             <button
+              data-tour-id="nav-wallet"
               onClick={() => navigateToTab("wallets")}
               className={`flex min-w-0 flex-col items-center justify-end w-full h-full pb-1.5 text-[9.5px] font-bold ${
                 activeTab === "wallets" || activeTab === "csv-import" ? "text-[#29B9AA]" : "text-[#7B6E67]"

@@ -22,6 +22,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import { useOnboarding } from "../../contexts/OnboardingContext";
 import supabase from "../../lib/supabase";
+import { useSpotlightTour } from "../../components/onboarding/SpotlightTourProvider";
 import { getCurrentUserId } from "../../services/queryUtils";
 import { formatCurrency } from "../../utils/format";
 import ModalShell from "../../components/modals/ModalShell";
@@ -47,6 +48,7 @@ export default function SettingsScreen({
 }) {
   const { user, signOut } = useAuth();
   const { showChecklist } = useOnboarding();
+  const { resetTour } = useSpotlightTour();
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
   const [isEnablingNotif, setIsEnablingNotif] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
@@ -242,6 +244,8 @@ export default function SettingsScreen({
     try {
       onOpenTutorial();
       await showChecklist();
+      await resetTour();
+      toast.success("Tutorial & Spotlight Onboarding telah di-reset!");
     } catch (err: any) {
       toast.error(err.message || "Gagal membuka tutorial.");
     }
@@ -250,10 +254,10 @@ export default function SettingsScreen({
   return (
     <>
       <div className="mx-auto max-w-6xl space-y-5 px-4 py-5 md:px-8">
-        <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2">
             <Settings className="w-4 h-4 text-[#29B9AA] flex-shrink-0" />
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">Settings</p>
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">Pengaturan</p>
           </div>
           <h1 className="mt-3 text-3xl font-bold text-[#1A2B38]">Biar app ini terasa makin pas dengan ritmemu.</h1>
           <p className="mt-3 text-sm text-[#7B6E67] flex items-center gap-1">
@@ -264,25 +268,25 @@ export default function SettingsScreen({
 
         <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
           <div className="space-y-5">
-            <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Account</p>
+            <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Akun</p>
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl bg-[#FEF9F4] px-4 py-4 flex items-center gap-3">
                   <User className="w-5 h-5 text-[#29B9AA] flex-shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-[#1A2B38]">{user?.email || "Unknown user"}</p>
-                    <p className="text-xs text-[#7B6E67]">Budget Flow account</p>
+                    <p className="text-xs text-[#7B6E67]">Akun Budget Flow</p>
                   </div>
                 </div>
                 <button onClick={handleOpenPasswordModal} className="flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left hover:bg-[#F3EDE8] transition-colors">
                   <div className="flex items-start gap-3">
                     <Lock className="w-5 h-5 text-[#7B6E67] flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-[#1A2B38]">Change Password</p>
+                      <p className="text-sm font-semibold text-[#1A2B38]">Ganti Password</p>
                       <p className="mt-1 text-xs text-[#7B6E67]">Ubah password Anda untuk keamanan tambahan.</p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-[#29B9AA] shrink-0">Open</span>
+                  <span className="text-xs font-bold text-[#29B9AA] shrink-0">Buka</span>
                 </button>
                 <button onClick={() => setShowLogoutModal(true)} className="flex w-full items-center justify-between rounded-2xl bg-red-50 px-4 py-4 text-left hover:bg-red-100 transition-colors">
                   <div className="flex items-start gap-3">
@@ -292,7 +296,7 @@ export default function SettingsScreen({
                       <p className="mt-1 text-xs text-[#7B6E67]">Keluar dari akun ini kapan saja.</p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-[#FF6B58] shrink-0">Now</span>
+                  <span className="text-xs font-bold text-[#FF6B58] shrink-0">Keluar</span>
                 </button>
                 <button onClick={() => setShowDeleteAccountModal(true)} className="flex w-full items-center justify-between rounded-2xl bg-red-50/50 border border-red-200/60 px-4 py-4 text-left hover:bg-red-100 transition-colors">
                   <div className="flex items-start gap-3">
@@ -307,8 +311,8 @@ export default function SettingsScreen({
               </div>
             </div>
 
-            <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Preferences</p>
+            <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Preferensi</p>
               <div className="mt-4 space-y-3">
                 {/* Notification permission */}
                 <div className={`rounded-2xl px-4 py-4 ${
@@ -382,7 +386,7 @@ export default function SettingsScreen({
                     <p className="text-sm font-semibold">Lihat Tutorial Lagi</p>
                     <p className="mt-1 text-xs text-white/80">Buka onboarding lagi dan munculkan starter checklist.</p>
                   </div>
-                  <span className="text-xs font-bold text-white">Open</span>
+                  <span className="text-xs font-bold text-white">Buka</span>
                 </button>
               </div>
             </div>
@@ -390,12 +394,12 @@ export default function SettingsScreen({
 
           <div className="space-y-5">
             {/* Notification Allowlist */}
-            <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EBF7F6] text-[#29B9AA]">
                   <ShieldCheck className="h-4 w-4" />
                 </div>
-                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Notification Allowlist</p>
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Daftar Izin Aplikasi</p>
               </div>
               <p className="mt-3 text-xs text-[#7B6E67]">
                 Aplikasi keuangan yang dipantau notifikasinya. OTP dan kode verifikasi selalu difilter otomatis.
@@ -425,25 +429,25 @@ export default function SettingsScreen({
               </p>
             </div>
 
-            <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Data</p>
+            <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Data Keuangan</p>
               <button
                 onClick={handleExport}
                 disabled={isExporting}
                 className="mt-4 flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left disabled:opacity-60"
               >
                 <div>
-                  <p className="text-sm font-semibold text-[#1A2B38]">Export Expenses (CSV)</p>
+                  <p className="text-sm font-semibold text-[#1A2B38]">Ekspor Pengeluaran (CSV)</p>
                   <p className="mt-1 text-xs text-[#7B6E67]">Unduh salinan transaksi untuk dibagikan atau dicek lagi.</p>
                 </div>
-                <span className="text-xs font-bold text-[#29B9AA]">{isExporting ? "Working..." : "Export"}</span>
+                <span className="text-xs font-bold text-[#29B9AA]">{isExporting ? "Memproses..." : "Ekspor"}</span>
               </button>
             </div>
 
-            <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">About</p>
+            <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Tentang Aplikasi</p>
               <div className="mt-4 rounded-2xl bg-[#FEF9F4] px-4 py-4">
-                <p className="text-sm font-semibold text-[#1A2B38]">App Version</p>
+                <p className="text-sm font-semibold text-[#1A2B38]">Versi Aplikasi</p>
                 <p className="mt-1 text-xs text-[#7B6E67]">{APP_VERSION}</p>
               </div>
             </div>

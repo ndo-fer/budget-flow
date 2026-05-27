@@ -36,7 +36,7 @@ export default function QuickChecklistActions({ onNavigateTab }: QuickChecklistA
   ];
 
   return (
-    <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm md:col-span-1 flex flex-col justify-between">
+    <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm md:col-span-1 flex flex-col justify-between">
       <div>
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-2.5">
@@ -44,7 +44,7 @@ export default function QuickChecklistActions({ onNavigateTab }: QuickChecklistA
               <Zap className="w-4 h-4 fill-[#FFB347]" />
             </div>
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#1A2B38]">Quick Actions</h3>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#1A2B38]">Aksi Cepat</h3>
               <p className="text-[10px] text-[#7B6E67] font-semibold mt-0.5">Aksi cepat kelola catatan</p>
             </div>
           </div>

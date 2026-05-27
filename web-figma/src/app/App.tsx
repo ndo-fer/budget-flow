@@ -10,6 +10,9 @@ import VersionSwitcher from "../components/VersionSwitcher";
 import { initNativeUI } from "../services/capacitorService";
 import { registerServiceWorker, scheduleHourlyCheck, tryRegisterPeriodicSync } from "../services/notificationService";
 
+import { SpotlightTourProvider } from "../components/onboarding/SpotlightTourProvider";
+import SpotlightTourOverlay from "../components/onboarding/SpotlightTourOverlay";
+
 function RootNavigator() {
   const { user, isLoading } = useAuth();
   const { isLoading: onboardingLoading } = useOnboarding();
@@ -45,9 +48,9 @@ function RootNavigator() {
   if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#FEF9F4]">
-        <div className="rounded-[28px] border border-black/10 bg-white px-6 py-5 text-center shadow-sm">
+        <div className="rounded-2xl border border-black/10 bg-white px-6 py-5 text-center shadow-sm">
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Budget Flow</p>
-          <p className="mt-2 text-sm font-semibold text-[#1A2B38]">Loading your workspace...</p>
+          <p className="mt-2 text-sm font-semibold text-[#1A2B38]">Memuat ruang kerja Anda...</p>
         </div>
       </div>
     );
@@ -70,6 +73,7 @@ function RootNavigator() {
           <>
             <AppShell />
             {!onboardingLoading ? <OnboardingOverlay /> : null}
+            <SpotlightTourOverlay />
           </>
         )
       }
@@ -82,9 +86,12 @@ export default function App() {
   return (
     <AuthProvider>
       <OnboardingProvider>
-        <RootNavigator />
-        <Toaster richColors position="top-right" />
+        <SpotlightTourProvider>
+          <RootNavigator />
+          <Toaster richColors position="top-right" />
+        </SpotlightTourProvider>
       </OnboardingProvider>
     </AuthProvider>
   );
 }
+

@@ -183,7 +183,7 @@ export default function OnboardingOverlay() {
 
   return (
     <div className="fixed inset-0 z-40 overflow-y-auto bg-[#FEF9F4]/90 p-4 backdrop-blur-sm flex items-start justify-center">
-      <div className="w-full max-w-4xl rounded-[24px] sm:rounded-[36px] border border-black/10 bg-white p-5 sm:p-8 shadow-[0_24px_80px_rgba(41,185,170,0.18)] my-auto transition-all">
+      <div className="w-full max-w-4xl rounded-3xl border border-black/10 bg-white p-5 sm:p-8 shadow-[0_24px_80px_rgba(41,185,170,0.18)] my-auto transition-all">
         
         {step === "slides" ? (
           // ── SLIDES VIEW ─────────────────────────────────────────────
@@ -197,7 +197,7 @@ export default function OnboardingOverlay() {
               </button>
             </div>
 
-            <div className="mt-6 sm:mt-8 rounded-2xl sm:rounded-[32px] border p-5 sm:p-8 transition-all duration-300" style={{ backgroundColor: slide.soft, borderColor: slide.accent }}>
+            <div className="mt-6 sm:mt-8 rounded-2xl border p-5 sm:p-8 transition-all duration-300" style={{ backgroundColor: slide.soft, borderColor: slide.accent }}>
               <div className="mb-4 sm:mb-6 flex h-12 w-12 sm:h-16 sm:w-16 items-center justify-center rounded-full text-lg sm:text-xl font-bold text-white shadow-sm" style={{ backgroundColor: slide.accent }}>
                 0{activeIndex + 1}
               </div>

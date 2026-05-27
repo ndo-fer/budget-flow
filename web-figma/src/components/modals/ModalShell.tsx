@@ -20,7 +20,7 @@ export default function ModalShell({
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/45 p-4 backdrop-blur-sm md:items-center">
       <div className="absolute inset-0" onClick={onClose} />
-      <div className="relative w-full max-w-2xl overflow-hidden rounded-[28px] border border-black/10 bg-white shadow-2xl">
+      <div className="relative w-full max-w-2xl overflow-hidden rounded-2xl border border-black/10 bg-white shadow-2xl">
         <div className="flex items-start justify-between border-b border-black/5 px-6 py-5">
           <div>
             <p className="text-[11px] font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Budget Flow</p>

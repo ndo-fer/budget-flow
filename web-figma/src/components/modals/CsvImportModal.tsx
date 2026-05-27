@@ -111,7 +111,7 @@ export default function CsvImportModal({ isOpen, onClose, walletId, onImportSucc
       onClick={onClose}
     >
       <div 
-        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-[32px] border border-black/10 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-black/10 bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         

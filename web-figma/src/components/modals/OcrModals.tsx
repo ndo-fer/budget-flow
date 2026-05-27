@@ -144,7 +144,7 @@ export function ScreenshotBalanceModal({
       onDrop={(e) => e.preventDefault()}
       onClick={onClose}
     >
-      <div className="w-full max-w-lg rounded-t-[32px] bg-white p-6 shadow-xl sm:rounded-[32px] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-lg rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-1.5 text-[#29B9AA] mb-0.5">
@@ -443,7 +443,7 @@ export function ReceiptScanModal({
       onDrop={(e) => e.preventDefault()}
       onClick={onClose}
     >
-      <div className="w-full max-w-lg rounded-t-[32px] bg-white p-6 shadow-xl sm:rounded-[32px] max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full max-w-lg rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="mb-5 flex items-center justify-between">
           <div>
             <div className="flex items-center gap-1.5 text-[#FF6B58] mb-0.5">

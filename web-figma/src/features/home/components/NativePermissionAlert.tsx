@@ -13,7 +13,7 @@ export default function NativePermissionAlert({ androidNotifEnabled }: NativePer
   if (!Capacitor.isNativePlatform() || androidNotifEnabled !== false) return null;
 
   return (
-    <div className="rounded-[24px] border border-[#FF6B58]/20 bg-red-50 p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+    <div className="rounded-2xl border border-[#FF6B58]/20 bg-red-50 p-4 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
       <div className="flex items-start gap-3">
         <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-red-100 text-[#FF6B58]">
           <AlertTriangle className="h-4 w-4" />

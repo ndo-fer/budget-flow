@@ -15,7 +15,7 @@ export default function DailyBudgetLimitCard({ safeToSpend, onNavigateTab }: Dai
   return (
     <div 
       onClick={() => onNavigateTab?.("history")}
-      className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-[#29B9AA]/30 hover:shadow-md transition-all group text-left"
+      className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm flex flex-col justify-between cursor-pointer hover:border-[#29B9AA]/30 hover:shadow-md transition-all group text-left"
     >
       <div>
         <div className="flex items-center justify-between">
@@ -29,7 +29,7 @@ export default function DailyBudgetLimitCard({ safeToSpend, onNavigateTab }: Dai
             {safeToSpend?.isOverDailyLimit ? (
               <>
                 <AlertTriangle className="w-3 h-3" />
-                Over limit
+                Lewat Batas
               </>
             ) : (
               <>

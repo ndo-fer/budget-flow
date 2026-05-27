@@ -18,7 +18,11 @@ export interface UserGuidanceState {
   has_seen_history_guide: boolean;
   has_seen_recurring_guide: boolean;
   starter_checklist_hidden: boolean;
+  has_completed_spotlight_tour?: boolean;
+  has_skipped_spotlight_tour?: boolean;
+  spotlight_tour_step?: string | null;
 }
+
 
 export interface UserSetupStatus {
   has_wallet: boolean;
@@ -138,6 +142,16 @@ export const getUserGuidanceState = async (): Promise<UserGuidanceState> => {
     if (error) throw error;
 
     if (data) {
+      // Sync local storage
+      if (data.has_completed_spotlight_tour) {
+        localStorage.setItem(`budget-flow:${userId}:spotlight-completed`, "true");
+      }
+      if (data.has_skipped_spotlight_tour) {
+        localStorage.setItem(`budget-flow:${userId}:spotlight-skipped`, "true");
+      }
+      if (data.spotlight_tour_step) {
+        localStorage.setItem(`budget-flow:${userId}:spotlight-step`, data.spotlight_tour_step);
+      }
       return data;
     }
 
@@ -151,7 +165,10 @@ export const getUserGuidanceState = async (): Promise<UserGuidanceState> => {
       has_seen_income_guide: false,
       has_seen_history_guide: false,
       has_seen_recurring_guide: false,
-      starter_checklist_hidden: localStorage.getItem(`budget-flow:${userId}:checklist-hidden`) === "true"
+      starter_checklist_hidden: localStorage.getItem(`budget-flow:${userId}:checklist-hidden`) === "true",
+      has_completed_spotlight_tour: false,
+      has_skipped_spotlight_tour: false,
+      spotlight_tour_step: null
     };
 
     const { data: inserted, error: insertError } = await supabase
@@ -179,7 +196,10 @@ export const getUserGuidanceState = async (): Promise<UserGuidanceState> => {
         has_seen_income_guide: localStorage.getItem(getLocalGuideKey(userId, "income")) === "true",
         has_seen_history_guide: localStorage.getItem(getLocalGuideKey(userId, "history")) === "true",
         has_seen_recurring_guide: localStorage.getItem(getLocalGuideKey(userId, "recurring")) === "true",
-        starter_checklist_hidden: localStorage.getItem(`budget-flow:${userId}:checklist-hidden`) === "true"
+        starter_checklist_hidden: localStorage.getItem(`budget-flow:${userId}:checklist-hidden`) === "true",
+        has_completed_spotlight_tour: localStorage.getItem(`budget-flow:${userId}:spotlight-completed`) === "true",
+        has_skipped_spotlight_tour: localStorage.getItem(`budget-flow:${userId}:spotlight-skipped`) === "true",
+        spotlight_tour_step: localStorage.getItem(`budget-flow:${userId}:spotlight-step`)
       };
     } catch {
       return {
@@ -191,7 +211,10 @@ export const getUserGuidanceState = async (): Promise<UserGuidanceState> => {
         has_seen_income_guide: false,
         has_seen_history_guide: false,
         has_seen_recurring_guide: false,
-        starter_checklist_hidden: false
+        starter_checklist_hidden: false,
+        has_completed_spotlight_tour: false,
+        has_skipped_spotlight_tour: false,
+        spotlight_tour_step: null
       };
     }
   }
@@ -368,6 +391,11 @@ export const resetGuidance = async (): Promise<void> => {
     localStorage.removeItem(getLocalGuideKey(userId, "history"));
     localStorage.removeItem(getLocalGuideKey(userId, "recurring"));
     localStorage.removeItem(`budget-flow:${userId}:checklist-hidden`);
+    
+    // Spotlight tour local storage reset
+    localStorage.removeItem(`budget-flow:${userId}:spotlight-completed`);
+    localStorage.removeItem(`budget-flow:${userId}:spotlight-skipped`);
+    localStorage.removeItem(`budget-flow:${userId}:spotlight-step`);
 
     await supabase
       .from("user_guidance_state")
@@ -381,9 +409,127 @@ export const resetGuidance = async (): Promise<void> => {
         has_seen_history_guide: false,
         has_seen_recurring_guide: false,
         starter_checklist_hidden: false,
+        has_completed_spotlight_tour: false,
+        has_skipped_spotlight_tour: false,
+        spotlight_tour_step: null,
         updated_at: new Date().toISOString()
       });
   } catch (err) {
     console.warn("Failed to reset guidance on database, reset locally:", err);
   }
 };
+
+export const markSpotlightTourCompleted = async (): Promise<void> => {
+  const userId = await getCurrentUserId().catch(() => "");
+  if (userId) {
+    localStorage.setItem(`budget-flow:${userId}:spotlight-completed`, "true");
+    localStorage.removeItem(`budget-flow:${userId}:spotlight-skipped`);
+    localStorage.removeItem(`budget-flow:${userId}:spotlight-step`);
+  }
+
+  try {
+    // Attempt RPC
+    const { error: rpcError } = await supabase.rpc("mark_spotlight_tour_completed");
+    if (rpcError) {
+      // Fallback: Direct table update
+      const { error: updateError } = await supabase
+        .from("user_guidance_state")
+        .update({
+          has_completed_spotlight_tour: true,
+          has_skipped_spotlight_tour: false,
+          spotlight_tour_step: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("user_id", userId);
+      if (updateError) throw updateError;
+    }
+  } catch (err) {
+    console.warn("Failed to mark spotlight tour completed in database, stored locally:", err);
+  }
+};
+
+export const markSpotlightTourSkipped = async (step: string | null): Promise<void> => {
+  const userId = await getCurrentUserId().catch(() => "");
+  if (userId) {
+    localStorage.setItem(`budget-flow:${userId}:spotlight-skipped`, "true");
+    localStorage.removeItem(`budget-flow:${userId}:spotlight-completed`);
+    if (step) {
+      localStorage.setItem(`budget-flow:${userId}:spotlight-step`, step);
+    }
+  }
+
+  try {
+    // Attempt RPC
+    const { error: rpcError } = await supabase.rpc("mark_spotlight_tour_skipped", { p_step: step });
+    if (rpcError) {
+      // Fallback: Direct table update
+      const { error: updateError } = await supabase
+        .from("user_guidance_state")
+        .update({
+          has_completed_spotlight_tour: false,
+          has_skipped_spotlight_tour: true,
+          spotlight_tour_step: step,
+          updated_at: new Date().toISOString()
+        })
+        .eq("user_id", userId);
+      if (updateError) throw updateError;
+    }
+  } catch (err) {
+    console.warn("Failed to mark spotlight tour skipped in database, stored locally:", err);
+  }
+};
+
+export const saveSpotlightTourStep = async (step: string): Promise<void> => {
+  const userId = await getCurrentUserId().catch(() => "");
+  if (userId) {
+    localStorage.setItem(`budget-flow:${userId}:spotlight-step`, step);
+  }
+
+  try {
+    // Attempt RPC
+    const { error: rpcError } = await supabase.rpc("save_spotlight_tour_step", { p_step: step });
+    if (rpcError) {
+      // Fallback: Direct table update
+      const { error: updateError } = await supabase
+        .from("user_guidance_state")
+        .update({
+          spotlight_tour_step: step,
+          updated_at: new Date().toISOString()
+        })
+        .eq("user_id", userId);
+      if (updateError) throw updateError;
+    }
+  } catch (err) {
+    console.warn("Failed to save spotlight tour step in database, stored locally:", err);
+  }
+};
+
+export const resetSpotlightTour = async (): Promise<void> => {
+  const userId = await getCurrentUserId().catch(() => "");
+  if (userId) {
+    localStorage.removeItem(`budget-flow:${userId}:spotlight-completed`);
+    localStorage.removeItem(`budget-flow:${userId}:spotlight-skipped`);
+    localStorage.removeItem(`budget-flow:${userId}:spotlight-step`);
+  }
+
+  try {
+    // Attempt RPC
+    const { error: rpcError } = await supabase.rpc("reset_spotlight_tour");
+    if (rpcError) {
+      // Fallback: Direct table update
+      const { error: updateError } = await supabase
+        .from("user_guidance_state")
+        .update({
+          has_completed_spotlight_tour: false,
+          has_skipped_spotlight_tour: false,
+          spotlight_tour_step: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("user_id", userId);
+      if (updateError) throw updateError;
+    }
+  } catch (err) {
+    console.warn("Failed to reset spotlight tour in database, reset locally:", err);
+  }
+};
+

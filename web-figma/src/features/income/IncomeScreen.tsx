@@ -173,21 +173,21 @@ export default function IncomeScreen({ onNavigateTab }: IncomeScreenProps) {
 
         {summary ? (
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-1.5 text-[#7B6E67]">
                 <TrendingUp className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
                 <p className="text-xs">Total income</p>
               </div>
               <p className="mt-1.5 text-2xl font-bold text-[#1A2B38]">{formatCurrency(summary.totalIncome)}</p>
             </div>
-            <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-1.5 text-[#7B6E67]">
                 <TrendingDown className="w-3.5 h-3.5 text-[#FF6B58] flex-shrink-0" />
                 <p className="text-xs">Total expenses</p>
               </div>
               <p className="mt-1.5 text-2xl font-bold text-[#FF6B58]">{formatCurrency(summary.totalExpenses)}</p>
             </div>
-            <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
+            <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
               <div className="flex items-center gap-1.5 text-[#7B6E67]">
                 <PiggyBank className="w-3.5 h-3.5 text-[#5BAEE8] flex-shrink-0" />
                 <p className="text-xs">Savings</p>
@@ -198,7 +198,7 @@ export default function IncomeScreen({ onNavigateTab }: IncomeScreenProps) {
         ) : null}
 
         <div className="grid gap-5 lg:grid-cols-2">
-          <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
             <div className="mb-3 flex items-center justify-between">
               <div>
                 <div className="flex items-center gap-1.5 text-[#7B6E67]">
@@ -250,7 +250,7 @@ export default function IncomeScreen({ onNavigateTab }: IncomeScreenProps) {
             </div>
           </div>
 
-          <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
             <div className="mb-3">
               <div className="flex items-center gap-1.5 text-[#7B6E67]">
                 <Wallet className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
@@ -286,7 +286,7 @@ export default function IncomeScreen({ onNavigateTab }: IncomeScreenProps) {
           </div>
         </div>
 
-        <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
+        <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
           <div className="flex items-center gap-1.5 text-[#7B6E67] mb-4">
             <List className="w-4 h-4 text-[#29B9AA] flex-shrink-0" />
             <p className="text-xs font-bold uppercase tracking-[0.28em]">Recent transactions</p>

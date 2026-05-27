@@ -21,7 +21,7 @@ export default function RecurringScreen() {
       setCategories(categoryData);
       setRecurringExpenses(recurringData);
     } catch (err: any) {
-      toast.error(err.message || "Gagal memuat recurring expense.");
+      toast.error(err.message || "Gagal memuat transaksi rutin.");
     }
   };
 
@@ -38,32 +38,32 @@ export default function RecurringScreen() {
     try {
       setIsSyncing(true);
       const count = await syncRecurringExpensesForMonth(getCurrentMonth());
-      toast.success(`Generated ${count} recurring expense(s) untuk bulan ini.`);
+      toast.success(`Berhasil membuat ${count} transaksi rutin untuk bulan ini.`);
     } catch (err: any) {
-      toast.error(err.message || "Gagal sync recurring expense.");
+      toast.error(err.message || "Gagal sinkronisasi transaksi rutin.");
     } finally {
       setIsSyncing(false);
     }
   };
 
   const handleArchive = async (id: string) => {
-    if (!window.confirm("Archive recurring expense ini?")) return;
+    if (!window.confirm("Arsipkan transaksi rutin ini?")) return;
     try {
       await deleteRecurringExpense(id);
-      toast.success("Recurring expense berhasil diarsipkan.");
+      toast.success("Transaksi rutin berhasil diarsipkan.");
       await loadData();
     } catch (err: any) {
-      toast.error(err.message || "Gagal mengarsipkan recurring expense.");
+      toast.error(err.message || "Gagal mengarsipkan transaksi rutin.");
     }
   };
 
   return (
     <>
       <div className="mx-auto max-w-6xl space-y-5 px-4 py-5 md:px-8">
-        <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Recurring</p>
-          <h1 className="mt-3 text-3xl font-bold text-[#1A2B38]">Jaga pengeluaran rutin tetap rapi dan tidak gampang kelupaan.</h1>
-          <p className="mt-3 text-sm text-[#7B6E67]">Sinkronkan expense berulang untuk bulan ini dan edit item aktif kapan saja.</p>
+        <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Tagihan Rutin</p>
+          <h1 className="mt-3 text-2xl md:text-3xl font-bold text-[#1A2B38]">Jaga pengeluaran rutin tetap rapi dan tidak gampang kelupaan.</h1>
+          <p className="mt-2 text-xs md:text-sm text-[#7B6E67]">Sinkronkan transaksi berulang untuk bulan ini dan sesuaikan tagihan rutin Anda kapan saja.</p>
         </div>
 
         <div className="flex flex-wrap gap-3">
@@ -74,7 +74,7 @@ export default function RecurringScreen() {
             }}
             className="rounded-2xl bg-[#29B9AA] px-5 py-3 text-sm font-semibold text-white"
           >
-            + Add recurring
+            + Tambah Tagihan
           </button>
           <button
             onClick={handleSync}
@@ -82,43 +82,43 @@ export default function RecurringScreen() {
             className="inline-flex items-center gap-2 rounded-2xl bg-[#29B9AA] px-5 py-3 text-sm font-semibold text-white shadow-sm disabled:bg-[#A7DDD6]"
           >
             <RefreshCcw className="h-4 w-4" />
-            {isSyncing ? "Syncing..." : "Sync month"}
+            {isSyncing ? "Menyinkronkan..." : "Sinkronkan Bulan"}
           </button>
           <button
             onClick={() => {
               if (recurringExpenses.length === 0) {
-                toast.error("Belum ada recurring expense.");
+                toast.error("Belum ada transaksi rutin.");
                 return;
               }
               const count = exportAllRecurringToICS(recurringExpenses);
-              toast.success(`${count} event diekspor ke file .ics`);
+              toast.success(`${count} kegiatan berhasil diekspor ke file .ics`);
             }}
             className="inline-flex items-center gap-2 rounded-2xl border border-[#29B9AA] bg-white px-5 py-3 text-sm font-semibold text-[#29B9AA] shadow-sm"
           >
             <Download className="h-4 w-4" />
-            Export ke Kalender (.ics)
+            Ekspor ke Kalender (.ics)
           </button>
         </div>
 
-        <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
-          <p className="text-xs text-[#7B6E67]">Monthly recurring total</p>
+        <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-wider text-[#7B6E67]">Total Tagihan Bulanan</p>
           <p className="mt-1 text-2xl font-bold text-[#1A2B38]">{formatCurrency(totalMonthlyRecurring)}</p>
-          <p className="mt-2 text-sm text-[#7B6E67]">Perkiraan total dari item dengan frekuensi bulanan.</p>
+          <p className="mt-2 text-xs text-[#7B6E67]">Perkiraan total tagihan rutin dari item dengan frekuensi bulanan.</p>
         </div>
 
-        <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Recurring list</p>
+        <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Daftar Tagihan Rutin</p>
           <div className="mt-4 space-y-3">
             {recurringExpenses.length === 0 ? (
-              <div className="rounded-2xl bg-[#FEF9F4] px-5 py-8 text-center text-sm text-[#7B6E67]">Belum ada recurring expense.</div>
+              <div className="rounded-2xl bg-[#FEF9F4] px-5 py-8 text-center text-xs text-[#7B6E67] font-semibold">Belum ada daftar transaksi rutin.</div>
             ) : (
               recurringExpenses.map((item) => (
                 <div key={item.id} className="flex flex-wrap items-center gap-4 rounded-2xl bg-[#FEF9F4] px-4 py-4">
                   <div className="flex-1 text-left">
-                    <p className="text-sm font-semibold text-[#1A2B38]">{item.budget_categories?.name || "Unknown"}</p>
-                    <p className="mt-1 text-xs text-[#7B6E67]">
-                      {item.frequency}
-                      {item.frequency === "monthly" && item.day_of_month ? ` - day ${item.day_of_month}` : ""}
+                    <p className="text-sm font-semibold text-[#1A2B38]">{item.budget_categories?.name || "Kategori Tidak Diketahui"}</p>
+                    <p className="mt-1 text-xs text-[#7B6E67] font-semibold">
+                      {item.frequency === "monthly" ? "Bulanan" : item.frequency}
+                      {item.frequency === "monthly" && item.day_of_month ? ` - Tanggal ${item.day_of_month}` : ""}
                     </p>
                     {item.note ? <p className="mt-1 text-xs text-[#7B6E67]">{item.note}</p> : null}
                   </div>
@@ -132,7 +132,7 @@ export default function RecurringScreen() {
                       className="inline-flex items-center gap-1 rounded-full bg-[#EBF7F6] px-3 py-2 text-xs font-semibold text-[#29B9AA] shadow-sm"
                     >
                       <CalendarPlus className="h-3 w-3" />
-                      Calendar
+                      Google Calendar
                     </a>
                     <button
                       onClick={() => {
@@ -145,7 +145,7 @@ export default function RecurringScreen() {
                       Edit
                     </button>
                     <button onClick={() => handleArchive(item.id)} className="rounded-full bg-red-50 px-3 py-2 text-xs font-semibold text-[#FF6B58]">
-                      Archive
+                      Arsipkan
                     </button>
                   </div>
                 </div>

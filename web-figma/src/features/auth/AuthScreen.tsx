@@ -72,7 +72,7 @@ export default function AuthScreen() {
       </div>
 
       <div className="relative z-10 w-full mx-auto grid min-h-0 lg:min-h-[calc(100vh-5rem)] max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">
-        <section className="hidden lg:flex relative overflow-hidden rounded-[36px] border border-black/10 bg-white/65 backdrop-blur-2xl p-8 shadow-[0_24px_64px_rgba(41,185,170,0.15)] lg:min-h-[560px] lg:flex-col lg:justify-center lg:p-12">
+        <section className="hidden lg:flex relative overflow-hidden rounded-3xl border border-black/10 bg-white/65 backdrop-blur-2xl p-8 shadow-[0_24px_64px_rgba(41,185,170,0.15)] lg:min-h-[560px] lg:flex-col lg:justify-center lg:p-12">
           <div className="absolute -right-12 -top-12 h-44 w-44 rounded-full bg-[#FFB347]/30" />
           <div className="absolute bottom-0 right-24 h-28 w-28 rounded-full bg-[#29B9AA]/15" />
           <p className="relative text-xs font-bold uppercase tracking-[0.28em] text-[#FF6B58]">Budget Flow</p>
@@ -84,9 +84,9 @@ export default function AuthScreen() {
           </p>
           <div className="relative mt-8 grid gap-4 sm:grid-cols-3">
             {[
-              ["Quick daily tracking", "#FF6B58", "#FFF0EC"],
-              ["Friendly budget alerts", "#29B9AA", "#EBF7F6"],
-              ["Cleaner monthly view", "#5BAEE8", "#EEF7FD"],
+              ["Catat Transaksi Harian", "#FF6B58", "#FFF0EC"],
+              ["Notifikasi Sisa Budget", "#29B9AA", "#EBF7F6"],
+              ["Tinjauan Bulanan Rapi", "#5BAEE8", "#EEF7FD"],
             ].map(([label, color, bg]) => (
               <div key={label} className="rounded-2xl p-4" style={{ backgroundColor: bg }}>
                 <p className="text-sm font-semibold" style={{ color }}>
@@ -97,7 +97,7 @@ export default function AuthScreen() {
           </div>
         </section>
 
-        <section className="rounded-[36px] border border-black/10 bg-white/65 backdrop-blur-2xl p-6 shadow-[0_24px_64px_rgba(255,107,88,0.12)] flex flex-col justify-center w-full max-w-md mx-auto lg:max-w-none">
+        <section className="rounded-3xl border border-black/10 bg-white/65 backdrop-blur-2xl p-6 shadow-[0_24px_64px_rgba(255,107,88,0.12)] flex flex-col justify-center w-full max-w-md mx-auto lg:max-w-none">
           {/* Logo / Branding */}
           <div className="mb-4 flex flex-col items-center justify-center">
             <img src="/logo-horizontal.png" alt="Budget Flow Logo" className="h-14 w-auto object-contain" />

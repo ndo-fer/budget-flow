@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { CheckCircle2, Circle, EyeOff, ChevronRight, Check } from "lucide-react";
+import { EyeOff, ChevronRight, Check } from "lucide-react";
 import { getUserSetupStatus, setChecklistHidden, UserSetupStatus } from "../../../services/guidanceService";
 import { toast } from "../../../utils/toast";
 
@@ -50,7 +50,6 @@ export default function StarterChecklist({ onNavigateTab, onOpenRecordHub }: Sta
 
   if (loading || !isVisible || !status) return null;
   
-  // Check if all P0 setup items are completed
   const isAllDone = status.setup_completion_percent === 100;
 
   const steps = [
@@ -68,7 +67,7 @@ export default function StarterChecklist({ onNavigateTab, onOpenRecordHub }: Sta
       description: "Tentukan nominal estimasi gajian atau uang masuk bulanan Anda.",
       isCompleted: status.has_income_source,
       actionLabel: "Atur Pemasukan",
-      action: () => onNavigateTab("budget") // Relocated features: income source is in Rencana/budget screen
+      action: () => onNavigateTab("budget")
     },
     {
       id: "budget",
@@ -97,7 +96,7 @@ export default function StarterChecklist({ onNavigateTab, onOpenRecordHub }: Sta
   ];
 
   return (
-    <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm space-y-5 animate-in fade-in duration-300">
+    <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm space-y-5 animate-in fade-in duration-300">
       <div className="flex items-start justify-between gap-4">
         <div>
           <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#29B9AA]">Langkah Pengenalan</span>
@@ -119,9 +118,12 @@ export default function StarterChecklist({ onNavigateTab, onOpenRecordHub }: Sta
       </div>
 
       {/* Progress Bar */}
-      <div className="space-y-2">
+      <div className="space-y-2.5 bg-[#FEF9F4]/40 p-4 rounded-xl border border-black/5">
         <div className="flex items-center justify-between text-xs font-bold text-[#1A2B38]">
-          <span>Progres Setup</span>
+          <span className="flex items-center gap-1.5">
+            <span className="h-1.5 w-1.5 rounded-full bg-[#29B9AA] animate-pulse" />
+            Progres Setup
+          </span>
           <span className="text-[#29B9AA]">{status.setup_completion_percent}% Selesai</span>
         </div>
         <div className="h-2 w-full rounded-full bg-[#F3EDE8] overflow-hidden">
@@ -132,44 +134,66 @@ export default function StarterChecklist({ onNavigateTab, onOpenRecordHub }: Sta
         </div>
       </div>
 
-      {/* Checklist List */}
-      <div className="grid gap-3.5 sm:grid-cols-1 md:grid-cols-2 lg:grid-cols-1">
+      {/* Checklist List (Borderless List Style) */}
+      <div className="space-y-1.5 pt-2">
         {steps.map((step, idx) => (
           <div 
             key={step.id}
-            className={`flex items-start gap-4 p-4 rounded-2xl border transition-all duration-300 ${
+            onClick={() => {
+              if (!step.isCompleted) {
+                step.action();
+              }
+            }}
+            className={`group flex flex-col sm:flex-row sm:items-center justify-between gap-3 py-3 px-3.5 -mx-3.5 transition-all duration-200 rounded-xl ${
               step.isCompleted 
-                ? "bg-[#FEF9F4]/40 border-black/5 opacity-75" 
-                : "bg-white border-black/10 hover:border-[#29B9AA]/30"
+                ? "opacity-60 cursor-default" 
+                : "hover:bg-[#FEF9F4]/60 cursor-pointer"
             }`}
           >
-            <div className="mt-0.5 shrink-0">
-              {step.isCompleted ? (
-                <div className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
-                  <Check className="h-3 w-3 stroke-[3]" />
-                </div>
-              ) : (
-                <Circle className="h-5 w-5 text-black/20" />
-              )}
+            {/* Left side: Checkbox & Text content */}
+            <div className="flex items-start gap-3.5 min-w-0 flex-1">
+              {/* Checkbox */}
+              <div className="mt-0.5 shrink-0">
+                {step.isCompleted ? (
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#29B9AA] text-white shadow-sm shadow-[#29B9AA]/10">
+                    <Check className="h-3.5 w-3.5 stroke-[3]" />
+                  </div>
+                ) : (
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full border border-black/20 bg-white text-transparent transition-all group-hover:border-[#29B9AA] group-hover:bg-[#29B9AA]/5">
+                    <Check className="h-3 w-3 text-[#29B9AA] opacity-0 transition-opacity group-hover:opacity-40" />
+                  </div>
+                )}
+              </div>
+
+              {/* Text content */}
+              <div className="min-w-0 flex-1 space-y-1">
+                <h4 className={`text-sm font-bold tracking-tight transition-colors ${
+                  step.isCompleted ? "text-[#7B6E67]/70 line-through font-medium" : "text-[#1A2B38] group-hover:text-[#29B9AA]"
+                }`}>
+                  {step.title}
+                </h4>
+                <p className={`text-xs leading-relaxed font-medium transition-colors ${
+                  step.isCompleted ? "text-[#7B6E67]/50" : "text-[#7B6E67]"
+                }`}>
+                  {step.description}
+                </p>
+              </div>
             </div>
 
-            <div className="min-w-0 flex-1 space-y-1">
-              <h4 className={`text-xs font-bold ${step.isCompleted ? "text-[#7B6E67] line-through font-semibold" : "text-[#1A2B38]"}`}>
-                {idx + 1}. {step.title}
-              </h4>
-              <p className="text-[10.5px] leading-relaxed font-semibold text-[#7B6E67]">
-                {step.description}
-              </p>
-            </div>
-
+            {/* Right side: Action Button */}
             {!step.isCompleted && (
-              <button
-                onClick={step.action}
-                className="shrink-0 flex items-center gap-1 rounded-xl bg-[#FEF9F4] border border-[#29B9AA]/20 hover:border-[#29B9AA]/50 hover:bg-[#EBF7F6] px-3 py-1.5 text-[10px] font-bold text-[#29B9AA] transition-all active:scale-[0.96]"
-              >
-                <span>{step.actionLabel}</span>
-                <ChevronRight className="h-3 w-3" />
-              </button>
+              <div className="shrink-0 pl-[34px] sm:pl-0 sm:ml-4">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    step.action();
+                  }}
+                  className="inline-flex items-center gap-1 rounded-xl bg-[#29B9AA]/5 border border-[#29B9AA]/20 group-hover:bg-[#29B9AA] group-hover:text-white group-hover:border-transparent px-3.5 py-1.5 text-xs font-bold text-[#29B9AA] transition-all duration-200 active:scale-[0.96] shadow-sm"
+                >
+                  <span>{step.actionLabel}</span>
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
             )}
           </div>
         ))}

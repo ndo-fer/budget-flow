@@ -11,7 +11,8 @@ import {
   ChevronRight,
   SlidersHorizontal,
   Check,
-  ChevronDown
+  ChevronDown,
+  Pencil
 } from "lucide-react";
 import { 
   getWalletTransactions, 
@@ -201,7 +202,7 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-8">
       
       {/* Title Header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
         <div>
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-[#29B9AA] flex-shrink-0" />
@@ -219,75 +220,76 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
       />
 
       {/* Filters & Search */}
-      <div className="flex items-center gap-3 rounded-2xl border border-black/5 bg-white px-4 py-3 shadow-sm">
-        <Search className="h-4 w-4 text-[#7B6E67] shrink-0" />
-        <input
-          type="text"
-          placeholder="Cari transaksi berdasarkan catatan atau merchant..."
-          className="flex-1 bg-transparent text-sm font-medium text-[#1A2B38] outline-none"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-        />
-        
-        {/* Category Filter Dropdown */}
-        <div className="relative shrink-0" ref={filterDropdownRef}>
-          <button 
-            type="button"
-            onClick={() => setShowCategoryFilterDropdown(!showCategoryFilterDropdown)}
-            className={`flex items-center gap-1.5 rounded-xl border border-black/5 px-2.5 py-1.5 text-xs font-bold transition-all ${
-              selectedCategoryFilter 
-                ? "bg-[#29B9AA]/10 text-[#29B9AA] border-[#29B9AA]/20" 
-                : "bg-[#FEF9F4] text-[#7B6E67] hover:bg-[#F3EDE8]"
-            }`}
-          >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span>{selectedCategoryFilter || "Filter Kategori"}</span>
-          </button>
+      <div data-tour-id="history-search-filter" className="flex items-center gap-2 rounded-2xl border border-black/5 bg-white p-3 shadow-sm">
+        <div className="flex flex-1 items-center gap-2 rounded-xl bg-[#FEF9F4] px-3 py-1.5 border border-black/5 min-w-0">
+          <Search className="h-4 w-4 text-[#7B6E67] shrink-0" />
+          <input
+            type="text"
+            placeholder="Cari transaksi..."
+            className="flex-1 bg-transparent text-sm font-medium text-[#1A2B38] outline-none min-w-0"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {(searchQuery || selectedCategoryFilter) && (
+            <button 
+              onClick={() => {
+                setSearchQuery("");
+                setSelectedCategoryFilter("");
+              }} 
+              className="text-[#7B6E67] hover:text-[#1A2B38] border-r border-black/5 pr-2 mr-1 shrink-0"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
 
-          {showCategoryFilterDropdown && (
-            <div className="absolute right-0 z-50 mt-2 w-48 max-h-60 overflow-y-auto rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl">
-              <button
-                type="button"
-                onClick={() => {
-                  setSelectedCategoryFilter("");
-                  setShowCategoryFilterDropdown(false);
-                }}
-                className={`w-full rounded-xl px-3 py-2 text-left text-xs font-bold transition-colors ${
-                  selectedCategoryFilter === "" ? "bg-[#29B9AA] text-white" : "text-[#1A2B38] hover:bg-[#FEF9F4]"
-                }`}
-              >
-                Semua Kategori
-              </button>
-              {categories.map((c) => (
+          {/* Category Filter Dropdown */}
+          <div className="relative shrink-0" ref={filterDropdownRef}>
+            <button 
+              type="button"
+              onClick={() => setShowCategoryFilterDropdown(!showCategoryFilterDropdown)}
+              className={`flex h-8 w-8 items-center justify-center rounded-lg transition-all ${
+                selectedCategoryFilter 
+                  ? "bg-[#29B9AA] text-white shadow-sm" 
+                  : "bg-white text-[#7B6E67] border border-black/5 hover:bg-[#FEF9F4]"
+              }`}
+              title={selectedCategoryFilter ? `Filter Kategori: ${selectedCategoryFilter}` : "Filter Kategori"}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+            </button>
+
+            {showCategoryFilterDropdown && (
+              <div className="absolute right-0 z-50 mt-2 w-48 max-h-60 overflow-y-auto rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl">
                 <button
-                  key={c.id}
                   type="button"
                   onClick={() => {
-                    setSelectedCategoryFilter(c.name);
+                    setSelectedCategoryFilter("");
                     setShowCategoryFilterDropdown(false);
                   }}
                   className={`w-full rounded-xl px-3 py-2 text-left text-xs font-bold transition-colors ${
-                    selectedCategoryFilter === c.name ? "bg-[#29B9AA] text-white" : "text-[#1A2B38] hover:bg-[#FEF9F4]"
+                    selectedCategoryFilter === "" ? "bg-[#29B9AA] text-white" : "text-[#1A2B38] hover:bg-[#FEF9F4]"
                   }`}
                 >
-                  {c.name}
+                  Semua Kategori
                 </button>
-              ))}
-            </div>
-          )}
+                {categories.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    onClick={() => {
+                      setSelectedCategoryFilter(c.name);
+                      setShowCategoryFilterDropdown(false);
+                    }}
+                    className={`w-full rounded-xl px-3 py-2 text-left text-xs font-bold transition-colors ${
+                      selectedCategoryFilter === c.name ? "bg-[#29B9AA] text-white" : "text-[#1A2B38] hover:bg-[#FEF9F4]"
+                    }`}
+                  >
+                    {c.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-
-        {(searchQuery || selectedCategoryFilter) && (
-          <button 
-            onClick={() => {
-              setSearchQuery("");
-              setSelectedCategoryFilter("");
-            }} 
-            className="text-[#7B6E67] hover:text-[#1A2B38] border-l border-black/5 pl-2 shrink-0"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        )}
       </div>
 
       {/* Grouped lists */}
@@ -417,9 +419,10 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
                                 setEditingNoteId(tx.id);
                                 setTempNote(tx.note || "");
                               }}
-                              className="text-[#29B9AA] hover:underline font-bold text-[10px] uppercase tracking-wider ml-1"
+                              className="inline-flex items-center gap-1 rounded-lg bg-[#FEF9F4] border border-[#29B9AA]/20 hover:bg-[#29B9AA]/10 px-2 py-0.5 text-[10px] font-bold text-[#29B9AA] transition-colors ml-2"
                             >
-                              [ Edit ]
+                              <Pencil className="w-2.5 h-2.5" />
+                              Ubah
                             </button>
                           </div>
                         )}

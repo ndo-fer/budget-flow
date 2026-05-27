@@ -143,7 +143,7 @@ export default function BudgetScreen() {
   return (
     <div className="mx-auto max-w-6xl space-y-6 px-4 py-6 md:px-8">
       {/* Unified sub-tabs header */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
         <div>
           <div className="flex items-center gap-2">
             <Target className="h-4 w-4 text-[#29B9AA] flex-shrink-0" />
@@ -153,33 +153,39 @@ export default function BudgetScreen() {
           <p className="mt-1.5 text-xs text-[#7B6E67]">Susun alokasi budget belanja, sumber pendapatan, dan tagihan wajib Anda.</p>
         </div>
 
-        <div className="flex rounded-2xl bg-[#F3EDE8] p-1 shadow-inner self-start md:self-auto overflow-x-auto max-w-full">
+        <div className="flex w-full rounded-2xl bg-[#F3EDE8] p-1 shadow-inner md:w-auto">
           <button
+            data-tour-id="plan-category-tab"
             onClick={() => setActiveSubTab("categories")}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+            className={`flex-1 md:flex-none py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 shrink-0 md:px-4 ${
               activeSubTab === "categories" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
             }`}
           >
-            <BarChart3 className="w-3.5 h-3.5" />
-            Anggaran Kategori
+            <BarChart3 className="w-3.5 h-3.5 shrink-0 hidden sm:inline" />
+            <span className="hidden sm:inline">Anggaran Kategori</span>
+            <span className="inline sm:hidden">Kategori</span>
           </button>
           <button
+            data-tour-id="plan-income-tab"
             onClick={() => setActiveSubTab("income")}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+            className={`flex-1 md:flex-none py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 shrink-0 md:px-4 ${
               activeSubTab === "income" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
             }`}
           >
-            <TrendingUp className="w-3.5 h-3.5 text-[#29B9AA]" />
-            Sumber Pemasukan
+            <TrendingUp className="w-3.5 h-3.5 text-[#29B9AA] shrink-0 hidden sm:inline" />
+            <span className="hidden sm:inline">Sumber Pemasukan</span>
+            <span className="inline sm:hidden">Pemasukan</span>
           </button>
           <button
+            data-tour-id="plan-recurring-tab"
             onClick={() => setActiveSubTab("recurring")}
-            className={`rounded-xl px-4 py-2 text-xs font-bold transition-all flex items-center gap-1.5 shrink-0 ${
+            className={`flex-1 md:flex-none py-2 text-xs font-bold rounded-xl transition-all flex items-center justify-center gap-1.5 shrink-0 md:px-4 ${
               activeSubTab === "recurring" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
             }`}
           >
-            <Clock className="w-3.5 h-3.5 text-[#FFB347]" />
-            Tagihan Rutin
+            <Clock className="w-3.5 h-3.5 text-[#FFB347] shrink-0 hidden sm:inline" />
+            <span className="hidden sm:inline">Tagihan Rutin</span>
+            <span className="inline sm:hidden">Tagihan</span>
           </button>
         </div>
       </div>
@@ -217,14 +223,14 @@ export default function BudgetScreen() {
           {summary ? (
             <>
               <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
                   <div className="flex items-center gap-1.5 text-[#7B6E67]">
                     <PiggyBank className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
                     <p className="text-xs">Total Budget</p>
                   </div>
                   <p className="mt-1.5 text-2xl font-bold text-[#1A2B38]">{formatCompactCurrency(summary.totalBudget)}</p>
                 </div>
-                <div className="rounded-[28px] border border-black/10 bg-white p-5 shadow-sm">
+                <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
                   <div className="flex items-center gap-1.5 text-[#7B6E67]">
                     <ArrowDownCircle className="w-3.5 h-3.5 text-[#FF6B58] flex-shrink-0" />
                     <p className="text-xs">Total Realisasi</p>
@@ -232,12 +238,12 @@ export default function BudgetScreen() {
                   <p className="mt-1.5 text-2xl font-bold text-[#FF6B58]">{formatCompactCurrency(summary.totalActual)}</p>
                 </div>
               </div>
-              <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
+              <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
                 <div className="flex items-end justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-1.5 text-[#7B6E67]">
                       <Target className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
-                      <p className="text-xs font-bold uppercase tracking-[0.28em]">Overall utilization</p>
+                      <p className="text-xs font-bold uppercase tracking-[0.28em]">Utilisasi Total</p>
                     </div>
                     <h2 className="mt-2 text-3xl font-bold text-[#1A2B38]">{Math.round(summary.utilizationPercent)}%</h2>
                   </div>
@@ -258,21 +264,21 @@ export default function BudgetScreen() {
                   <div className="rounded-2xl bg-[#FEF9F4] p-4">
                     <div className="flex items-center gap-1 text-[#7B6E67]">
                       <CheckCircle2 className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
-                      <p className="text-xs">On track</p>
+                      <p className="text-xs">Sesuai Rencana</p>
                     </div>
                     <p className="mt-1 text-lg font-bold text-[#1A2B38]">{summary.onTrackCount}</p>
                   </div>
                   <div className="rounded-2xl bg-[#FEF9F4] p-4">
                     <div className="flex items-center gap-1 text-[#7B6E67]">
                       <TrendingDown className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
-                      <p className="text-xs">Under</p>
+                      <p className="text-xs">Di Bawah Budget</p>
                     </div>
                     <p className="mt-1 text-lg font-bold text-[#29B9AA]">{summary.underBudgetCount}</p>
                   </div>
                   <div className="rounded-2xl bg-[#FEF9F4] p-4">
                     <div className="flex items-center gap-1 text-[#7B6E67]">
                       <AlertTriangle className="w-3.5 h-3.5 text-[#FF6B58] flex-shrink-0" />
-                      <p className="text-xs">Over</p>
+                      <p className="text-xs">Melebihi Budget</p>
                     </div>
                     <p className="mt-1 text-lg font-bold text-[#FF6B58]">{summary.overBudgetCount}</p>
                   </div>
@@ -282,11 +288,11 @@ export default function BudgetScreen() {
           ) : null}
 
           {recommendations.length > 0 ? (
-            <div className="rounded-[32px] border border-amber-200 bg-amber-50 p-5 shadow-sm">
+            <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5 text-amber-700">
                   <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                  <p className="text-xs font-bold uppercase tracking-[0.28em]">Recommendations</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.28em]">Rekomendasi</p>
                 </div>
                 {recommendations.length > 4 ? (
                   <button
@@ -308,12 +314,12 @@ export default function BudgetScreen() {
             </div>
           ) : null}
 
-          <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <div className="flex items-center gap-1.5 text-[#7B6E67]">
                   <BarChart3 className="w-4 h-4 text-[#29B9AA] flex-shrink-0" />
-                  <p className="text-xs font-bold uppercase tracking-[0.28em]">Category breakdown</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.28em]">Detail Kategori</p>
                 </div>
                 <p className="mt-2 text-sm text-[#7B6E67]">Bandingkan budget alokasi per kategori belanja bulanan Anda.</p>
               </div>
@@ -331,6 +337,7 @@ export default function BudgetScreen() {
                     setShowCategoryModal(true);
                   }}
                   actionIcon={PlusCircle}
+                  variant="inline"
                 />
               ) : (
                 comparison.map((item) => {
@@ -376,15 +383,15 @@ export default function BudgetScreen() {
                       </div>
                       <div className="mt-4 grid gap-3 sm:grid-cols-3">
                         <div>
-                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7B6E67]">Budget</p>
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7B6E67]">Anggaran</p>
                           <p className="mt-1 text-xs font-bold text-[#1A2B38]">{formatCurrency(item.budget)}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7B6E67]">Actual</p>
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7B6E67]">Realisasi</p>
                           <p className="mt-1 text-xs font-bold text-[#1A2B38]">{formatCurrency(item.actual)}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7B6E67]">{item.variance >= 0 ? "Sisa" : "Over"}</p>
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7B6E67]">{item.variance >= 0 ? "Sisa" : "Lebih"}</p>
                           <p className={`mt-1 text-xs font-bold ${item.variance >= 0 ? "text-[#29B9AA]" : "text-[#FF6B58]"}`}>{item.variance >= 0 ? formatCurrency(item.variance) : formatCurrency(Math.abs(item.variance))}</p>
                         </div>
                       </div>
@@ -406,12 +413,12 @@ export default function BudgetScreen() {
             description="Di sini Anda dapat merencanakan estimasi pemasukan bulanan, mingguan, atau sekali waktu. Sumber pemasukan ini digunakan untuk menghitung sisa dana belanja aman (Safe-To-Spend) di Beranda secara dinamis."
           />
 
-          <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
               <div>
                 <div className="flex items-center gap-1.5 text-[#7B6E67]">
                   <TrendingUp className="w-4 h-4 text-[#29B9AA] flex-shrink-0" />
-                  <p className="text-xs font-bold uppercase tracking-[0.28em]">Income Sources</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.28em]">Sumber Pemasukan</p>
                 </div>
                 <p className="mt-2 text-sm text-[#7B6E67]">Kelola daftar sumber pendapatan bulanan atau mingguan Anda.</p>
               </div>
@@ -438,6 +445,7 @@ export default function BudgetScreen() {
                   setShowIncomeSourceModal(true);
                 }}
                 actionIcon={PlusCircle}
+                variant="inline"
               />
             ) : (
               <div className="grid gap-4 md:grid-cols-2">
@@ -477,7 +485,7 @@ export default function BudgetScreen() {
             description="Di sini Anda dapat melacak tagihan bulanan atau mingguan tetap (seperti sewa kost, langganan internet, listrik). Anda dapat menyinkronkan tagihan ini ke pengeluaran bulanan secara langsung dengan tombol Sinkronisasi."
           />
 
-          <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
               <div>
                 <div className="flex items-center gap-1.5 text-[#7B6E67]">
@@ -529,6 +537,7 @@ export default function BudgetScreen() {
                   setShowRecurringModal(true);
                 }}
                 actionIcon={Plus}
+                variant="inline"
               />
             ) : (
               <div className="grid gap-4 md:grid-cols-2">

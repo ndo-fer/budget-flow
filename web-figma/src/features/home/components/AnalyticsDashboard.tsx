@@ -64,7 +64,7 @@ export default function AnalyticsDashboard({
       <div className="grid gap-6 md:grid-cols-2">
         
         {/* Daily Trend Chart Card */}
-        <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-[#29B9AA]" />
             <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38]">Tren Pengeluaran Harian</h3>
@@ -96,7 +96,7 @@ export default function AnalyticsDashboard({
         </div>
 
         {/* Category Breakdown Pie Chart Card */}
-        <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2">
             <PieIcon className="h-4 w-4 text-[#FF6B58]" />
             <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38]">Porsi Pengeluaran Kategori</h3>
@@ -148,7 +148,7 @@ export default function AnalyticsDashboard({
       <div className="grid gap-6 md:grid-cols-3">
         
         {/* Top spending categories detailed progress lists */}
-        <div className="md:col-span-2 rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+        <div className="md:col-span-2 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38] mb-4">Pengeluaran Terbesar</h3>
           <div className="space-y-4">
             {categoryBreakdown.slice(0, 5).map((cat, i) => {
@@ -186,7 +186,7 @@ export default function AnalyticsDashboard({
         </div>
 
         {/* Smart insights card */}
-        <div className="rounded-[32px] border border-black/10 bg-gradient-to-br from-[#FEF9F4] to-[#F3EDE8] p-6 shadow-inner">
+        <div className="rounded-2xl border border-black/10 bg-gradient-to-br from-[#FEF9F4] to-[#F3EDE8] p-6 shadow-inner">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38] mb-3 flex items-center gap-1.5">
             <Sparkles className="h-4 w-4 text-[#29B9AA]" />
             <span>Insight Pintar</span>

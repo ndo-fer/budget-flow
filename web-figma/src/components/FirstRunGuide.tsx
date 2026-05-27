@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { X, Sparkles, LucideIcon } from "lucide-react";
 import { getUserGuidanceState, markGuideSeen } from "../services/guidanceService";
+import { useSpotlightTour } from "./onboarding/SpotlightTourProvider";
 
 interface FirstRunGuideProps {
   guideKey: "home" | "wallet" | "plan" | "history" | "income" | "recurring";
@@ -17,6 +18,7 @@ export default function FirstRunGuide({
 }: FirstRunGuideProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [loading, setLoading] = useState(true);
+  const { isActive: isTourActive } = useSpotlightTour();
 
   useEffect(() => {
     const checkVisibility = async () => {
@@ -52,40 +54,27 @@ export default function FirstRunGuide({
     }
   };
 
-  if (loading || !isVisible) return null;
+  if (loading || !isVisible || isTourActive) return null;
 
   return (
-    <div className="relative rounded-[32px] border border-[#29B9AA]/20 bg-gradient-to-br from-[#FEF9F4] to-[#EBF7F6] p-6 shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
-      {/* Background accents */}
-      <div className="absolute -right-8 -top-8 h-24 w-24 rounded-full bg-[#29B9AA]/5 blur-xl"></div>
-      
-      <div className="flex gap-4">
-        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white border border-[#29B9AA]/15 text-[#29B9AA] shadow-sm">
-          <Icon className="h-5.5 w-5.5" />
+    <div className="relative rounded-2xl border border-[#29B9AA]/10 bg-[#EBF7F6]/50 p-4 shadow-sm overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+      <div className="flex items-center justify-between gap-4 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white border border-[#29B9AA]/15 text-[#29B9AA] shadow-sm">
+            <Icon className="h-4.5 w-4.5" />
+          </div>
+          <p className="text-xs text-[#7B6E67] leading-normal font-semibold">
+            <span className="font-bold text-[#1A2B38] mr-1">{title}</span>
+            — {description}
+          </p>
         </div>
-        
-        <div className="flex-1 space-y-2">
-          <div className="flex items-start justify-between gap-4">
-            <h3 className="text-sm font-bold text-[#1A2B38]">{title}</h3>
-            <button
-              onClick={handleDismiss}
-              className="rounded-full p-1 text-[#7B6E67] hover:bg-black/5 hover:text-[#1A2B38] transition-colors"
-              aria-label="Dismiss guide"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-          
-          <p className="text-xs text-[#7B6E67] leading-relaxed font-medium max-w-2xl">{description}</p>
-          
-          <div className="pt-2">
-            <button
-              onClick={handleDismiss}
-              className="rounded-xl bg-[#29B9AA] hover:bg-[#229A8E] active:scale-[0.98] px-4 py-2 text-[10px] font-bold text-white transition-all shadow-sm shadow-teal-500/5"
-            >
-              Saya Mengerti
-            </button>
-          </div>
+        <div className="flex items-center gap-2 shrink-0 ml-auto sm:ml-0">
+          <button
+            onClick={handleDismiss}
+            className="rounded-lg bg-[#29B9AA] hover:bg-[#229A8E] active:scale-[0.98] px-3 py-1.5 text-[10px] font-bold text-white transition-all shadow-sm"
+          >
+            OK
+          </button>
         </div>
       </div>
     </div>

@@ -106,7 +106,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
       setWallets(ws.filter((w) => w.is_active));
     } catch (err) {
       console.error("Error fetching wallets:", err);
-      toast.error("Gagal memuat daftar wallet.");
+      toast.error("Gagal memuat daftar dompet.");
     } finally {
       if (!silent) setIsLoading(false);
     }
@@ -126,7 +126,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
 
   const handleCreateWallet = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newWalletName.trim()) return toast.error("Nama wallet wajib diisi.");
+    if (!newWalletName.trim()) return toast.error("Nama dompet wajib diisi.");
     const balance = parseFloat(newWalletBalance.replace(/[^0-9]/g, "")) || 0;
 
     setIsCreatingWallet(true);
@@ -139,14 +139,14 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
         estimated_balance: balance,
         confidence: 1.0,
       });
-      toast.success("Wallet baru berhasil ditambahkan.");
+      toast.success("Dompet baru berhasil ditambahkan.");
       setNewWalletName("");
       setNewWalletProvider("");
       setNewWalletBalance("");
       setShowAddWallet(false);
       fetchWallets();
     } catch (err: any) {
-      toast.error(err.message || "Gagal membuat wallet.");
+      toast.error(err.message || "Gagal membuat dompet.");
     } finally {
       setIsCreatingWallet(false);
     }
@@ -163,7 +163,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
       <div className="flex min-h-screen items-center justify-center bg-[#FEF9F4]">
         <div className="text-center space-y-3">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#29B9AA] border-t-transparent mx-auto"></div>
-          <p className="text-sm font-semibold text-[#7B6E67]">Memuat Daftar Wallet...</p>
+          <p className="text-sm font-semibold text-[#7B6E67]">Memuat Daftar Dompet...</p>
         </div>
       </div>
     );
@@ -179,13 +179,13 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
       />
 
       {/* Header with ingestion actions */}
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
         <div>
           <div className="flex items-center gap-2">
             <CreditCard className="h-4 w-4 text-[#29B9AA] flex-shrink-0" />
             <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">Keuangan</p>
           </div>
-          <h1 className="mt-2 text-3xl font-bold text-[#1A2B38]">Daftar Wallet</h1>
+          <h1 className="mt-2 text-3xl font-bold text-[#1A2B38]">Daftar Dompet</h1>
           <p className="mt-1.5 text-xs text-[#7B6E67]">Kelola saldo terkonfirmasi vs estimasi dengan ingest otomatis.</p>
         </div>
 
@@ -230,7 +230,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
             wallets.map((wallet) => (
               <div 
                 key={wallet.id}
-                className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between"
+                className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between"
               >
                 {/* Confidence score badge */}
                 <div className="absolute right-6 top-6 flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-white/80" style={{ contentVisibility: 'auto' }}>
@@ -296,27 +296,6 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                       Koreksi Saldo
                     </button>
                   </div>
-
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={() => {
-                        setActiveWalletId(wallet.id);
-                        setIsExpenseOpen(true);
-                      }}
-                      className="flex-1 rounded-xl bg-red-50 hover:bg-red-100 active:scale-[0.97] py-1.5 text-center text-[10px] font-bold text-[#FF6B58] transition-all"
-                    >
-                      + Expense
-                    </button>
-                    <button
-                      onClick={() => {
-                        setActiveWalletId(wallet.id);
-                        setIsIncomeOpen(true);
-                      }}
-                      className="flex-1 rounded-xl bg-[#EBF7F6] hover:bg-[#D5EFEF] active:scale-[0.97] py-1.5 text-center text-[10px] font-bold text-[#29B9AA] transition-all"
-                    >
-                      + Income
-                    </button>
-                  </div>
                 </div>
               </div>
             ))
@@ -326,9 +305,9 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
         {/* Sidebar/Add Wallet side block */}
         <div className="md:col-span-1">
           {showAddWallet ? (
-            <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm space-y-4">
+            <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38]">Add Wallet</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38]">Tambah Dompet</h3>
                 <button 
                   onClick={() => setShowAddWallet(false)}
                   className="rounded-full p-1.5 hover:bg-[#FEF9F4] text-[#7B6E67]"
@@ -339,7 +318,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
 
               <form onSubmit={handleCreateWallet} className="space-y-3">
                 <div>
-                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Nama Wallet</label>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Nama Dompet</label>
                   <input
                     type="text"
                     required
@@ -351,14 +330,14 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Tipe Wallet</label>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Tipe Dompet</label>
                   <select
                     className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-3 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
                     value={newWalletType}
                     onChange={(e: any) => setNewWalletType(e.target.value)}
                   >
-                    <option value="bank">Bank Account</option>
-                    <option value="ewallet">E-Wallet</option>
+                    <option value="bank">Rekening Bank</option>
+                    <option value="ewallet">Dompet Digital (E-Wallet)</option>
                     <option value="cash">Cash / Tunai</option>
                     <option value="other">Lainnya</option>
                   </select>
@@ -399,7 +378,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                   ) : (
                     <>
                       <PlusCircle className="w-4 h-4" />
-                      Tambah Wallet
+                      Tambah Dompet
                     </>
                   )}
                 </button>
@@ -408,7 +387,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
           ) : (
             <button
               onClick={() => setShowAddWallet(true)}
-              className="flex w-full flex-col items-center justify-center gap-3 rounded-[32px] border-2 border-dashed border-black/10 bg-[#FEF9F4]/40 hover:bg-[#FEF9F4] px-6 py-12 text-center"
+              className="flex w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-black/10 bg-[#FEF9F4]/40 hover:bg-[#FEF9F4] px-6 py-12 text-center"
             >
               <Plus className="h-6 w-6 text-[#29B9AA]" />
               <span className="text-xs font-bold text-[#1A2B38]">Registrasi Wallet Baru</span>

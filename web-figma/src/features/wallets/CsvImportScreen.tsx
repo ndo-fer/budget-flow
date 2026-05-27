@@ -90,7 +90,7 @@ export default function CsvImportScreen() {
   return (
     <div className="mx-auto max-w-3xl space-y-5 px-4 py-5 md:px-8">
       {/* Header */}
-      <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+      <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
         <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Import Data</p>
         <h1 className="mt-3 text-3xl font-bold text-[#1A2B38]">CSV Import</h1>
         <p className="mt-2 text-sm text-[#7B6E67]">Import histori transaksi dari bank, e-wallet, atau finance app lain.</p>
@@ -115,7 +115,7 @@ export default function CsvImportScreen() {
 
       {/* Step 1: Upload */}
       {step === "upload" && (
-        <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-[#1A2B38]">Upload file CSV</h2>
           <p className="mt-1 text-sm text-[#7B6E67]">Format CSV dari BCA, Mandiri, GoPay, OVO, Jago, dll. diterima.</p>
 
@@ -158,7 +158,7 @@ export default function CsvImportScreen() {
 
       {/* Step 2: Column Mapping */}
       {step === "map" && rawCsv && (
-        <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+        <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
           <h2 className="text-lg font-bold text-[#1A2B38]">Mapping kolom</h2>
           <p className="mt-1 text-sm text-[#7B6E67]">
             {rawCsv.rows.length} baris ditemukan. Cocokkan kolom dari file ke field yang dibutuhkan.
@@ -235,7 +235,7 @@ export default function CsvImportScreen() {
       {/* Step 3: Preview */}
       {step === "preview" && preview && (
         <div className="space-y-4">
-          <div className="rounded-[32px] border border-black/10 bg-white p-6 shadow-sm">
+          <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
             <h2 className="text-lg font-bold text-[#1A2B38]">Preview import</h2>
             <div className="mt-4 grid grid-cols-3 gap-3">
               <div className="rounded-2xl bg-[#EBF7F6] px-4 py-4 text-center">
@@ -253,7 +253,7 @@ export default function CsvImportScreen() {
             </div>
           </div>
 
-          <div className="rounded-[32px] border border-black/10 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
             <p className="text-xs font-bold uppercase tracking-widest text-[#7B6E67]">Sample transaksi</p>
             <div className="mt-3 space-y-2">
               {preview.transactions.slice(0, 8).map((tx, i) => (
@@ -290,7 +290,7 @@ export default function CsvImportScreen() {
 
       {/* Step 4: Done */}
       {step === "done" && (
-        <div className="rounded-[32px] border border-black/10 bg-white p-10 text-center shadow-sm">
+        <div className="rounded-2xl border border-black/10 bg-white p-10 text-center shadow-sm">
           <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-[#EBF7F6]">
             <Check className="h-8 w-8 text-[#29B9AA]" />
           </div>

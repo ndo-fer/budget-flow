@@ -20,8 +20,8 @@ import DailyBudgetLimitCard from "./components/DailyBudgetLimitCard";
 import ProgressRencanaCard from "./components/ProgressRencanaCard";
 import AnalyticsDashboard from "./components/AnalyticsDashboard";
 import ModalShell from "../../components/modals/ModalShell";
-import FirstRunGuide from "../../components/FirstRunGuide";
 import StarterChecklist from "./components/StarterChecklist";
+import { useSpotlightTour } from "../../components/onboarding/SpotlightTourProvider";
 
 interface HomeScreenProps {
   onNavigateTab: (tabId: any, options?: { replace?: boolean; search?: string }) => void;
@@ -38,6 +38,7 @@ export default function HomeScreen({
 }: HomeScreenProps) {
   const [activeSubTab, setActiveSubTab] = useState<"overview" | "analytics">("overview");
   const [month] = useState(getCurrentMonth());
+  const { isActive: isTourActive } = useSpotlightTour();
 
   useEffect(() => {
     const query = searchParams || "";
@@ -198,24 +199,21 @@ export default function HomeScreen({
         setAndroidNotifEnabled={setAndroidNotifEnabled} 
       />
 
-      <FirstRunGuide
-        guideKey="home"
-        title="Selamat Datang di Beranda Budget Flow!"
-        description="Di sini Anda dapat memantau estimasi kondisi keuangan harian (Safe-To-Spend), batas belanja aman hari ini, dan alokasi anggaran bulanan. Selesaikan setup awal keuangan Anda lewat Starter Checklist di bawah agar perhitungan saldo Anda akurat."
-      />
-
-      <StarterChecklist 
-        onNavigateTab={onNavigateTab} 
-        onOpenRecordHub={() => window.dispatchEvent(new CustomEvent("bf-open-record-sheet"))}
-      />
+      {!isTourActive && (
+        <StarterChecklist 
+          onNavigateTab={onNavigateTab} 
+          onOpenRecordHub={() => window.dispatchEvent(new CustomEvent("bf-open-record-sheet"))}
+        />
+      )}
 
       {/* Upper Title and SubTabs */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Beranda</p>
-          <h1 className="mt-1 text-3xl font-bold text-[#1A2B38]">Estimated Financials</h1>
+          <h1 className="mt-1 text-3xl font-bold text-[#1A2B38]">Ringkasan Keuangan</h1>
+          <p className="text-xs text-[#7B6E67] mt-1">Pantau estimasi kondisi keuangan harian (Safe-To-Spend) dan anggaran belanja bulanan Anda.</p>
         </div>
-        <div className="flex w-full sm:w-auto sm:inline-flex rounded-2xl bg-[#F3EDE8] p-1 shadow-inner">
+        <div className="flex w-full sm:w-auto sm:inline-flex rounded-2xl bg-[#F3EDE8] p-1 shadow-inner self-start sm:self-center">
           <button
             onClick={() => setActiveSubTab("overview")}
             className={`flex-1 sm:flex-initial justify-center rounded-xl px-4 py-2 text-xs font-bold transition-all active:scale-[0.97] flex items-center gap-1.5 ${
@@ -223,7 +221,7 @@ export default function HomeScreen({
             }`}
           >
             <LayoutGrid className="w-3.5 h-3.5" />
-            Overview
+            Ringkasan
           </button>
           <button
             onClick={() => setActiveSubTab("analytics")}
@@ -232,7 +230,7 @@ export default function HomeScreen({
             }`}
           >
             <BarChart2 className="w-3.5 h-3.5" />
-            Analytics & Insights
+            Analisis
           </button>
         </div>
       </div>

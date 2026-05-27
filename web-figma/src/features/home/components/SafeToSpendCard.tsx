@@ -13,7 +13,7 @@ interface SafeToSpendCardProps {
 
 export default function SafeToSpendCard({ safeToSpend, onNavigateTab, onEditPayday }: SafeToSpendCardProps) {
   return (
-    <div className="md:col-span-2 rounded-[32px] border border-black/10 bg-white p-6 shadow-sm relative overflow-hidden">
+    <div data-tour-id="home-safe-to-spend-card" className="md:col-span-2 rounded-2xl border border-black/10 bg-white p-6 shadow-sm relative overflow-hidden">
       <div className="absolute right-0 top-0 h-40 w-40 translate-x-10 -translate-y-10 rounded-full bg-gradient-to-br from-[#29B9AA]/10 to-transparent blur-2xl"></div>
       
       <div className="flex items-center gap-2">
