@@ -6,6 +6,7 @@ import android.appwidget.AppWidgetProvider;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.widget.RemoteViews;
@@ -28,10 +29,21 @@ public class QuickActionsWidgetProvider extends AppWidgetProvider {
         String saldo = prefs.getString("saldo", "Rp -");
         String limitHarian = prefs.getString("limitHarian", "Rp -");
         long accumulatedTotal = prefs.getLong("accumulated_total", 0);
+        boolean isOverDailyLimit = prefs.getBoolean("is_over_daily_limit", false);
+        long overAmountRaw = prefs.getLong("over_amount_raw", 0);
 
         // Update RemoteViews Text
         views.setTextViewText(R.id.txt_saldo, saldo);
         views.setTextViewText(R.id.txt_limit_harian, limitHarian);
+        if (isOverDailyLimit) {
+            views.setTextViewText(R.id.txt_limit_status, "LEWAT BATAS: Rp " + formatNumber(overAmountRaw));
+            views.setTextColor(R.id.txt_limit_harian, Color.parseColor("#D62828"));
+            views.setTextColor(R.id.txt_limit_status, Color.parseColor("#D62828"));
+        } else {
+            views.setTextViewText(R.id.txt_limit_status, "AMAN HARI INI");
+            views.setTextColor(R.id.txt_limit_harian, Color.parseColor("#29B9AA"));
+            views.setTextColor(R.id.txt_limit_status, Color.parseColor("#2A9D8F"));
+        }
         
         // Format and set accumulated total display
         views.setTextViewText(R.id.txt_accumulated_total, "Rp " + formatNumber(accumulatedTotal));
@@ -52,6 +64,18 @@ public class QuickActionsWidgetProvider extends AppWidgetProvider {
                 pendingIntentFlags
         );
         views.setOnClickPendingIntent(R.id.btn_add_expense, addExpensePendingIntent);
+
+        // --- Limit Status Click (Open History deep-link) ---
+        Intent historyIntent = new Intent(Intent.ACTION_VIEW, Uri.parse("budgetflow://action/ledger"));
+        historyIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+        PendingIntent historyPendingIntent = PendingIntent.getActivity(
+                context,
+                3001,
+                historyIntent,
+                pendingIntentFlags
+        );
+        views.setOnClickPendingIntent(R.id.txt_limit_harian, historyPendingIntent);
+        views.setOnClickPendingIntent(R.id.txt_limit_status, historyPendingIntent);
 
         // --- Banknote Clicks (ACTION_ADD_ACCUMULATION) ---
         views.setOnClickPendingIntent(R.id.btn_quick_1k, getAccumulatePendingIntent(context, 1001, 1000.0, pendingIntentFlags));

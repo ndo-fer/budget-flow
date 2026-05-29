@@ -287,7 +287,13 @@ export default function AppShell() {
         "localNotificationActionPerformed",
         (action: any) => {
           console.log("[Notification] Native action performed:", action);
-          // If the persistent warning notification is tapped, navigate to Wallets screen
+          // Open target screen based on notification action payload
+          if (action.notification.id === 42001 || action.notification.extra?.action === "open_history") {
+            navigateToTab("history");
+            return;
+          }
+
+          // Legacy sticky wallet warning behavior
           if (action.notification.id === 10101 || action.notification.extra?.action === "open_wallets") {
             navigateToTab("wallets");
           }

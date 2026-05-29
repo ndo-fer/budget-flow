@@ -56,7 +56,7 @@ export default function DailyBudgetLimitCard({ safeToSpend, onNavigateTab }: Dai
             <div className={`flex items-center gap-1.5 ${isOver ? "text-red-700" : "text-[#7B6E67]"}`}>
               <Target className={`w-3.5 h-3.5 flex-shrink-0 group-hover:scale-105 transition-transform ${isOver ? "text-red-500" : "text-[#29B9AA]"}`} />
               <span className={`text-xs font-bold uppercase tracking-wider ${isOver ? "text-red-700" : "group-hover:text-[#1A2B38] transition-colors"}`}>
-                Batas Harian
+                Pemakaian Harian
               </span>
             </div>
 

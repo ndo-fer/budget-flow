@@ -24,8 +24,11 @@ public class WidgetDataPlugin extends Plugin {
         String limitHarian = call.getString("limitHarian", "Rp -");
         double saldoRaw = call.getDouble("saldoRaw", 0.0);
         double limitHarianRaw = call.getDouble("limitHarianRaw", 0.0);
+        boolean isOverDailyLimit = call.getBoolean("isOverDailyLimit", false);
+        double overAmount = call.getDouble("overAmount", 0.0);
         long saldoRawLong = (long) saldoRaw;
         long limitHarianRawLong = (long) limitHarianRaw;
+        long overAmountRawLong = (long) overAmount;
 
         Context context = getContext();
         SharedPreferences prefs = context.getSharedPreferences("widget_prefs", Context.MODE_PRIVATE);
@@ -34,6 +37,8 @@ public class WidgetDataPlugin extends Plugin {
         editor.putString("limitHarian", limitHarian);
         editor.putLong("saldo_raw", saldoRawLong);
         editor.putLong("limit_harian_raw", limitHarianRawLong);
+        editor.putBoolean("is_over_daily_limit", isOverDailyLimit);
+        editor.putLong("over_amount_raw", overAmountRawLong);
         editor.apply();
 
         // Broadcast to trigger Widget Provider update

@@ -16,7 +16,12 @@ import { Capacitor, registerPlugin } from "@capacitor/core";
 
 const WidgetData = registerPlugin<any>("WidgetData");
 
-export const updateAndroidWidget = (availableMoney: number, safeToSpendToday: number) => {
+export const updateAndroidWidget = (
+  availableMoney: number,
+  safeToSpendToday: number,
+  isOverDailyLimit: boolean,
+  overAmount: number,
+) => {
   if (Capacitor.isNativePlatform()) {
     const formattedSaldo = new Intl.NumberFormat("id-ID", {
       style: "currency",
@@ -35,6 +40,8 @@ export const updateAndroidWidget = (availableMoney: number, safeToSpendToday: nu
       limitHarian: formattedLimit,
       saldoRaw: Math.round(availableMoney),
       limitHarianRaw: Math.round(safeToSpendToday),
+      isOverDailyLimit,
+      overAmount: Math.round(overAmount),
     }).catch((err: any) => console.warn("Failed to update Android widget:", err));
   }
 };
@@ -151,7 +158,7 @@ export const calculateSafeToSpend = async (): Promise<SafeToSpend> => {
   const overAmount = isOverDailyLimit ? todaySpent - safeToSpendPerDay : 0;
 
   // Automatically update the Android widget
-  updateAndroidWidget(availableMoney, safeToSpendToday);
+  updateAndroidWidget(availableMoney, safeToSpendToday, isOverDailyLimit, overAmount);
 
   return {
     totalEstimatedBalance,

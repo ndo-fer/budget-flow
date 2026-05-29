@@ -75,6 +75,17 @@
             android:textColor="#FF6B58"
             android:textSize="13.5sp"
             android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/txt_limit_status"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="4dp"
+            android:text="AMAN HARI INI"
+            android:textAllCaps="true"
+            android:textColor="#2A9D8F"
+            android:textSize="8.5sp"
+            android:textStyle="bold" />
     </LinearLayout>
 
     <!-- Divider Line -->

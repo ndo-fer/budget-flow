@@ -393,7 +393,7 @@ export default function SettingsScreen({
                               title: "🚨 Test Notifikasi Budget Flow",
                               body: "Jika Anda melihat notifikasi ini, maka perizinan dan saluran notifikasi Anda sudah berjalan dengan baik!",
                               channelId: "budget-flow-alerts",
-                              schedule: { at: new Date() }
+                              schedule: { at: new Date(Date.now() + 2000) }
                             }
                           ]
                         });

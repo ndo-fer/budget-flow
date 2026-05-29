@@ -19,6 +19,26 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 const STORAGE_KEY_LAST_REMINDER = "bf_last_reminder_date";
 const STORAGE_KEY_LAST_BUDGET_ALERT = "bf_last_budget_alert";
 const STORAGE_KEY_LAST_DAILY_LIMIT_ALERT = "bf_last_daily_limit_alert";
+const STORAGE_KEY_DAILY_LIMIT_PERSISTENT_DATE = "bf_daily_limit_persistent_date";
+const DAILY_LIMIT_PERSISTENT_NOTIFICATION_ID = 42001;
+
+const ensureNativeNotificationReady = async (): Promise<boolean> => {
+  try {
+    await LocalNotifications.createChannel({
+      id: "budget-flow-alerts",
+      name: "Budget Flow Alerts",
+      description: "Notifikasi penting seputar budget dan pengeluaran harian",
+      importance: 5,
+      visibility: 1,
+      vibration: true,
+    });
+    const perm = await LocalNotifications.checkPermissions();
+    return perm.display === "granted";
+  } catch (e) {
+    console.warn("[LocalNotifications] Failed to ensure channel/permission", e);
+    return false;
+  }
+};
 
 // ── Permission ────────────────────────────────────────────────
 
@@ -65,6 +85,8 @@ const showNotification = async (
 ) => {
   if (Capacitor.isNativePlatform()) {
     try {
+      const canNotify = await ensureNativeNotificationReady();
+      if (!canNotify) return;
       await LocalNotifications.schedule({
         notifications: [
           {
@@ -72,7 +94,7 @@ const showNotification = async (
             title,
             body,
             channelId: "budget-flow-alerts", // Reference Android notification channel
-            schedule: { at: new Date() }, // Fire immediately
+            schedule: { at: new Date(Date.now() + 2000) },
             sound: undefined, // Default system sound
           }
         ]
@@ -131,6 +153,66 @@ export const notifyDailyLimitExceeded = async (overAmount: number) => {
   );
   localStorage.setItem(STORAGE_KEY_LAST_DAILY_LIMIT_ALERT, today);
   localStorage.setItem("bf_last_daily_limit_over_amount", overAmount.toString());
+};
+
+const clearDailyLimitPersistentNotification = async () => {
+  if (!Capacitor.isNativePlatform()) return;
+
+  try {
+    await LocalNotifications.cancel({
+      notifications: [{ id: DAILY_LIMIT_PERSISTENT_NOTIFICATION_ID }],
+    });
+  } catch (e) {
+    console.warn("[LocalNotifications] Failed to clear daily limit persistent notification", e);
+  }
+};
+
+const upsertDailyLimitPersistentNotification = async (overAmount: number) => {
+  if (!Capacitor.isNativePlatform()) return;
+
+  const formatted = Math.round(overAmount).toLocaleString("id-ID");
+  try {
+    const canNotify = await ensureNativeNotificationReady();
+    if (!canNotify) return;
+    await LocalNotifications.schedule({
+      notifications: [
+        {
+          id: DAILY_LIMIT_PERSISTENT_NOTIFICATION_ID,
+          title: "🚨 Batas Harian Terlewati",
+          body: `Kelebihan Rp ${formatted}. Notif ini akan tetap tampil sampai ganti hari.`,
+          channelId: "budget-flow-alerts",
+          schedule: { at: new Date(Date.now() + 2000) },
+          ongoing: true,
+          autoCancel: false,
+          extra: { action: "open_history" },
+        } as any,
+      ],
+    });
+  } catch (e) {
+    console.warn("[LocalNotifications] Failed to set persistent daily limit notification", e);
+  }
+};
+
+export const syncDailyLimitPersistentNotification = async (
+  isOverDailyLimit: boolean,
+  overAmount: number,
+) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const storedDate = localStorage.getItem(STORAGE_KEY_DAILY_LIMIT_PERSISTENT_DATE);
+
+  if (storedDate && storedDate !== today) {
+    await clearDailyLimitPersistentNotification();
+    localStorage.removeItem(STORAGE_KEY_DAILY_LIMIT_PERSISTENT_DATE);
+  }
+
+  if (isOverDailyLimit && overAmount > 0) {
+    await upsertDailyLimitPersistentNotification(overAmount);
+    localStorage.setItem(STORAGE_KEY_DAILY_LIMIT_PERSISTENT_DATE, today);
+    return;
+  }
+
+  await clearDailyLimitPersistentNotification();
+  localStorage.removeItem(STORAGE_KEY_DAILY_LIMIT_PERSISTENT_DATE);
 };
 
 export const checkAndNotify = async () => {
