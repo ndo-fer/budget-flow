@@ -17,7 +17,8 @@ import {
   Sparkles,
   BookOpen,
   Layers,
-  Settings
+  Settings,
+  LogOut
 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useOnboarding } from "../../contexts/OnboardingContext";
@@ -290,7 +291,7 @@ export default function SettingsScreen({
                 </button>
                 <button onClick={() => setShowLogoutModal(true)} className="flex w-full items-center justify-between rounded-2xl bg-red-50 px-4 py-4 text-left hover:bg-red-100 transition-colors">
                   <div className="flex items-start gap-3">
-                    <Trash2 className="w-5 h-5 text-[#FF6B58] flex-shrink-0 mt-0.5" />
+                    <LogOut className="w-5 h-5 text-[#FF6B58] flex-shrink-0 mt-0.5" />
                     <div>
                       <p className="text-sm font-semibold text-[#FF6B58]">Logout</p>
                       <p className="mt-1 text-xs text-[#7B6E67]">Keluar dari akun ini kapan saja.</p>
