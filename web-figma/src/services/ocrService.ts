@@ -94,7 +94,7 @@ export const extractTextFromImage = async (
   // 15 second timeout to prevent infinite loader hangs
   const recognizePromise = worker.recognize(processedSource);
   const timeoutPromise = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error("OCR scan timed out. Pastikan file asset tesseract tersedia dan koneksi stabil.")), 15000)
+    setTimeout(() => reject(new Error("Scan OCR melebihi batas waktu (timeout). Pastikan berkas struk cukup jelas dan perangkat memiliki RAM/CPU bebas yang cukup.")), 15000)
   );
 
   try {

@@ -112,7 +112,7 @@ export default function IncomeTransactionModal({
     if (isNaN(numAmount) || numAmount <= 0) {
       return toast.error("Nominal pemasukan tidak valid.");
     }
-    if (!incomeSourceId) {
+    if (!incomeSourceId || incomeSourceId === "null" || incomeSourceId === "undefined") {
       return toast.error("Pilih sumber pemasukan.");
     }
 

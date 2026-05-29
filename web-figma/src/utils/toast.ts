@@ -22,14 +22,14 @@ export const toast = {
         lower.includes("diimpor")
       ) {
         action = {
-          label: "Lihat Ledger",
+          label: "Lihat Riwayat",
           onClick: () => navigateTo("/ledger"),
         };
       }
       // 2. Income/Pemasukan Successful -> View Ledger
       else if (lower.includes("pemasukan") && !lower.includes("sumber")) {
         action = {
-          label: "Lihat Ledger",
+          label: "Lihat Riwayat",
           onClick: () => navigateTo("/ledger"),
         };
       }
@@ -50,6 +50,7 @@ export const toast = {
     }
 
     return sonnerToast.success(message, {
+      duration: 4000,
       ...options,
       action: action || options?.action,
     });
@@ -58,9 +59,7 @@ export const toast = {
   error: (err: any, options?: any) => {
     const parsed = parseError(err);
     const displayMessage = `[${parsed.code}] ${parsed.message}`;
-    const copyContent = parsed.originalMessage 
-      ? `Code: ${parsed.code}\nMessage: ${parsed.message}\nTechnical Details: ${parsed.originalMessage}`
-      : `Code: ${parsed.code}\nMessage: ${parsed.message}`;
+    const copyContent = `Code: ${parsed.code}\nMessage: ${parsed.message}`;
 
     let action = options?.action;
 
@@ -80,6 +79,7 @@ export const toast = {
     }
 
     return sonnerToast.error(displayMessage, {
+      duration: 5000,
       ...options,
       action: action || options?.action,
     });

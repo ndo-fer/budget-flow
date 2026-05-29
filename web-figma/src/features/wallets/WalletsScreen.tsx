@@ -18,7 +18,7 @@ import {
   Shield,
   PlusCircle
 } from "lucide-react";
-import { getWallets, createWallet } from "../../services/walletService";
+import { getWallets, createWallet, getWalletStatus } from "../../services/walletService";
 import { formatCurrency } from "../../utils/format";
 import { toast } from "../../utils/toast";
 import type { Wallet } from "../../types/models";
@@ -26,6 +26,7 @@ import CsvImportModal from "../../components/modals/CsvImportModal";
 import { ScreenshotBalanceModal, ReceiptScanModal } from "../../components/modals/OcrModals";
 import ExpenseModal from "../../components/modals/ExpenseModal";
 import IncomeTransactionModal from "../../components/modals/IncomeTransactionModal";
+import BalanceGapModal from "../../components/modals/BalanceGapModal";
 import FirstRunGuide from "../../components/FirstRunGuide";
 import EmptyState from "../../components/EmptyState";
 
@@ -64,6 +65,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
     return false;
   });
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
+  const [gapAnalysisWallet, setGapAnalysisWallet] = useState<Wallet | null>(null);
 
   useEffect(() => {
     const query = searchParams || "";
@@ -227,78 +229,109 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
               actionIcon={Plus}
             />
           ) : (
-            wallets.map((wallet) => (
-              <div 
-                key={wallet.id}
-                className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between"
-              >
-                {/* Confidence score badge */}
-                <div className="absolute right-6 top-6 flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-white/80" style={{ contentVisibility: 'auto' }}>
-                  <Shield className="w-3 h-3 text-[#29B9AA] flex-shrink-0" />
-                  <span className="text-[#1A2B38]">Confidence: {Math.round(wallet.confidence * 100)}%</span>
-                </div>
+            wallets.map((wallet) => {
+              const status = { isRed: false, isYellow: false, dynamicConfidence: wallet.confidence, estimatedGap: 0, daysSinceConfirmation: 0 };
+              const borderClass = status.isRed 
+                ? "border-red-300 bg-red-50/10" 
+                : status.isYellow 
+                  ? "border-amber-300 bg-amber-50/10" 
+                  : "border-black/10";
+              const accentBar = status.isRed
+                ? <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
+                : status.isYellow
+                  ? <div className="absolute top-0 left-0 right-0 h-1 bg-amber-500" />
+                  : null;
 
-                <div>
-                  <div className="flex items-center gap-2.5">
-                    <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FEF9F4] border border-black/5 text-[#29B9AA]">
-                      <CreditCard className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-bold text-[#1A2B38]">{wallet.name}</h3>
-                      <p className="text-xs text-[#7B6E67] font-medium capitalize flex items-center gap-1">
-                        {(() => {
-                          const IconComp = walletTypeIcon[wallet.type as keyof typeof walletTypeIcon] || CreditCard;
-                          return <IconComp className="h-3 w-3 text-[#7B6E67]" />;
-                        })()}
-                        {wallet.provider || wallet.type}
-                      </p>
-                    </div>
+              return (
+                <div 
+                  key={wallet.id}
+                  className={`rounded-2xl border bg-white p-6 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden flex flex-col justify-between ${borderClass}`}
+                >
+                  {accentBar}
+
+                  {/* Confidence score badge */}
+                  <div className="absolute right-6 top-6 flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-white/80">
+                    <Shield className={`w-3 h-3 flex-shrink-0 ${status.isRed ? "text-red-500" : status.isYellow ? "text-amber-500" : "text-[#29B9AA]"}`} />
+                    <span className="text-[#1A2B38]">Confidence: {Math.round(status.dynamicConfidence * 100)}%</span>
                   </div>
 
-                  {/* Balance details */}
-                  <div className="mt-6 grid grid-cols-2 gap-4">
-                    <div>
-                      <div className="flex items-center gap-1 text-[#7B6E67]">
-                        <Lock className="w-3.5 h-3.5 text-[#7B6E67] flex-shrink-0" />
-                        <p className="text-[10px] font-bold uppercase tracking-wider">Saldo Terkonfirmasi</p>
+                  <div>
+                    <div className="flex items-center gap-2.5">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#FEF9F4] border border-black/5 text-[#29B9AA]">
+                        <CreditCard className="h-5 w-5" />
                       </div>
-                      <p className="mt-1 text-lg font-bold text-[#7B6E67]">
-                        Rp {wallet.confirmed_balance?.toLocaleString("id-ID")}
-                      </p>
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-1 text-[#29B9AA]">
-                        <Sparkles className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
-                        <p className="text-[10px] font-bold uppercase tracking-wider">Saldo Estimasi</p>
+                      <div>
+                        <h3 className="text-base font-bold text-[#1A2B38]">{wallet.name}</h3>
+                        <p className="text-xs text-[#7B6E67] font-medium capitalize flex items-center gap-1">
+                          {(() => {
+                            const IconComp = walletTypeIcon[wallet.type as keyof typeof walletTypeIcon] || CreditCard;
+                            return <IconComp className="h-3 w-3 text-[#7B6E67]" />;
+                          })()}
+                          {wallet.provider || wallet.type}
+                        </p>
                       </div>
-                      <p className="mt-1 text-xl font-black text-[#1A2B38]">
-                        Rp {wallet.estimated_balance?.toLocaleString("id-ID")}
-                      </p>
+                    </div>
+
+                    {/* Balance details */}
+                    <div className="mt-6 grid grid-cols-2 gap-4">
+                      <div>
+                        <div className="flex items-center gap-1 text-[#7B6E67]">
+                          <Lock className="w-3.5 h-3.5 text-[#7B6E67] flex-shrink-0" />
+                          <p className="text-[10px] font-bold uppercase tracking-wider">Saldo Terkonfirmasi</p>
+                        </div>
+                        <p className="mt-1 text-lg font-bold text-[#7B6E67]">
+                          Rp {wallet.confirmed_balance?.toLocaleString("id-ID")}
+                        </p>
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-1 text-[#29B9AA]">
+                          <Sparkles className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
+                          <p className="text-[10px] font-bold uppercase tracking-wider">Saldo Estimasi</p>
+                        </div>
+                        <p className="mt-1 text-xl font-black text-[#1A2B38]">
+                          Rp {wallet.estimated_balance?.toLocaleString("id-ID")}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-6 border-t border-black/5 pt-4">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] text-[#7B6E67] font-semibold flex items-center gap-1">
+                        <Clock className="w-3 h-3 text-[#7B6E67]" />
+                        Last confirmed: {wallet.last_confirmed_at ? new Date(wallet.last_confirmed_at).toLocaleDateString("id-ID", { day: "numeric", month: "long" }) : "Belum pernah"}
+                      </span>
+                      
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          onClick={() => setGapAnalysisWallet(wallet)}
+                          className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-[10px] font-bold border transition-all active:scale-[0.96] ${
+                            status.isRed
+                              ? "bg-red-50 border-red-200 hover:bg-red-100 text-red-700 animate-pulse"
+                              : status.isYellow
+                                ? "bg-amber-50 border-amber-200 hover:bg-amber-100 text-amber-700 font-semibold"
+                                : "bg-gray-50 border-gray-200 hover:bg-gray-100 text-gray-700"
+                          }`}
+                        >
+                          <AlertCircle className={`h-2.5 w-2.5 ${status.isRed ? "text-red-600" : status.isYellow ? "text-amber-600" : "text-gray-500"}`} />
+                          Analisis Gap
+                        </button>
+                        <button
+                          onClick={() => {
+                            setActiveWalletId(wallet.id);
+                            setIsScreenshotOpen(true);
+                          }}
+                          className="flex items-center gap-1.5 rounded-lg bg-[#FEF9F4] border border-[#29B9AA]/20 hover:border-[#29B9AA]/50 hover:bg-[#EBF7F6] px-2.5 py-1 text-[10px] font-bold text-[#29B9AA] transition-all active:scale-[0.96]"
+                        >
+                          <RefreshCw className="h-2.5 w-2.5 text-[#29B9AA]" />
+                          Koreksi Saldo
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-
-                <div className="mt-6 border-t border-black/5 pt-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] text-[#7B6E67] font-semibold flex items-center gap-1">
-                      <Clock className="w-3 h-3 text-[#7B6E67]" />
-                      Last confirmed: {wallet.last_confirmed_at ? new Date(wallet.last_confirmed_at).toLocaleDateString("id-ID", { day: "numeric", month: "long" }) : "Belum pernah"}
-                    </span>
-                    
-                    <button
-                      onClick={() => {
-                        setActiveWalletId(wallet.id);
-                        setIsScreenshotOpen(true);
-                      }}
-                      className="flex items-center gap-1.5 rounded-lg bg-[#FEF9F4] border border-[#29B9AA]/20 hover:border-[#29B9AA]/50 hover:bg-[#EBF7F6] px-2.5 py-1 text-[10px] font-bold text-[#29B9AA] transition-all active:scale-[0.96]"
-                    >
-                      <RefreshCw className="h-2.5 w-2.5 text-[#29B9AA]" />
-                      Koreksi Saldo
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
@@ -438,6 +471,15 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
         onSuccess={fetchWallets}
         defaultWalletId={activeWalletId}
       />
+
+      {/* Balance Gap Analysis Modal */}
+      {gapAnalysisWallet && (
+        <BalanceGapModal
+          wallet={gapAnalysisWallet}
+          onClose={() => setGapAnalysisWallet(null)}
+          onSaved={fetchWallets}
+        />
+      )}
 
     </div>
   );

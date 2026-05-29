@@ -88,12 +88,26 @@ export const addExpense = async (
     const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
     const occurred_at = new Date(`${date}T${timeStr}`).toISOString();
 
+    // Resolve category name for the denormalized `category` column.
+    // HistoryScreen reads `category` (string) directly without a FK join,
+    // so we must populate it on write to keep Riwayat in sync with analytics.
+    let categoryName: string | null = null;
+    if (categoryId) {
+      const { data: catRow } = await supabase
+        .from("budget_categories")
+        .select("name")
+        .eq("id", categoryId)
+        .maybeSingle();
+      categoryName = catRow?.name ?? null;
+    }
+
     const { data, error } = await supabase
       .from("wallet_transactions")
       .insert([
         {
           user_id: userId,
           category_id: categoryId,
+          category: categoryName,
           amount,
           occurred_at,
           note: note || null,
@@ -123,6 +137,17 @@ export const updateExpense = async (expenseId: string, updates: any) => {
 
     if (updates.categoryId !== undefined) {
       payload.category_id = updates.categoryId;
+      // Keep denormalized `category` string in sync
+      if (updates.categoryId) {
+        const { data: catRow } = await supabase
+          .from("budget_categories")
+          .select("name")
+          .eq("id", updates.categoryId)
+          .maybeSingle();
+        payload.category = catRow?.name ?? null;
+      } else {
+        payload.category = null;
+      }
     }
     if (updates.amount !== undefined) {
       payload.amount = updates.amount;

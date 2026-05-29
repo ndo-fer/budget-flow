@@ -12,6 +12,7 @@ import {
 import { getCurrentPlan } from "../../services/planService";
 import { getCurrentMonth, getToday } from "../../utils/date";
 import { toast } from "../../utils/toast";
+import { notifyDailyLimitExceeded } from "../../services/notificationService";
 
 // Sub-components
 import NativePermissionAlert from "./components/NativePermissionAlert";
@@ -128,6 +129,11 @@ export default function HomeScreen({
       setCategoryBreakdown(breakdownData);
       setDailyTrend(trendData);
       setDailyAverage(avgData);
+
+      // 🔔 Trigger native/web push notification when daily limit is exceeded
+      if (stsData.isOverDailyLimit && stsData.overAmount > 0) {
+        notifyDailyLimitExceeded(stsData.overAmount);
+      }
     } catch (err) {
       console.error("Error loading home dashboard data:", err);
       toast.error("Gagal memuat data dashboard.");

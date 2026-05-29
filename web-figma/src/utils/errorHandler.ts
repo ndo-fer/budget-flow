@@ -139,7 +139,17 @@ export function parseError(error: any): SystemError {
     };
   }
 
-  // 5. Default Fallback
+  // 5. Validation/User-facing plain strings fallback
+  const isTechnical = /violates|constraint|foreign key|duplicate|permission|denied|rls|policy|fetch|network|schema|rpc|undefined|null/i.test(lowerMessage);
+  if (typeof error === "string" && !isTechnical) {
+    return {
+      message: error,
+      code: "BF-VAL-001",
+      originalMessage: error,
+    };
+  }
+
+  // 6. Default Fallback
   return {
     message: `Terjadi kesalahan internal pada aplikasi.`,
     code: "BF-SYS-999",

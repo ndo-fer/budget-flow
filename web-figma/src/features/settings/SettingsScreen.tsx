@@ -381,6 +381,57 @@ export default function SettingsScreen({
                   </div>
                 )}
 
+                {Capacitor.isNativePlatform() && (
+                  <button
+                    onClick={async () => {
+                      try {
+                        const { LocalNotifications: capLocalNotifs } = await import("@capacitor/local-notifications");
+                        await capLocalNotifs.schedule({
+                          notifications: [
+                            {
+                              id: 99999,
+                              title: "🚨 Test Notifikasi Budget Flow",
+                              body: "Jika Anda melihat notifikasi ini, maka perizinan dan saluran notifikasi Anda sudah berjalan dengan baik!",
+                              channelId: "budget-flow-alerts",
+                              schedule: { at: new Date() }
+                            }
+                          ]
+                        });
+                        toast.success("Test notifikasi terkirim ke sistem!");
+                      } catch (e: any) {
+                        toast.error(`Gagal mengirim test notifikasi: ${e.message || e}`);
+                      }
+                    }}
+                    className="flex w-full items-center justify-between rounded-2xl bg-[#EBF7F6] px-4 py-4 text-left hover:bg-[#D5EFEB] transition-colors"
+                  >
+                    <div className="flex items-start gap-3">
+                      <Bell className="w-5 h-5 text-[#29B9AA] flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-sm font-semibold text-[#1A2B38]">Test Kirim Notifikasi</p>
+                        <p className="mt-1 text-xs text-[#7B6E67]">Ketuk untuk menguji apakah notifikasi push sistem berfungsi.</p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-[#29B9AA] shrink-0">Tes</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    window.history.pushState({}, "", "/design-preview");
+                    window.dispatchEvent(new PopStateEvent("popstate"));
+                  }}
+                  className="flex w-full items-center justify-between rounded-2xl bg-[#000814] px-4 py-4 text-left text-white shadow-sm hover:bg-[#000814]/80 transition-colors cursor-pointer"
+                >
+                  <div className="flex items-start gap-3">
+                    <Layers className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-semibold">Design Preview (V2)</p>
+                      <p className="mt-1 text-xs text-white/70">Coba antarmuka baru dengan tema Dark Hybrid modern.</p>
+                    </div>
+                  </div>
+                  <span className="text-xs font-bold text-indigo-400 shrink-0">Buka V2</span>
+                </button>
+
                 <button onClick={handleOpenTutorial} className="flex w-full items-center justify-between rounded-2xl bg-[#29B9AA] px-4 py-4 text-left text-white shadow-sm">
                   <div>
                     <p className="text-sm font-semibold">Lihat Tutorial Lagi</p>

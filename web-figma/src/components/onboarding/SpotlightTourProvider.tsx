@@ -121,7 +121,7 @@ export function SpotlightTourProvider({ children }: { children: React.ReactNode 
     }
 
     // Modal closing trigger when changing steps
-    if (["welcome-home", "open-plan", "open-wallet", "open-history", "tour-complete"].includes(currentStep.id)) {
+    if (["welcome-home", "open-history", "tour-complete", "advanced-features"].includes(currentStep.id)) {
       window.dispatchEvent(new CustomEvent("bf-close-modals"));
     }
   }, [isActive, currentStepIndex]);
@@ -152,6 +152,7 @@ export function SpotlightTourProvider({ children }: { children: React.ReactNode 
   }, [isActive, currentStepIndex]);
 
   const startTour = useCallback(() => {
+    window.dispatchEvent(new CustomEvent("bf-close-modals"));
     setCurrentStepIndex(0);
     setIsActive(true);
   }, []);

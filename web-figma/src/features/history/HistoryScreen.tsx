@@ -310,8 +310,9 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
               </h3>
               
               <div className="space-y-3">
-                {groupedTxs[dateStr].map((tx) => {
+                {groupedTxs[dateStr].map((tx, idx) => {
                   const isExpense = tx.direction === "out";
+                  const isFirstOverall = dateStr === sortedDates[0] && idx === 0;
                   
                   // Extract package name and actual notification text from raw_text
                   let appFriendlyName = "";
@@ -325,9 +326,18 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
                     }
                   }
 
+                  let displayTime = "";
+                  if (tx.occurred_at) {
+                    const txDate = new Date(tx.occurred_at);
+                    const hours = String(txDate.getHours()).padStart(2, "0");
+                    const minutes = String(txDate.getMinutes()).padStart(2, "0");
+                    displayTime = `${hours}:${minutes}`;
+                  }
+
                   return (
                     <div 
                       key={tx.id}
+                      data-tour-id={isFirstOverall ? "history-first-transaction" : undefined}
                       className="flex flex-col gap-3 rounded-2xl border border-black/10 bg-white p-4 shadow-sm hover:bg-[#FEF9F4]/30 transition-all"
                     >
                       {/* Top Row: Icon, Merchant/Title, and Amount */}
@@ -348,7 +358,7 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
                               }
                             </h4>
                             <p className="text-[10px] text-[#7B6E67] font-semibold uppercase tracking-wider mt-0.5">
-                              {tx.source} {appFriendlyName ? `· ${appFriendlyName}` : ""}
+                              {displayTime ? `${displayTime} · ` : ""}{tx.source} {appFriendlyName ? `· ${appFriendlyName}` : ""}
                             </p>
                           </div>
                         </div>

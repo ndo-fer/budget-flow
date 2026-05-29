@@ -57,6 +57,20 @@ describe("notificationParserService", () => {
       expect(result?.amount).toBe(15000);
       expect(result?.direction).toBe("in"); // GoPay merchant always receives payments
     });
+
+    it("extracts remaining balance when present in the notification", () => {
+      const text1 = "Transaksi QRIS senilai Rp 50.000 di Kopi Kenangan berhasil. Sisa saldo Rp 150.000";
+      const res1 = parseNotification(text1, "id.co.bankjago.android");
+      expect(res1?.remainingBalance).toBe(150000);
+
+      const text2 = "Pembelian Rp 35.000 berhasil, Saldo Rp 12.000.000";
+      const res2 = parseNotification(text2, "com.bca");
+      expect(res2?.remainingBalance).toBe(12000000);
+
+      const text3 = "Dana masuk Rp 100.000, Saldo akhir Anda Rp 1.100.000";
+      const res3 = parseNotification(text3, "com.gojek.app");
+      expect(res3?.remainingBalance).toBe(1100000);
+    });
   });
 
   describe("getAppFriendlyName", () => {

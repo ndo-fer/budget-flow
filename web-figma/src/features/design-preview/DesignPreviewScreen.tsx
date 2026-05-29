@@ -21,9 +21,9 @@ type PreviewTab = "dashboard" | "wallets" | "ledger" | "budget" | "settings";
 
 const TABS: { id: PreviewTab; label: string; icon: any }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { id: "wallets", label: "Wallets", icon: Wallet },
   { id: "budget", label: "Budget", icon: BarChart3 },
   { id: "ledger", label: "Ledger", icon: Clock },
+  { id: "wallets", label: "Wallets", icon: Wallet },
   { id: "settings", label: "Settings", icon: Settings },
 ];
 

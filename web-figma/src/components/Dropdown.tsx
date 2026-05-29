@@ -74,11 +74,12 @@ export default function Dropdown({
       {isOpen && createPortal(
         <>
           <div 
-            className="fixed inset-0 z-40 cursor-default" 
+            style={{ zIndex: 10040 }}
+            className="fixed inset-0 cursor-default" 
             onClick={() => setIsOpen(false)}
           />
           <div 
-            style={{ ...menuStyle, zIndex: 9999 }}
+            style={{ ...menuStyle, zIndex: 10050 }}
             className="max-h-60 overflow-y-auto rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl animate-in fade-in slide-in-from-top-2 duration-150"
           >
             {options.length === 0 ? (

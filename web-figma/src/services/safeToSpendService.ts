@@ -33,6 +33,8 @@ export const updateAndroidWidget = (availableMoney: number, safeToSpendToday: nu
     WidgetData.updateWidgetData({
       saldo: formattedSaldo,
       limitHarian: formattedLimit,
+      saldoRaw: Math.round(availableMoney),
+      limitHarianRaw: Math.round(safeToSpendToday),
     }).catch((err: any) => console.warn("Failed to update Android widget:", err));
   }
 };

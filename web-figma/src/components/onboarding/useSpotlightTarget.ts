@@ -23,87 +23,83 @@ export function useSpotlightTarget(
       return;
     }
 
-    let attempts = 0;
-    const maxAttempts = 12; // Try for 1.8 seconds (12 * 150ms)
-    const intervalTime = 150;
+    // Helper to measure element and set listeners
+    const setupMeasurement = (el: Element) => {
+      // Target found! Scroll it into view if needed
+      el.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+        inline: "center",
+      });
 
-    const findAndMeasure = (): boolean => {
-      let el = document.querySelector(`[data-tour-id="${targetId}"]`);
-      if (!el && fallbackId) {
-        el = document.querySelector(`[data-tour-id="${fallbackId}"]`);
-      }
+      // Measure immediately
+      setMeasurement({ rect: el.getBoundingClientRect(), element: el, notFound: false });
 
-      if (el) {
-        // Target found! Let's scroll it into view if needed
-        el.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-          inline: "center",
-        });
+      // Re-measure after a short delay in case scroll animated the element
+      const timeout = setTimeout(() => {
+        setMeasurement({ rect: el.getBoundingClientRect(), element: el, notFound: false });
+      }, 200);
 
-        // Measure immediately
-        const rect = el.getBoundingClientRect();
-        setMeasurement({ rect, element: el, notFound: false });
-
-        // Re-measure after a short delay in case scroll animated the element
-        setTimeout(() => {
-          if (el) {
-            setMeasurement({ rect: el.getBoundingClientRect(), element: el, notFound: false });
-          }
-        }, 200);
-
-        return true;
-      }
-      return false;
-    };
-
-    // Try finding immediately
-    if (findAndMeasure()) {
       // Set up resize and scroll listeners
       const handleUpdate = () => {
-        let el = document.querySelector(`[data-tour-id="${targetId}"]`);
-        if (!el && fallbackId) {
-          el = document.querySelector(`[data-tour-id="${fallbackId}"]`);
-        }
-        if (el) {
-          setMeasurement({ rect: el.getBoundingClientRect(), element: el, notFound: false });
-        }
+        setMeasurement({ rect: el.getBoundingClientRect(), element: el, notFound: false });
       };
 
       window.addEventListener("resize", handleUpdate);
       window.addEventListener("scroll", handleUpdate, true);
 
       return () => {
+        clearTimeout(timeout);
         window.removeEventListener("resize", handleUpdate);
         window.removeEventListener("scroll", handleUpdate, true);
       };
+    };
+
+    // Try finding immediately
+    let currentEl = document.querySelector(`[data-tour-id="${targetId}"]`);
+    if (!currentEl && fallbackId) {
+      currentEl = document.querySelector(`[data-tour-id="${fallbackId}"]`);
     }
 
-    // Polling retry
-    const interval = setInterval(() => {
-      attempts++;
-      if (findAndMeasure()) {
-        clearInterval(interval);
-        
-        const handleUpdate = () => {
-          let el = document.querySelector(`[data-tour-id="${targetId}"]`);
-          if (!el && fallbackId) {
-            el = document.querySelector(`[data-tour-id="${fallbackId}"]`);
-          }
-          if (el) {
-            setMeasurement({ rect: el.getBoundingClientRect(), element: el, notFound: false });
-          }
-        };
-        window.addEventListener("resize", handleUpdate);
-        window.addEventListener("scroll", handleUpdate, true);
-      } else if (attempts >= maxAttempts) {
-        clearInterval(interval);
+    if (currentEl) {
+      return setupMeasurement(currentEl);
+    }
+
+    // Set up MutationObserver to find the element when it mounts
+    let cleanUpListeners: (() => void) | null = null;
+    
+    const observer = new MutationObserver(() => {
+      let foundEl = document.querySelector(`[data-tour-id="${targetId}"]`);
+      if (!foundEl && fallbackId) {
+        foundEl = document.querySelector(`[data-tour-id="${fallbackId}"]`);
+      }
+
+      if (foundEl) {
+        cleanUpListeners = setupMeasurement(foundEl);
+        observer.disconnect();
+      }
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Polling backup only to mark as not found if it fails to appear after 4 seconds
+    const timeoutId = setTimeout(() => {
+      observer.disconnect();
+      let finalEl = document.querySelector(`[data-tour-id="${targetId}"]`);
+      if (!finalEl && fallbackId) {
+        finalEl = document.querySelector(`[data-tour-id="${fallbackId}"]`);
+      }
+      if (!finalEl) {
         setMeasurement({ rect: null, element: null, notFound: true });
       }
-    }, intervalTime);
+    }, 4000);
 
     return () => {
-      clearInterval(interval);
+      observer.disconnect();
+      clearTimeout(timeoutId);
+      if (cleanUpListeners) {
+        cleanUpListeners();
+      }
     };
   }, [targetId, fallbackId, triggerKey]);
 

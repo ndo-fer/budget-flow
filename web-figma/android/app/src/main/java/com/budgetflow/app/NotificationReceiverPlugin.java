@@ -46,31 +46,33 @@ public class NotificationReceiverPlugin extends Plugin {
 
     @PluginMethod
     public void getPendingNotifications(PluginCall call) {
-        Context context = getContext();
-        SharedPreferences prefs = context.getSharedPreferences("notification_prefs", Context.MODE_PRIVATE);
-        String pendingStr = prefs.getString("pending_notifications", "[]");
-        
-        try {
-            JSONArray array = new JSONArray(pendingStr);
-            JSArray jsArray = new JSArray();
-            for (int i = 0; i < array.length(); i++) {
-                JSONObject obj = array.getJSONObject(i);
-                JSObject jsObj = new JSObject();
-                jsObj.put("packageName", obj.getString("packageName"));
-                jsObj.put("title", obj.getString("title"));
-                jsObj.put("text", obj.getString("text"));
-                jsObj.put("timestamp", obj.getLong("timestamp"));
-                jsArray.put(jsObj);
+        synchronized (NotificationListener.class) {
+            Context context = getContext();
+            SharedPreferences prefs = context.getSharedPreferences("notification_prefs", Context.MODE_PRIVATE);
+            String pendingStr = prefs.getString("pending_notifications", "[]");
+            
+            try {
+                JSONArray array = new JSONArray(pendingStr);
+                JSArray jsArray = new JSArray();
+                for (int i = 0; i < array.length(); i++) {
+                    JSONObject obj = array.getJSONObject(i);
+                    JSObject jsObj = new JSObject();
+                    jsObj.put("packageName", obj.getString("packageName"));
+                    jsObj.put("title", obj.getString("title"));
+                    jsObj.put("text", obj.getString("text"));
+                    jsObj.put("timestamp", obj.getLong("timestamp"));
+                    jsArray.put(jsObj);
+                }
+                
+                // Clear queue
+                prefs.edit().putString("pending_notifications", "[]").commit();
+                
+                JSObject ret = new JSObject();
+                ret.put("notifications", jsArray);
+                call.resolve(ret);
+            } catch (Exception e) {
+                call.reject("Failed to retrieve pending notifications", e);
             }
-            
-            // Clear queue
-            prefs.edit().putString("pending_notifications", "[]").apply();
-            
-            JSObject ret = new JSObject();
-            ret.put("notifications", jsArray);
-            call.resolve(ret);
-        } catch (Exception e) {
-            call.reject("Failed to retrieve pending notifications", e);
         }
     }
 }

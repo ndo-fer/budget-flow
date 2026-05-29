@@ -99,6 +99,31 @@ export const adjustWalletBalance = async (
   });
 
   if (error) throw error;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("wallet-transaction-added"));
+  }
+};
+
+export const updateConfirmedBalance = async (
+  walletId: string,
+  confirmedBalance: number,
+): Promise<void> => {
+  const userId = await getCurrentUserId();
+  const { error } = await supabase
+    .from("wallets")
+    .update({ 
+      confirmed_balance: confirmedBalance,
+      last_confirmed_at: new Date().toISOString(),
+      confidence: 1.0,
+      updated_at: new Date().toISOString() 
+    })
+    .eq("user_id", userId)
+    .eq("id", walletId);
+
+  if (error) throw error;
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("wallet-transaction-added"));
+  }
 };
 
 // ── Helpers ───────────────────────────────────────────────────
@@ -130,4 +155,49 @@ export const COMMON_PROVIDERS: Record<string, string[]> = {
   ewallet: ["GoPay", "OVO", "ShopeePay", "Dana", "LinkAja", "Jenius", "Flip", "Lainnya"],
   cash: ["Dompet"],
   other: ["Investasi", "Tabungan Lain"],
+};
+
+export interface WalletStatus {
+  dynamicConfidence: number;
+  isRed: boolean;
+  isYellow: boolean;
+  estimatedGap: number;
+  daysSinceConfirmation: number;
+}
+
+export const getWalletStatus = (wallet: any): WalletStatus => {
+  const lastConfirmed = wallet.last_confirmed_at ? new Date(wallet.last_confirmed_at) : null;
+  const daysSinceConfirmation = lastConfirmed 
+    ? (Date.now() - lastConfirmed.getTime()) / (1000 * 60 * 60 * 24) 
+    : 30;
+
+  const estimatedGap = wallet.estimated_balance - wallet.confirmed_balance;
+  
+  // Base confidence starts at 1.0 (100%)
+  let dynamicConfidence = 1.0;
+  
+  // Degrade by 5% per day after 3 days
+  if (daysSinceConfirmation > 3) {
+    dynamicConfidence -= (daysSinceConfirmation - 3) * 0.05;
+  }
+  
+  // Degrade based on size of the gap (every Rp 50.000 of gap degrades by 10%)
+  if (Math.abs(estimatedGap) > 0) {
+    const gapDegradation = Math.min(0.5, (Math.abs(estimatedGap) / 50000) * 0.1);
+    dynamicConfidence -= gapDegradation;
+  }
+  
+  // Clamp between 0.1 and 1.0
+  dynamicConfidence = Math.max(0.1, Math.min(dynamicConfidence, 1.0));
+  
+  const isRed = dynamicConfidence < 0.7 || daysSinceConfirmation >= 7;
+  const isYellow = !isRed && (dynamicConfidence < 0.9 || daysSinceConfirmation >= 4 || Math.abs(estimatedGap) > 0);
+  
+  return {
+    dynamicConfidence,
+    isRed,
+    isYellow,
+    estimatedGap,
+    daysSinceConfirmation: Math.floor(daysSinceConfirmation),
+  };
 };

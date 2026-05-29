@@ -34,6 +34,15 @@
             <meta-data android:name="android.appwidget.provider" android:resource="@xml/quick_actions_widget_info" />
         </receiver>
 
+        <receiver android:name=".WidgetActionReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="com.budgetflow.app.ACTION_QUICK_RECORD" />
+                <action android:name="com.budgetflow.app.ACTION_ADD_ACCUMULATION" />
+                <action android:name="com.budgetflow.app.ACTION_RESET_ACCUMULATION" />
+                <action android:name="com.budgetflow.app.ACTION_COMMIT_ACCUMULATION" />
+            </intent-filter>
+        </receiver>
+
         <!-- Notification Listener Service -->
         <service
             android:name=".NotificationListener"

@@ -110,7 +110,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, defaultWallet
     if (isNaN(numAmount) || numAmount <= 0) {
       return toast.error("Nominal pengeluaran tidak valid.");
     }
-    if (!categoryId) {
+    if (!categoryId || categoryId === "null" || categoryId === "undefined") {
       return toast.error("Pilih kategori pengeluaran.");
     }
 
@@ -184,6 +184,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, defaultWallet
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-[#7B6E67]">Rp</span>
               <input
+                data-tour-id="expense-amount-input"
                 type="text"
                 required
                 placeholder="0"
@@ -274,6 +275,7 @@ export default function ExpenseModal({ isOpen, onClose, onSuccess, defaultWallet
 
           {/* Submit */}
           <button
+            data-tour-id="expense-save-button"
             type="submit"
             disabled={isSubmitting}
             className="w-full rounded-2xl bg-gradient-to-r from-[#FF6B58] to-[#E8503F] py-3.5 text-sm font-bold text-white shadow-lg shadow-red-500/10 hover:shadow-red-500/20 disabled:opacity-50 flex items-center justify-center gap-1.5"

@@ -35,10 +35,7 @@ public class NotificationListener extends NotificationListenerService {
         "com.bri.brimo",
         "id.co.mandiri.mobile", // Livin Classic
         "id.co.mandiri.livin", // Livin New
-        "com.bni.mobilebanking",
-        "com.google.android.gm", // Gmail
-        "com.microsoft.office.outlook",
-        "com.samsung.android.email.provider"
+        "com.bni.mobilebanking"
     ));
 
     @Override
@@ -95,21 +92,23 @@ public class NotificationListener extends NotificationListenerService {
     }
 
     private void savePendingNotification(String packageName, String title, String text, long timestamp) {
-        SharedPreferences prefs = getSharedPreferences("notification_prefs", Context.MODE_PRIVATE);
-        String pendingStr = prefs.getString("pending_notifications", "[]");
-        try {
-            JSONArray array = new JSONArray(pendingStr);
-            JSONObject obj = new JSONObject();
-            obj.put("packageName", packageName);
-            obj.put("title", title);
-            obj.put("text", text);
-            obj.put("timestamp", timestamp);
-            array.put(obj);
+        synchronized (NotificationListener.class) {
+            SharedPreferences prefs = getSharedPreferences("notification_prefs", Context.MODE_PRIVATE);
+            String pendingStr = prefs.getString("pending_notifications", "[]");
+            try {
+                JSONArray array = new JSONArray(pendingStr);
+                JSONObject obj = new JSONObject();
+                obj.put("packageName", packageName);
+                obj.put("title", title);
+                obj.put("text", text);
+                obj.put("timestamp", timestamp);
+                array.put(obj);
 
-            prefs.edit().putString("pending_notifications", array.toString()).apply();
-            Log.d(TAG, "Notification saved to queue. Queue size: " + array.length());
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to save notification to queue", e);
+                prefs.edit().putString("pending_notifications", array.toString()).commit();
+                Log.d(TAG, "Notification saved to queue. Queue size: " + array.length());
+            } catch (Exception e) {
+                Log.e(TAG, "Failed to save notification to queue", e);
+            }
         }
     }
 }

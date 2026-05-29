@@ -11,12 +11,20 @@ Gunakan flow ini untuk mengaktifkan dan mengecek hampir semua fitur utama dalam 
 5. Cek email yang diinput untuk verifikasi Supabase
 6. Setelah verified, balik ke app lalu `Login`
 
-## 2. Onboarding
+## 2. Onboarding & Spotlight Guided Tour
 
-1. Setelah login pertama, onboarding overlay akan muncul
-2. Klik `Lanjut` sampai slide terakhir
-3. Klik `Mulai Pakai App`
-4. Di `Settings`, klik `Lihat Tutorial Lagi` untuk memastikan flow reopen bekerja
+1. Setelah login pertama, onboarding overlay (slider guide) akan muncul.
+2. Klik `Lanjut` sampai slide terakhir, lalu klik `Siapkan Akun` dan `Simpan & Mulai Budgeting`.
+3. Setelah menyelesaikan setup awal, Spotlight Guided Onboarding (Tour 7 langkah) akan otomatis dimulai:
+   - **Langkah 1 (Beranda):** Menjelaskan area Safe-to-spend. Klik `Lanjut` pada dialog tooltip.
+   - **Langkah 2 (Tombol Catat):** Menyorot tombol `+` di navigasi bawah. Klik tombol tersebut untuk membuka lembar aksi pencatatan (Record Action Sheet).
+   - **Langkah 3 (Pilih Pengeluaran):** Menyorot tombol `Pengeluaran`. Klik tombol tersebut untuk melanjutkan.
+   - **Langkah 4 (Menu Rencana):** Menyorot tab `Rencana`. Klik tab tersebut untuk berpindah halaman ke layar Budget.
+   - **Langkah 5 (Menu Dompet):** Menyorot tab `Dompet`. Klik tab tersebut untuk berpindah halaman ke layar Wallet.
+   - **Langkah 6 (Menu Riwayat):** Menyorot tab `Riwayat`. Klik tab tersebut untuk berpindah halaman ke layar Ledger/History.
+   - **Langkah 7 (Cari & Filter):** Menyorot area input pencarian di bagian atas. Klik `Selesai` untuk mengakhiri panduan.
+4. Buka menu `Settings` (klik ikon profil di kanan atas), gulir ke bawah ke bagian **Preferensi**, lalu klik **Lihat Tutorial Lagi (Buka)** untuk memastikan seluruh flow onboarding & spotlight dapat di-reset dan dimainkan kembali dengan lancar.
+
 
 ## 3. Home dan Starter Checklist
 

@@ -18,6 +18,7 @@ import { LocalNotifications } from '@capacitor/local-notifications';
 
 const STORAGE_KEY_LAST_REMINDER = "bf_last_reminder_date";
 const STORAGE_KEY_LAST_BUDGET_ALERT = "bf_last_budget_alert";
+const STORAGE_KEY_LAST_DAILY_LIMIT_ALERT = "bf_last_daily_limit_alert";
 
 // ── Permission ────────────────────────────────────────────────
 
@@ -29,9 +30,20 @@ export const getPermissionStatus = (): NotificationPermission | "unsupported" =>
 export const requestNotificationPermission = async (): Promise<boolean> => {
   if (Capacitor.isNativePlatform()) {
     try {
+      // 1. Create a high-priority notification channel for Android 8.0+
+      await LocalNotifications.createChannel({
+        id: "budget-flow-alerts",
+        name: "Budget Flow Alerts",
+        description: "Notifikasi penting seputar budget dan pengeluaran harian",
+        importance: 5, // High importance (heads-up pop-up alert)
+        visibility: 1, // Public visibility
+        vibration: true,
+      });
+
       const res = await LocalNotifications.requestPermissions();
       return res.display === 'granted';
-    } catch {
+    } catch (e) {
+      console.warn("[LocalNotifications] Failed to setup channel/permissions", e);
       return false;
     }
   }
@@ -59,6 +71,7 @@ const showNotification = async (
             id: Math.floor(Math.random() * 1000000), // Random ID
             title,
             body,
+            channelId: "budget-flow-alerts", // Reference Android notification channel
             schedule: { at: new Date() }, // Fire immediately
             sound: undefined, // Default system sound
           }
@@ -93,8 +106,37 @@ const showNotification = async (
 
 // ── Smart check ───────────────────────────────────────────────
 
+/**
+ * Fire a native/web push notification when the user exceeds their daily
+ * Safe-to-Spend limit. Deduped to once per day unless the limit is exceeded further.
+ */
+export const notifyDailyLimitExceeded = async (overAmount: number) => {
+  const today = new Date().toISOString().slice(0, 10);
+  const lastAlert = localStorage.getItem(STORAGE_KEY_LAST_DAILY_LIMIT_ALERT);
+  const lastAmountStr = localStorage.getItem("bf_last_daily_limit_over_amount");
+  const lastAmount = lastAmountStr ? parseFloat(lastAmountStr) : 0;
+
+  // Allow triggering again if the amount exceeded is significantly higher than before,
+  // which makes testing and real usage updates work correctly.
+  if (lastAlert === today && overAmount <= lastAmount + 1000) {
+    console.log("[Notification] Daily limit exceeded alert skipped: already fired for today.");
+    return;
+  }
+
+  const formatted = Math.round(overAmount).toLocaleString("id-ID");
+  await showNotification(
+    "🚨 Kamu Lewat Batas Harian!",
+    `Pengeluaran hari ini melebihi limit aman sebesar Rp ${formatted}. Kurangi pengeluaran besok ya!`,
+    { tag: "daily-limit-exceeded", requireInteraction: true },
+  );
+  localStorage.setItem(STORAGE_KEY_LAST_DAILY_LIMIT_ALERT, today);
+  localStorage.setItem("bf_last_daily_limit_over_amount", overAmount.toString());
+};
+
 export const checkAndNotify = async () => {
-  if (Notification.permission !== "granted") return;
+  // Allow through on native (Capacitor) or when web permission granted
+  const isNative = Capacitor.isNativePlatform();
+  if (!isNative && Notification.permission !== "granted") return;
 
   const today = new Date().toISOString().slice(0, 10);
 
@@ -131,16 +173,22 @@ export const checkAndNotify = async () => {
       localStorage.setItem(STORAGE_KEY_LAST_BUDGET_ALERT, today);
     }
 
-    // 2️⃣  Daily over-budget alert
+    // 2️⃣  Daily Safe-to-Spend over-limit alert (via safeToSpendService)
+    // Note: the primary trigger for this is notifyDailyLimitExceeded()
+    // called directly from HomeScreen after calculateSafeToSpend().
+    // This secondary check is a fallback for periodic runs.
     if (
       dailyStatus.status === "fulfilled" &&
-      dailyStatus.value?.isOverBudget &&
-      lastBudgetAlert !== today
+      dailyStatus.value?.isOverBudget
     ) {
-      showNotification("📊 Budget Harian Terlewati", `Pengeluaran hari ini sudah melebihi target harian. Hati-hati!`, {
-        tag: "daily-exceeded",
-        requireInteraction: false,
-      });
+      const lastLimitAlert = localStorage.getItem(STORAGE_KEY_LAST_DAILY_LIMIT_ALERT);
+      if (lastLimitAlert !== today) {
+        showNotification("📊 Batas Harian Terlewati", `Pengeluaran hari ini sudah melewati batas aman. Hati-hati!`, {
+          tag: "daily-limit-exceeded",
+          requireInteraction: false,
+        });
+        localStorage.setItem(STORAGE_KEY_LAST_DAILY_LIMIT_ALERT, today);
+      }
     }
 
     // 3️⃣  No-input reminder (once per day)

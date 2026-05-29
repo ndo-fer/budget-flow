@@ -16,6 +16,7 @@ export interface ParsedNotification {
   walletCandidate?: string;
   confidence: number;
   rawText: string;
+  remainingBalance?: number;
 }
 
 // ── Security: OTP / sensitive notification filter ─────────────
@@ -27,12 +28,15 @@ const SENSITIVE_KEYWORDS = [
   "verification code",
   "login code",
   "password",
+  "kata sandi",
+  "sandi",
   "PIN",
   "kode rahasia",
   "jangan bagikan",
   "do not share",
   "two-factor",
   "2FA",
+  "tfa",
 ];
 
 export const isSensitiveNotification = (text: string): boolean => {
@@ -52,11 +56,15 @@ const AMOUNT_PATTERNS = [
 
 const parseAmount = (text: string): number | null => {
   for (const pattern of AMOUNT_PATTERNS) {
+    pattern.lastIndex = 0;
     const match = pattern.exec(text);
     if (match) {
       const raw = match[1].replace(/\./g, "").replace(",", ".");
       const num = parseFloat(raw);
-      if (!isNaN(num) && num > 0) return num;
+      if (!isNaN(num) && num > 0) {
+        pattern.lastIndex = 0;
+        return num;
+      }
     }
     pattern.lastIndex = 0;
   }
@@ -201,6 +209,29 @@ const detectMethod = (text: string): string | undefined => {
   return undefined;
 };
 
+const BALANCE_PATTERNS = [
+  /(?:sisa\s*)?saldo(?:\s+[\w\s]{1,20})?\s*(?::)?\s*Rp\s*([\d.,]+)/i,
+  /sisa\s*limit(?:\s+[\w\s]{1,20})?\s*(?::)?\s*Rp\s*([\d.,]+)/i,
+  /balance(?:\s+[\w\s]{1,20})?\s*(?::)?\s*Rp\s*([\d.,]+)/i,
+  /balance\s*(?:is)?\s*IDR\s*([\d.,]+)/i,
+];
+
+const parseRemainingBalance = (text: string, txAmount: number): number | undefined => {
+  for (const pattern of BALANCE_PATTERNS) {
+    const match = pattern.exec(text);
+    if (match) {
+      const raw = match[1].replace(/\./g, "").replace(",", ".");
+      const num = parseFloat(raw);
+      if (!isNaN(num) && num !== txAmount) {
+        pattern.lastIndex = 0;
+        return num;
+      }
+    }
+    pattern.lastIndex = 0;
+  }
+  return undefined;
+};
+
 // ── Main parser ───────────────────────────────────────────────
 
 export const parseNotification = (
@@ -219,6 +250,7 @@ export const parseNotification = (
   const merchant = extractMerchant(text);
   const method = detectMethod(text);
   const walletCandidate = detectWalletCandidate(appName, text);
+  const remainingBalance = parseRemainingBalance(text, amount);
 
   // Confidence based on what we extracted
   let confidence = 0.6;
@@ -235,6 +267,7 @@ export const parseNotification = (
     walletCandidate,
     confidence: Math.min(confidence, 0.95),
     rawText: text,
+    remainingBalance,
   };
 };
 
@@ -259,9 +292,6 @@ export const DEFAULT_ALLOWLIST_APPS = [
   { package_name: "id.co.mandiri.mobile", app_name: "Livin' Mandiri (Classic)" },
   { package_name: "id.co.mandiri.livin", app_name: "Livin' Mandiri (New)" },
   { package_name: "com.bni.mobilebanking", app_name: "BNI Mobile Banking" },
-  { package_name: "com.google.android.gm", app_name: "Gmail" },
-  { package_name: "com.microsoft.office.outlook", app_name: "Outlook" },
-  { package_name: "com.samsung.android.email.provider", app_name: "Samsung Mail" },
 ];
 
 export const getAppFriendlyName = (packageName: string): string => {
