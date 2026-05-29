@@ -31,7 +31,7 @@ export default function RecurringExpenseModal({
     if (!open) return;
 
     setCategoryId(recurring?.category_id || categories[0]?.id || "");
-    setAmount(recurring?.amount ? String(recurring.amount) : "");
+    setAmount(recurring?.amount ? Math.round(recurring.amount).toLocaleString("id-ID") : "");
     setFrequency(recurring?.frequency || "monthly");
     setDayOfMonth(String(recurring?.day_of_month || 1));
     setStartDate(recurring?.start_date || getToday());
@@ -40,7 +40,8 @@ export default function RecurringExpenseModal({
   }, [categories, open, recurring]);
 
   const handleSubmit = async () => {
-    if (!categoryId || !amount || Number(amount) <= 0) {
+    const numAmount = parseFloat(amount.replace(/[^0-9]/g, ""));
+    if (!categoryId || isNaN(numAmount) || numAmount <= 0) {
       toast.error("Lengkapi kategori dan nominal dulu.");
       return;
     }
@@ -49,7 +50,7 @@ export default function RecurringExpenseModal({
       setIsSaving(true);
       const payload = {
         category_id: categoryId,
-        amount: Number(amount),
+        amount: numAmount,
         frequency,
         day_of_month: frequency === "monthly" ? Number(dayOfMonth) : null,
         start_date: startDate,
@@ -115,10 +116,14 @@ export default function RecurringExpenseModal({
         <label className="block">
           <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Nominal</span>
           <input
-            type="number"
-            min="0"
+            type="text"
+            inputMode="numeric"
+            placeholder="0"
             value={amount}
-            onChange={(event) => setAmount(event.target.value)}
+            onChange={(event) => {
+              const raw = event.target.value.replace(/[^0-9]/g, "");
+              setAmount(raw ? parseInt(raw).toLocaleString("id-ID") : "");
+            }}
             className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#29B9AA]"
           />
         </label>
