@@ -118,10 +118,25 @@ export const recurringToCalendarEvent = (item: any): CalendarEvent => {
 
   // Build the next occurrence date
   const now = new Date();
-  const targetDay = Math.min(dayOfMonth, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate());
-  const nextDate = new Date(now.getFullYear(), now.getMonth(), targetDay);
-  if (nextDate < now) nextDate.setMonth(nextDate.getMonth() + 1);
-  const startDate = toLocalDateString(nextDate);
+  let startDate = "";
+
+  if (item.frequency === "weekly" && item.start_date) {
+    const startWeekDay = new Date(item.start_date).getDay();
+    const nextDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    let count = 0;
+    while (nextDate.getDay() !== startWeekDay && count < 7) {
+      nextDate.setDate(nextDate.getDate() + 1);
+      count++;
+    }
+    startDate = toLocalDateString(nextDate);
+  } else if (item.frequency === "daily") {
+    startDate = toLocalDateString(now);
+  } else {
+    const targetDay = Math.min(dayOfMonth, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate());
+    const nextDate = new Date(now.getFullYear(), now.getMonth(), targetDay);
+    if (nextDate < now) nextDate.setMonth(nextDate.getMonth() + 1);
+    startDate = toLocalDateString(nextDate);
+  }
 
   return {
     uid: item.id ?? Math.random().toString(36).slice(2),
@@ -141,7 +156,9 @@ export const recurringToCalendarEvent = (item: any): CalendarEvent => {
         ? `FREQ=MONTHLY;BYMONTHDAY=${dayOfMonth}`
         : item.frequency === "weekly"
           ? "FREQ=WEEKLY"
-          : undefined,
+          : item.frequency === "daily"
+            ? "FREQ=DAILY"
+            : undefined,
     reminderMinutes: 2 * 24 * 60, // 2 days before
     color: item.budget_categories?.color,
   };

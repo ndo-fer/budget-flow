@@ -4,6 +4,7 @@ import type { BudgetCategory, RecurringExpense } from "../../types/models";
 import { createRecurringExpense, updateRecurringExpense } from "../../services/recurringService";
 import { getToday } from "../../utils/date";
 import ModalShell from "./ModalShell";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function RecurringExpenseModal({
   open,
@@ -18,6 +19,7 @@ export default function RecurringExpenseModal({
   onClose: () => void;
   onSaved: () => Promise<void> | void;
 }) {
+  const { t, lang } = useLanguage();
   const [categoryId, setCategoryId] = useState("");
   const [amount, setAmount] = useState("");
   const [frequency, setFrequency] = useState<"daily" | "weekly" | "monthly">("monthly");
@@ -42,7 +44,7 @@ export default function RecurringExpenseModal({
   const handleSubmit = async () => {
     const numAmount = parseFloat(amount.replace(/[^0-9]/g, ""));
     if (!categoryId || isNaN(numAmount) || numAmount <= 0) {
-      toast.error("Lengkapi kategori dan nominal dulu.");
+      toast.error(lang === "id" ? "Lengkapi kategori dan nominal dulu." : "Please complete the category and amount.");
       return;
     }
 
@@ -60,18 +62,18 @@ export default function RecurringExpenseModal({
 
       if (recurring) {
         await updateRecurringExpense(recurring.id, payload);
-        toast.success("Recurring expense berhasil diperbarui.");
+        toast.success(lang === "id" ? "Recurring expense berhasil diperbarui." : "Recurring expense updated successfully.");
       } else {
         await createRecurringExpense(payload);
-        toast.success("Recurring expense berhasil ditambahkan.");
+        toast.success(lang === "id" ? "Recurring expense berhasil ditambahkan." : "Recurring expense added successfully.");
       }
 
       onClose();
       Promise.resolve(onSaved()).catch((err: any) => {
-        toast.error(err?.message || "Recurring tersimpan, tapi refresh data gagal.");
+        toast.error(err?.message || (lang === "id" ? "Tagihan tersimpan, tapi refresh data gagal." : "Recurring saved, but refresh failed."));
       });
     } catch (err: any) {
-      toast.error(err.message || "Gagal menyimpan recurring expense.");
+      toast.error(err.message || (lang === "id" ? "Gagal menyimpan tagihan rutin." : "Failed to save recurring expense."));
     } finally {
       setIsSaving(false);
     }
@@ -80,27 +82,27 @@ export default function RecurringExpenseModal({
   return (
     <ModalShell
       open={open}
-      title={recurring ? "Edit Recurring Expense" : "Tambah Recurring Expense"}
-      subtitle="Atur pengeluaran rutin supaya bisa disinkronkan ke bulan berjalan."
+      title={recurring ? (lang === "id" ? "Edit Tagihan Rutin" : "Edit Recurring Expense") : (lang === "id" ? "Tambah Tagihan Rutin" : "Add Recurring Expense")}
+      subtitle={lang === "id" ? "Atur pengeluaran rutin supaya bisa disinkronkan ke bulan berjalan." : "Configure recurring expenses to be synced to the current active month."}
       onClose={onClose}
       footer={
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-2xl bg-[#F3EDE8] px-4 py-3 text-sm font-semibold text-[#7B6E67]">
-            Batal
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleSubmit}
             disabled={isSaving}
             className="flex-1 rounded-2xl bg-[#29B9AA] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {isSaving ? "Menyimpan..." : "Simpan Recurring"}
+            {isSaving ? (lang === "id" ? "Menyimpan..." : "Saving...") : (lang === "id" ? "Simpan Tagihan" : "Save Recurring")}
           </button>
         </div>
       }
     >
       <div className="grid gap-4 md:grid-cols-2">
         <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Kategori</span>
+          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">{lang === "id" ? "Kategori" : "Category"}</span>
           <select
             value={categoryId}
             onChange={(event) => setCategoryId(event.target.value)}
@@ -114,7 +116,7 @@ export default function RecurringExpenseModal({
           </select>
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Nominal</span>
+          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">{lang === "id" ? "Nominal" : "Amount"}</span>
           <input
             type="text"
             inputMode="numeric"
@@ -128,19 +130,19 @@ export default function RecurringExpenseModal({
           />
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Frekuensi</span>
+          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">{lang === "id" ? "Frekuensi" : "Frequency"}</span>
           <select
             value={frequency}
             onChange={(event) => setFrequency(event.target.value as "daily" | "weekly" | "monthly")}
             className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#29B9AA]"
           >
-            <option value="monthly">monthly</option>
-            <option value="weekly">weekly</option>
-            <option value="daily">daily</option>
+            <option value="monthly">{lang === "id" ? "Bulanan" : "Monthly"}</option>
+            <option value="weekly">{lang === "id" ? "Mingguan" : "Weekly"}</option>
+            <option value="daily">{lang === "id" ? "Harian" : "Daily"}</option>
           </select>
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Tanggal Mulai</span>
+          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">{lang === "id" ? "Tanggal Mulai" : "Start Date"}</span>
           <input
             type="date"
             value={startDate}
@@ -150,7 +152,7 @@ export default function RecurringExpenseModal({
         </label>
         {frequency === "monthly" ? (
           <label className="block">
-            <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Tanggal Tagih</span>
+            <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">{lang === "id" ? "Tanggal Tagih" : "Billing Date"}</span>
             <input
               type="number"
               min="1"
@@ -162,7 +164,7 @@ export default function RecurringExpenseModal({
           </label>
         ) : null}
         <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Tanggal Selesai</span>
+          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">{lang === "id" ? "Tanggal Selesai" : "End Date"}</span>
           <input
             type="date"
             value={endDate}
@@ -171,7 +173,7 @@ export default function RecurringExpenseModal({
           />
         </label>
         <label className="block md:col-span-2">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Catatan</span>
+          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">{lang === "id" ? "Catatan" : "Note"}</span>
           <textarea
             rows={3}
             value={note}

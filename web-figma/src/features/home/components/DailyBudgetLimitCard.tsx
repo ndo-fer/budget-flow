@@ -1,4 +1,5 @@
 import { Target, AlertTriangle, CheckCircle2, TrendingDown } from "lucide-react";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 interface DailyBudgetLimitCardProps {
   safeToSpend: {
@@ -12,10 +13,17 @@ interface DailyBudgetLimitCardProps {
 }
 
 export default function DailyBudgetLimitCard({ safeToSpend, onNavigateTab }: DailyBudgetLimitCardProps) {
+  const { t } = useLanguage();
   const isOver = safeToSpend?.isOverDailyLimit ?? false;
   const pct = safeToSpend?.safeToSpendPerDay
     ? Math.min((safeToSpend.todaySpent / safeToSpend.safeToSpendPerDay) * 100, 100)
     : 0;
+
+  const overspendMsg = t("home.overspendMessage", "Kelebihan Rp {amount} - Kurangi pengeluaran besok – lihat riwayat transaksi hari ini.")
+    .replace("{amount}", (safeToSpend?.overAmount ?? 0).toLocaleString("id-ID"));
+  const parts = overspendMsg.split(" - ");
+  const partTitle = parts[0] || `Kelebihan Rp ${(safeToSpend?.overAmount ?? 0).toLocaleString("id-ID")}`;
+  const partDesc = parts[1] || "Kurangi pengeluaran besok — lihat riwayat transaksi hari ini.";
 
   return (
     <>
@@ -56,7 +64,7 @@ export default function DailyBudgetLimitCard({ safeToSpend, onNavigateTab }: Dai
             <div className={`flex items-center gap-1.5 ${isOver ? "text-red-700" : "text-[#7B6E67]"}`}>
               <Target className={`w-3.5 h-3.5 flex-shrink-0 group-hover:scale-105 transition-transform ${isOver ? "text-red-500" : "text-[#29B9AA]"}`} />
               <span className={`text-xs font-bold uppercase tracking-wider ${isOver ? "text-red-700" : "group-hover:text-[#1A2B38] transition-colors"}`}>
-                Pemakaian Harian
+                {t("home.dailyLimit", "Pemakaian Harian")}
               </span>
             </div>
 
@@ -64,12 +72,12 @@ export default function DailyBudgetLimitCard({ safeToSpend, onNavigateTab }: Dai
             {isOver ? (
               <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-red-600 text-white shadow-sm shadow-red-500/30">
                 <AlertTriangle className="w-3 h-3" />
-                Lewat Batas!
+                {t("home.dailyLimitOver", "Lewat Batas!")}
               </span>
             ) : (
               <span className="inline-flex items-center gap-1 rounded-lg px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-[#EBF7F6] text-[#29B9AA]">
                 <CheckCircle2 className="w-3 h-3" />
-                Aman
+                {t("budget.statusHealthy", "Aman")}
               </span>
             )}
           </div>
@@ -80,10 +88,10 @@ export default function DailyBudgetLimitCard({ safeToSpend, onNavigateTab }: Dai
               <span className={`text-2xl font-bold ${isOver ? "text-red-700" : "text-[#1A2B38] group-hover:underline"}`}>
                 Rp {(safeToSpend?.todaySpent ?? 0).toLocaleString("id-ID")}
               </span>
-              <span className={`text-xs ${isOver ? "text-red-500" : "text-[#7B6E67]"}`}>terpakai</span>
+              <span className={`text-xs ${isOver ? "text-red-500" : "text-[#7B6E67]"}`}>{t("home.spent", "terpakai")}</span>
             </div>
             <p className={`text-xs mt-0.5 ${isOver ? "text-red-500" : "text-[#7B6E67]"}`}>
-              Batas aman harian: Rp {safeToSpend?.safeToSpendPerDay ? Math.round(safeToSpend.safeToSpendPerDay).toLocaleString("id-ID") : "0"}
+              {t("home.dailyLimitNormal", "Batas aman harian: Rp {limit}").replace("{limit}", safeToSpend?.safeToSpendPerDay ? Math.round(safeToSpend.safeToSpendPerDay).toLocaleString("id-ID") : "0")}
             </p>
           </div>
 
@@ -102,10 +110,10 @@ export default function DailyBudgetLimitCard({ safeToSpend, onNavigateTab }: Dai
             <TrendingDown className="h-4 w-4 text-white shrink-0 mt-0.5" />
             <div>
               <p className="text-[11px] font-extrabold text-white leading-snug">
-                Kelebihan Rp {(safeToSpend?.overAmount ?? 0).toLocaleString("id-ID")}
+                {partTitle}
               </p>
               <p className="text-[10px] text-red-100 mt-0.5 leading-snug">
-                Kurangi pengeluaran besok — lihat riwayat transaksi hari ini.
+                {partDesc}
               </p>
             </div>
           </div>
@@ -113,7 +121,7 @@ export default function DailyBudgetLimitCard({ safeToSpend, onNavigateTab }: Dai
           <div className="mt-4 flex items-start gap-2 rounded-2xl bg-[#FEF9F4] p-3 text-[11px] font-semibold text-[#7B6E67]">
             <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-[#29B9AA] mt-0.5" />
             <p>
-              Kamu masih punya sisa Rp {(safeToSpend?.safeToSpendToday ?? 0).toLocaleString("id-ID")} budget jajan hari ini.
+              {t("home.safeToSpendLeft", "Kamu masih punya sisa Rp {amount} budget jajan hari ini.").replace("{amount}", (safeToSpend?.safeToSpendToday ?? 0).toLocaleString("id-ID"))}
             </p>
           </div>
         )}

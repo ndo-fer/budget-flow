@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { EyeOff, ChevronRight, Check } from "lucide-react";
 import { getUserSetupStatus, setChecklistHidden, UserSetupStatus } from "../../../services/guidanceService";
 import { toast } from "../../../utils/toast";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 interface StarterChecklistProps {
   onNavigateTab: (tabId: any, options?: { replace?: boolean; search?: string }) => void;
@@ -9,6 +10,7 @@ interface StarterChecklistProps {
 }
 
 export default function StarterChecklist({ onNavigateTab, onOpenRecordHub }: StarterChecklistProps) {
+  const { t } = useLanguage();
   const [status, setStatus] = useState<UserSetupStatus | null>(null);
   const [isVisible, setIsVisible] = useState(true);
   const [loading, setLoading] = useState(true);
@@ -42,7 +44,7 @@ export default function StarterChecklist({ onNavigateTab, onOpenRecordHub }: Sta
     setIsVisible(false);
     try {
       await setChecklistHidden(true);
-      toast.success("Checklist onboarding disembunyikan. Anda dapat menampilkannya lagi di Pengaturan.");
+      toast.success(t("home.checklistDismissSuccess", "Checklist onboarding disembunyikan. Anda dapat menampilkannya lagi di Pengaturan."));
     } catch (err) {
       console.error("Failed to hide checklist:", err);
     }
@@ -51,46 +53,46 @@ export default function StarterChecklist({ onNavigateTab, onOpenRecordHub }: Sta
   if (loading || !isVisible || !status) return null;
   
   const isAllDone = status.setup_completion_percent === 100;
-
+  
   const steps = [
     {
       id: "wallet",
-      title: "Registrasi Dompet Pertama",
-      description: "Tambahkan bank, e-wallet, atau uang tunai untuk melacak saldo Anda.",
+      title: t("home.step1Title", "Registrasi Dompet Pertama"),
+      description: t("home.step1Desc", "Tambahkan bank, e-wallet, atau uang tunai untuk melacak saldo Anda."),
       isCompleted: status.has_wallet,
-      actionLabel: "Tambah Dompet",
+      actionLabel: t("home.step1Action", "Tambah Dompet"),
       action: () => onNavigateTab("wallets")
     },
     {
       id: "income",
-      title: "Tambah Rencana Pemasukan",
-      description: "Tentukan nominal estimasi gajian atau uang masuk bulanan Anda.",
+      title: t("home.step2Title", "Tambah Rencana Pemasukan"),
+      description: t("home.step2Desc", "Tentukan nominal estimasi gajian atau uang masuk bulanan Anda."),
       isCompleted: status.has_income_source,
-      actionLabel: "Atur Pemasukan",
+      actionLabel: t("home.step2Action", "Atur Pemasukan"),
       action: () => onNavigateTab("budget")
     },
     {
       id: "budget",
-      title: "Atur Anggaran Kategori",
-      description: "Buat alokasi batas belanja per kategori (misal: Makanan, Transportasi).",
+      title: t("home.step3Title", "Atur Anggaran Kategori"),
+      description: t("home.step3Desc", "Buat alokasi batas belanja per kategori (misal: Makanan, Transportasi)."),
       isCompleted: status.has_budget_category,
-      actionLabel: "Atur Budget",
+      actionLabel: t("home.step3Action", "Atur Budget"),
       action: () => onNavigateTab("budget")
     },
     {
       id: "expense",
-      title: "Catat Pengeluaran Pertama",
-      description: "Mulai merekam transaksi harian secara manual atau otomatis.",
+      title: t("home.step4Title", "Catat Pengeluaran Pertama"),
+      description: t("home.step4Desc", "Mulai merekam transaksi harian secara manual atau otomatis."),
       isCompleted: status.has_expense_transaction,
-      actionLabel: "Catat Sekarang",
+      actionLabel: t("home.step4Action", "Catat Sekarang"),
       action: onOpenRecordHub
     },
     {
       id: "correction",
-      title: "Koreksi & Konfirmasi Saldo",
-      description: "Sesuaikan saldo pertama Anda agar akurat dengan kondisi asli.",
+      title: t("home.step5Title", "Koreksi & Konfirmasi Saldo"),
+      description: t("home.step5Desc", "Sesuaikan saldo pertama Anda agar akurat dengan kondisi asli."),
       isCompleted: status.has_balance_adjustment,
-      actionLabel: "Update Saldo",
+      actionLabel: t("home.step5Action", "Update Saldo"),
       action: onOpenRecordHub
     }
   ];
@@ -99,19 +101,19 @@ export default function StarterChecklist({ onNavigateTab, onOpenRecordHub }: Sta
     <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm space-y-5 animate-in fade-in duration-300">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#29B9AA]">Langkah Pengenalan</span>
-          <h2 className="text-lg font-bold text-[#1A2B38] mt-1">Starter Checklist</h2>
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#29B9AA]">{t("home.checklistIntro", "Langkah Pengenalan")}</span>
+          <h2 className="text-lg font-bold text-[#1A2B38] mt-1">{t("home.checklistTitle", "Starter Checklist")}</h2>
           <p className="text-xs text-[#7B6E67] font-medium mt-0.5">
             {isAllDone 
-              ? "Luar biasa! Semua langkah setup awal keuangan Anda telah selesai." 
-              : "Selesaikan setup awal berikut untuk mengaktifkan pemantauan Safe-To-Spend harian secara akurat."}
+              ? t("home.checklistAllDone", "Luar biasa! Semua langkah setup awal keuangan Anda telah selesai.") 
+              : t("home.checklistNotDone", "Selesaikan setup awal berikut untuk mengaktifkan pemantauan Safe-To-Spend harian secara akurat.")}
           </p>
         </div>
         
         <button
           onClick={handleDismiss}
           className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FEF9F4] text-[#7B6E67] hover:bg-[#F3EDE8] transition-colors"
-          title="Sembunyikan Checklist"
+          title={t("home.checklistDismissTooltip", "Sembunyikan Checklist")}
         >
           <EyeOff className="h-4 w-4" />
         </button>
@@ -122,9 +124,11 @@ export default function StarterChecklist({ onNavigateTab, onOpenRecordHub }: Sta
         <div className="flex items-center justify-between text-xs font-bold text-[#1A2B38]">
           <span className="flex items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#29B9AA] animate-pulse" />
-            Progres Setup
+            {t("home.checklistProgress", "Progres Setup")}
           </span>
-          <span className="text-[#29B9AA]">{status.setup_completion_percent}% Selesai</span>
+          <span className="text-[#29B9AA]">
+            {t("home.checklistCompletedPercent", "{percent}% Selesai").replace("{percent}", String(status.setup_completion_percent))}
+          </span>
         </div>
         <div className="h-2 w-full rounded-full bg-[#F3EDE8] overflow-hidden">
           <div 

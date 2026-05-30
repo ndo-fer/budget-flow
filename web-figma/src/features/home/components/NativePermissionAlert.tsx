@@ -1,15 +1,17 @@
 import { BellRing, AlertTriangle } from "lucide-react";
 import { registerPlugin, Capacitor } from "@capacitor/core";
 import { toast } from "../../../utils/toast";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 const NotificationReceiver = registerPlugin<any>("NotificationReceiver");
 
 interface NativePermissionAlertProps {
   androidNotifEnabled: boolean | null;
-  setAndroidNotifEnabled: (enabled: boolean) => void;
 }
 
 export default function NativePermissionAlert({ androidNotifEnabled }: NativePermissionAlertProps) {
+  const { t } = useLanguage();
+
   if (!Capacitor.isNativePlatform() || androidNotifEnabled !== false) return null;
 
   return (
@@ -19,9 +21,9 @@ export default function NativePermissionAlert({ androidNotifEnabled }: NativePer
           <AlertTriangle className="h-4 w-4" />
         </div>
         <div>
-          <p className="text-sm font-semibold text-[#1A2B38]">Aktivasi Pemantauan Transaksi Otomatis</p>
+          <p className="text-sm font-semibold text-[#1A2B38]">{t("home.permissionTitle", "Aktivasi Pemantauan Transaksi Otomatis")}</p>
           <p className="mt-0.5 text-xs text-[#7B6E67]">
-            Budget Flow perlu izin akses notifikasi agar bisa membaca SMS/notifikasi e-wallet & mencatat pengeluaran Anda secara otomatis.
+            {t("home.permissionDesc", "Budget Flow perlu izin akses notifikasi agar bisa membaca SMS/notifikasi e-wallet & mencatat pengeluaran Anda secara otomatis.")}
           </p>
         </div>
       </div>
@@ -30,13 +32,13 @@ export default function NativePermissionAlert({ androidNotifEnabled }: NativePer
           try {
             await NotificationReceiver.openNotificationSettings();
           } catch {
-            toast.error("Gagal membuka pengaturan.");
+            toast.error(t("home.permissionError", "Gagal membuka pengaturan."));
           }
         }}
         className="rounded-full bg-[#FF6B58] hover:bg-[#FF6B58]/90 text-white px-4 py-2 text-xs font-bold transition-all shrink-0 flex items-center gap-1.5"
       >
         <BellRing className="w-3.5 h-3.5" />
-        Aktifkan Sekarang
+        {t("home.permissionBtn", "Aktifkan Sekarang")}
       </button>
     </div>
   );

@@ -121,4 +121,47 @@ describe("csvImportService", () => {
       expect(preview.transactions[0].is_duplicate).toBe(false);
     });
   });
+
+  describe("advanced csv behaviors", () => {
+    it("handles newlines inside quoted fields", () => {
+      const csv = `Tanggal,Keterangan,Nominal\n2026-05-01,"Beli makan siang\ndi warung bakso",35000`;
+      const { headers, rows } = parseRawCsv(csv);
+      expect(headers).toEqual(["Tanggal", "Keterangan", "Nominal"]);
+      expect(rows).toHaveLength(1);
+      expect(rows[0]["Keterangan"]).toBe("Beli makan siang\ndi warung bakso");
+    });
+
+    it("auto-detects US vs International date format", () => {
+      const idCsv = [
+        { Tanggal: "25/05/2026", Nominal: "10000" }
+      ];
+      const usCsv = [
+        { Tanggal: "05/25/2026", Nominal: "10000" }
+      ];
+
+      const idCandidates = buildTransactionCandidates(idCsv, { date: "Tanggal", amount: "Nominal" });
+      const usCandidates = buildTransactionCandidates(usCsv, { date: "Tanggal", amount: "Nominal" });
+
+      expect(idCandidates[0].occurred_at).toBe(new Date("2026-05-25T12:00:00").toISOString());
+      expect(usCandidates[0].occurred_at).toBe(new Date("2026-05-25T12:00:00").toISOString());
+    });
+
+    it("correctly handles single-column positive/negative amount direction mapping", () => {
+      const rows = [
+        { Tanggal: "2026-05-01", Nominal: "-50000" },
+        { Tanggal: "2026-05-02", Nominal: "150000" },
+      ];
+      const mapping = {
+        date: "Tanggal",
+        amount: "Nominal",
+      };
+
+      const candidates = buildTransactionCandidates(rows, mapping);
+      expect(candidates).toHaveLength(2);
+      expect(candidates[0].direction).toBe("out");
+      expect(candidates[0].amount).toBe(50000);
+      expect(candidates[1].direction).toBe("in");
+      expect(candidates[1].amount).toBe(150000);
+    });
+  });
 });

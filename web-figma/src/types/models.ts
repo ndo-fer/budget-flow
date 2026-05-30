@@ -16,6 +16,7 @@ export interface BudgetCategory {
   budget_amount: number;
   priority?: number;
   is_active?: boolean;
+  exclude_from_daily_streak?: boolean;
 }
 
 export interface ExpenseRecord {

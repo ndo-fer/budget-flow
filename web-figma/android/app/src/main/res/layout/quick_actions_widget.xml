@@ -4,7 +4,7 @@
     android:layout_height="match_parent"
     android:orientation="horizontal"
     android:background="@drawable/quick_actions_widget_background"
-    android:padding="10dp"
+    android:padding="16dp"
     android:weightSum="10">
 
     <!-- Left Column: Information Panel (Weight 3.8) -->
@@ -14,27 +14,52 @@
         android:layout_weight="3.8"
         android:orientation="vertical"
         android:gravity="center_vertical"
-        android:paddingEnd="2dp">
+        android:paddingEnd="4dp">
 
-        <!-- Logo & App Name Header -->
+        <!-- Logo, App Name Header & Streak -->
         <LinearLayout
-            android:layout_width="wrap_content"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
             android:gravity="center_vertical"
             android:layout_marginBottom="10dp">
             <ImageView
-                android:layout_width="14dp"
-                android:layout_height="14dp"
+                android:layout_width="12dp"
+                android:layout_height="12dp"
                 android:src="@mipmap/ic_launcher" />
             <TextView
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
+                android:layout_weight="1"
                 android:layout_height="wrap_content"
                 android:text="Budget Flow"
-                android:textColor="#29B9AA"
+                android:textColor="#33D6C5"
                 android:textSize="9.5sp"
                 android:textStyle="bold"
                 android:layout_marginStart="4dp" />
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:background="@drawable/streak_badge_bg"
+                android:paddingHorizontal="4.5dp"
+                android:paddingVertical="1dp"
+                android:layout_marginStart="2dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="🔥"
+                    android:textSize="8sp" />
+                <TextView
+                    android:id="@+id/txt_widget_streak"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="#FF8F80"
+                    android:textSize="8.5sp"
+                    android:textStyle="bold"
+                    android:layout_marginStart="2dp" />
+            </LinearLayout>
         </LinearLayout>
 
         <!-- Saldo / Dana Bersih -->
@@ -42,7 +67,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="DANA BERSIH"
-            android:textColor="#7B6E67"
+            android:textColor="#80A29E"
             android:textSize="8sp"
             android:textStyle="bold"
             android:textAllCaps="true" />
@@ -52,7 +77,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Rp -"
-            android:textColor="#1A2B38"
+            android:textColor="#FFFFFF"
             android:textSize="15.5sp"
             android:textStyle="bold"
             android:layout_marginBottom="10dp" />
@@ -62,7 +87,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="BATAS HARI INI"
-            android:textColor="#7B6E67"
+            android:textColor="#80A29E"
             android:textSize="8sp"
             android:textStyle="bold"
             android:textAllCaps="true" />
@@ -72,7 +97,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="Rp -"
-            android:textColor="#FF6B58"
+            android:textColor="#FF8F80"
             android:textSize="13.5sp"
             android:textStyle="bold" />
 
@@ -83,24 +108,17 @@
             android:layout_marginTop="4dp"
             android:text="AMAN HARI INI"
             android:textAllCaps="true"
-            android:textColor="#2A9D8F"
+            android:textColor="#33D6C5"
             android:textSize="8.5sp"
             android:textStyle="bold" />
     </LinearLayout>
-
-    <!-- Divider Line -->
-    <FrameLayout
-        android:layout_width="1dp"
-        android:layout_height="match_parent"
-        android:background="#1A000000"
-        android:layout_marginStart="4dp"
-        android:layout_marginEnd="8dp" />
 
     <!-- Right Column: Calculator Keypad & Display (Weight 6.2) -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="6.2"
+        android:layout_marginStart="12dp"
         android:orientation="vertical">
 
         <!-- Calculator Display Header Row -->
@@ -108,7 +126,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginBottom="6dp"
+            android:layout_marginBottom="8dp"
             android:gravity="center_vertical"
             android:weightSum="4">
 
@@ -120,13 +138,14 @@
                 android:layout_weight="0.9"
                 android:background="@drawable/widget_button_secondary"
                 android:gravity="center"
+                android:layout_marginEnd="6dp"
                 android:clickable="true"
                 android:focusable="true">
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Rst"
-                    android:textColor="#B84A39"
+                    android:textColor="#FF8A91"
                     android:textSize="9sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -138,15 +157,14 @@
                 android:layout_weight="2.2"
                 android:background="@drawable/display_bg"
                 android:gravity="center"
-                android:layout_marginStart="4dp"
-                android:layout_marginEnd="4dp"
+                android:layout_marginEnd="6dp"
                 android:paddingHorizontal="2dp">
                 <TextView
                     android:id="@+id/txt_accumulated_total"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="Rp 0"
-                    android:textColor="#1A2B38"
+                    android:textColor="#FFFFFF"
                     android:textSize="9.5sp"
                     android:textStyle="bold"
                     android:ellipsize="end"
@@ -186,7 +204,7 @@
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:orientation="horizontal"
-                android:layout_marginBottom="4dp"
+                android:layout_marginBottom="6dp"
                 android:weightSum="3">
 
                 <!-- +1k -->
@@ -197,14 +215,14 @@
                     android:layout_weight="1"
                     android:background="@drawable/note_1k"
                     android:gravity="center"
-                    android:layout_marginEnd="4dp"
+                    android:layout_marginEnd="6dp"
                     android:clickable="true"
                     android:focusable="true">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="+1k"
-                        android:textColor="#5A5A5A"
+                        android:textColor="#A0A5A7"
                         android:textSize="10sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -217,14 +235,14 @@
                     android:layout_weight="1"
                     android:background="@drawable/note_2k"
                     android:gravity="center"
-                    android:layout_marginEnd="4dp"
+                    android:layout_marginEnd="6dp"
                     android:clickable="true"
                     android:focusable="true">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="+2k"
-                        android:textColor="#4A5A4A"
+                        android:textColor="#A2BFA8"
                         android:textSize="10sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -243,7 +261,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="+5k"
-                        android:textColor="#8C5815"
+                        android:textColor="#FFD199"
                         android:textSize="10sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -255,7 +273,7 @@
                 android:layout_height="0dp"
                 android:layout_weight="1"
                 android:orientation="horizontal"
-                android:layout_marginBottom="4dp"
+                android:layout_marginBottom="6dp"
                 android:weightSum="3">
 
                 <!-- +10k -->
@@ -266,14 +284,14 @@
                     android:layout_weight="1"
                     android:background="@drawable/note_10k"
                     android:gravity="center"
-                    android:layout_marginEnd="4dp"
+                    android:layout_marginEnd="6dp"
                     android:clickable="true"
                     android:focusable="true">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="+10k"
-                        android:textColor="#5D3891"
+                        android:textColor="#D7B3FF"
                         android:textSize="10sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -286,14 +304,14 @@
                     android:layout_weight="1"
                     android:background="@drawable/note_20k"
                     android:gravity="center"
-                    android:layout_marginEnd="4dp"
+                    android:layout_marginEnd="6dp"
                     android:clickable="true"
                     android:focusable="true">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="+20k"
-                        android:textColor="#137A3F"
+                        android:textColor="#B5FFC8"
                         android:textSize="10sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -312,7 +330,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="+50k"
-                        android:textColor="#1A5B8C"
+                        android:textColor="#B5DFFF"
                         android:textSize="10sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -334,14 +352,14 @@
                     android:layout_weight="1"
                     android:background="@drawable/note_100k"
                     android:gravity="center"
-                    android:layout_marginEnd="4dp"
+                    android:layout_marginEnd="6dp"
                     android:clickable="true"
                     android:focusable="true">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="+100k"
-                        android:textColor="#A82020"
+                        android:textColor="#FFB5B5"
                         android:textSize="10sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -354,14 +372,14 @@
                     android:layout_weight="1"
                     android:background="@drawable/note_200k"
                     android:gravity="center"
-                    android:layout_marginEnd="4dp"
+                    android:layout_marginEnd="6dp"
                     android:clickable="true"
                     android:focusable="true">
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="+200k"
-                        android:textColor="#6C695D"
+                        android:textColor="#E1E4E7"
                         android:textSize="10sp"
                         android:textStyle="bold" />
                 </LinearLayout>

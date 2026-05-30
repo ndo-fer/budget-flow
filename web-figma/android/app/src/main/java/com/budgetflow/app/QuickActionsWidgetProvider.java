@@ -31,18 +31,21 @@ public class QuickActionsWidgetProvider extends AppWidgetProvider {
         long accumulatedTotal = prefs.getLong("accumulated_total", 0);
         boolean isOverDailyLimit = prefs.getBoolean("is_over_daily_limit", false);
         long overAmountRaw = prefs.getLong("over_amount_raw", 0);
+        int streak = prefs.getInt("streak", 0);
 
         // Update RemoteViews Text
         views.setTextViewText(R.id.txt_saldo, saldo);
         views.setTextViewText(R.id.txt_limit_harian, limitHarian);
+        views.setTextViewText(R.id.txt_widget_streak, String.valueOf(streak));
+        
         if (isOverDailyLimit) {
             views.setTextViewText(R.id.txt_limit_status, "LEWAT BATAS: Rp " + formatNumber(overAmountRaw));
-            views.setTextColor(R.id.txt_limit_harian, Color.parseColor("#D62828"));
-            views.setTextColor(R.id.txt_limit_status, Color.parseColor("#D62828"));
+            views.setTextColor(R.id.txt_limit_harian, Color.parseColor("#FF6B58"));
+            views.setTextColor(R.id.txt_limit_status, Color.parseColor("#FF6B58"));
         } else {
             views.setTextViewText(R.id.txt_limit_status, "AMAN HARI INI");
-            views.setTextColor(R.id.txt_limit_harian, Color.parseColor("#29B9AA"));
-            views.setTextColor(R.id.txt_limit_status, Color.parseColor("#2A9D8F"));
+            views.setTextColor(R.id.txt_limit_harian, Color.parseColor("#33D6C5"));
+            views.setTextColor(R.id.txt_limit_status, Color.parseColor("#33D6C5"));
         }
         
         // Format and set accumulated total display

@@ -1,5 +1,10 @@
 {
   "appId": "com.budgetflow.app",
   "appName": "Budget Flow",
-  "webDir": "dist"
+  "webDir": "dist",
+  "plugins": {
+    "CapacitorHttp": {
+      "enabled": true
+    }
+  }
 }

@@ -14,13 +14,28 @@ import { getCurrentMonth } from "../utils/date";
 import type { SafeToSpend } from "../types/models";
 import { Capacitor, registerPlugin } from "@capacitor/core";
 
-const WidgetData = registerPlugin<any>("WidgetData");
+interface WidgetDataPayload {
+  saldo: string;
+  limitHarian: string;
+  saldoRaw: number;
+  limitHarianRaw: number;
+  isOverDailyLimit: boolean;
+  overAmount: number;
+  streak: number;
+}
+
+interface WidgetDataPlugin {
+  updateWidgetData(options: WidgetDataPayload): Promise<void>;
+}
+
+const WidgetData = registerPlugin<WidgetDataPlugin>("WidgetData");
 
 export const updateAndroidWidget = (
   availableMoney: number,
   safeToSpendToday: number,
   isOverDailyLimit: boolean,
   overAmount: number,
+  streak: number = 0,
 ) => {
   if (Capacitor.isNativePlatform()) {
     const formattedSaldo = new Intl.NumberFormat("id-ID", {
@@ -42,6 +57,7 @@ export const updateAndroidWidget = (
       limitHarianRaw: Math.round(safeToSpendToday),
       isOverDailyLimit,
       overAmount: Math.round(overAmount),
+      streak,
     }).catch((err: any) => console.warn("Failed to update Android widget:", err));
   }
 };
@@ -87,7 +103,7 @@ export const getDaysUntilNextIncome = (month: string): number => {
   }
   targetDate.setHours(0, 0, 0, 0);
 
-  if (today.getTime() > targetDate.getTime()) {
+  if (today.getTime() >= targetDate.getTime()) {
     if (useEndOfMonth) {
       return 1;
     } else {
@@ -112,21 +128,93 @@ export const getDaysUntilNextIncome = (month: string): number => {
 
 /**
  * Calculates the total amount of upcoming bills still pending this month.
- * Uses active monthly recurring expenses whose due day hasn't passed yet.
+ * Counts remaining daily, weekly, and monthly occurrences from tomorrow to the end of the current month.
  */
 export const getUpcomingBillsThisMonth = async (): Promise<number> => {
   const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
   const todayDay = today.getDate();
+  const year = today.getFullYear();
+  const monthIdx = today.getMonth(); // 0-indexed
+  const endOfMonth = new Date(year, monthIdx + 1, 0);
+  endOfMonth.setHours(23, 59, 59, 999);
 
   try {
     const recurring = await getRecurringExpenses();
-    return recurring
-      .filter((r) => r.frequency === "monthly" && r.is_active !== false)
-      .filter((r) => {
+    let totalUpcoming = 0;
+
+    for (const r of recurring) {
+      if (r.is_active === false) continue;
+
+      const startDate = new Date(r.start_date);
+      startDate.setHours(0, 0, 0, 0);
+
+      // Skip if it hasn't started yet
+      if (startDate.getTime() > endOfMonth.getTime()) continue;
+
+      // Skip if it already ended
+      if (r.end_date) {
+        const endDate = new Date(r.end_date);
+        endDate.setHours(23, 59, 59, 999);
+        if (endDate.getTime() < today.getTime()) continue;
+      }
+
+      if (r.frequency === "monthly") {
         const dueDay = r.day_of_month || 1;
-        return dueDay > todayDay;
-      })
-      .reduce((sum, r) => sum + r.amount, 0);
+        if (dueDay > todayDay) {
+          const thisMonthDue = new Date(year, monthIdx, dueDay);
+          if (startDate.getTime() <= thisMonthDue.getTime()) {
+            totalUpcoming += r.amount;
+          }
+        }
+      } else if (r.frequency === "weekly") {
+        const targetDayOfWeek = startDate.getDay();
+        let count = 0;
+        const scanDate = new Date(today);
+        scanDate.setDate(scanDate.getDate() + 1);
+
+        while (scanDate.getTime() <= endOfMonth.getTime()) {
+          if (scanDate.getTime() >= startDate.getTime()) {
+            if (r.end_date) {
+              const endDate = new Date(r.end_date);
+              endDate.setHours(23, 59, 59, 999);
+              if (scanDate.getTime() > endDate.getTime()) {
+                break;
+              }
+            }
+
+            if (scanDate.getDay() === targetDayOfWeek) {
+              count++;
+            }
+          }
+          scanDate.setDate(scanDate.getDate() + 1);
+        }
+        totalUpcoming += count * r.amount;
+      } else if (r.frequency === "daily") {
+        const startScan = new Date(today);
+        startScan.setDate(startScan.getDate() + 1);
+
+        const effectiveStart = startDate.getTime() > startScan.getTime() ? startDate : startScan;
+        
+        let effectiveEnd = endOfMonth;
+        if (r.end_date) {
+          const endDate = new Date(r.end_date);
+          endDate.setHours(23, 59, 59, 999);
+          if (endDate.getTime() < effectiveEnd.getTime()) {
+            effectiveEnd = endDate;
+          }
+        }
+
+        if (effectiveStart.getTime() <= effectiveEnd.getTime()) {
+          const diffMs = effectiveEnd.getTime() - effectiveStart.getTime();
+          const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+          totalUpcoming += diffDays * r.amount;
+        }
+      }
+    }
+
+    return totalUpcoming;
   } catch {
     return 0;
   }
@@ -157,8 +245,18 @@ export const calculateSafeToSpend = async (): Promise<SafeToSpend> => {
   const isOverDailyLimit = todaySpent > safeToSpendPerDay;
   const overAmount = isOverDailyLimit ? todaySpent - safeToSpendPerDay : 0;
 
+  // Fetch gamification streak to sync with the widget
+  let currentStreak = 0;
+  try {
+    const { getUserGamification } = await import("./gamificationService");
+    const gamification = await getUserGamification();
+    currentStreak = gamification.current_streak;
+  } catch (e) {
+    console.warn("Failed to fetch gamification streak for widget:", e);
+  }
+
   // Automatically update the Android widget
-  updateAndroidWidget(availableMoney, safeToSpendToday, isOverDailyLimit, overAmount);
+  updateAndroidWidget(availableMoney, safeToSpendToday, isOverDailyLimit, overAmount, currentStreak);
 
   return {
     totalEstimatedBalance,

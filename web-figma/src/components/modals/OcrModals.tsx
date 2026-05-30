@@ -8,14 +8,16 @@ import { formatCurrency, parseRawCurrencyInput } from "../../utils/format";
 import { toast } from "../../utils/toast";
 import type { Wallet, BalanceOcrResult, ReceiptOcrResult } from "../../types/models";
 import { toLocalDateString } from "../../utils/date";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 // ── OCR Progress Bar ──────────────────────────────────────────
 
 function OcrProgress({ progress, status }: { progress: number; status: string }) {
+  const { lang } = useLanguage();
   return (
     <div className="mt-4">
       <div className="flex items-center justify-between text-xs text-[#7B6E67]">
-        <span>{status || "Memproses..."}</span>
+        <span>{status || (lang === "id" ? "Memproses..." : "Processing...")}</span>
         <span>{progress}%</span>
       </div>
       <div className="mt-1 h-1.5 w-full rounded-full bg-[#F3EDE8]">
@@ -39,6 +41,7 @@ export function ScreenshotBalanceModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t, lang } = useLanguage();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [selectedWalletId, setSelectedWalletId] = useState(walletId || "");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -105,11 +108,11 @@ export function ScreenshotBalanceModal({
         if (match) setSelectedWalletId(match.id);
       }
     } catch (e: any) {
-      toast.error("Gagal membaca screenshot: " + e.message);
+      toast.error((lang === "id" ? "Gagal membaca screenshot: " : "Failed to read screenshot: ") + e.message);
     } finally {
       setIsProcessing(false);
     }
-  }, [wallets]);
+  }, [wallets, lang]);
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -119,19 +122,25 @@ export function ScreenshotBalanceModal({
 
   const handleSave = async () => {
     const balance = parseRawCurrencyInput(editedBalance);
-    if (isNaN(balance) || balance < 0) return toast.error("Nominal tidak valid.");
-    if (!selectedWalletId) return toast.error("Pilih wallet terlebih dahulu.");
+    if (isNaN(balance) || balance < 0) return toast.error(lang === "id" ? "Nominal tidak valid." : "Invalid balance amount.");
+    if (!selectedWalletId) return toast.error(lang === "id" ? "Pilih wallet terlebih dahulu." : "Please select a wallet first.");
 
     setIsSaving(true);
     try {
-      const description = activeMode === "manual" ? "Koreksi saldo manual" : "Update dari screenshot";
+      const description = activeMode === "manual" 
+        ? (lang === "id" ? "Koreksi saldo manual" : "Manual balance correction") 
+        : (lang === "id" ? "Update dari screenshot" : "Update from screenshot");
       const source = activeMode === "manual" ? "manual" : "screenshot";
       await adjustWalletBalance(selectedWalletId, balance, description, source);
-      toast.success(activeMode === "manual" ? "Saldo berhasil dikoreksi." : "Saldo berhasil diperbarui dari screenshot.");
+      toast.success(
+        activeMode === "manual" 
+          ? (lang === "id" ? "Saldo berhasil dikoreksi." : "Balance corrected successfully.") 
+          : (lang === "id" ? "Saldo berhasil diperbarui dari screenshot." : "Balance updated successfully from screenshot.")
+      );
       onSaved();
       onClose();
     } catch (e: any) {
-      toast.error(e.message || "Gagal menyimpan.");
+      toast.error(e.message || (lang === "id" ? "Gagal menyimpan." : "Failed to save."));
     } finally {
       setIsSaving(false);
     }
@@ -151,22 +160,28 @@ export function ScreenshotBalanceModal({
               {activeMode === "screenshot" ? (
                 <>
                   <Upload className="w-4 h-4 animate-bounce" />
-                  <span className="text-[10px] font-bold uppercase tracking-[0.28em] leading-none">Automated Sync</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.28em] leading-none">
+                    {lang === "id" ? "Sinkronisasi Otomatis" : "Automated Sync"}
+                  </span>
                 </>
               ) : (
                 <>
                   <Edit3 className="w-4 h-4" />
-                  <span className="text-[10px] font-bold uppercase tracking-[0.28em] leading-none">Manual Correction</span>
+                  <span className="text-[10px] font-bold uppercase tracking-[0.28em] leading-none">
+                    {lang === "id" ? "Koreksi Manual" : "Manual Correction"}
+                  </span>
                 </>
               )}
             </div>
             <h2 className="text-xl font-bold text-[#1A2B38]">
-              {activeMode === "screenshot" ? "Update dari Screenshot" : "Koreksi Saldo Manual"}
+              {activeMode === "screenshot" 
+                ? (lang === "id" ? "Update dari Screenshot" : "Update from Screenshot") 
+                : (lang === "id" ? "Koreksi Saldo Manual" : "Manual Balance Correction")}
             </h2>
             <p className="mt-1 text-xs text-[#7B6E67]">
               {activeMode === "screenshot" 
-                ? "Upload screenshot saldo dari aplikasi finansialmu." 
-                : "Masukkan nominal saldo terbaru wallet Anda secara langsung."}
+                ? (lang === "id" ? "Upload screenshot saldo dari aplikasi finansialmu." : "Upload a balance screenshot from your financial app.") 
+                : (lang === "id" ? "Masukkan nominal saldo terbaru wallet Anda secara langsung." : "Enter the latest wallet balance directly.")}
             </p>
           </div>
           <button onClick={onClose} className="rounded-full bg-[#F3EDE8] hover:bg-[#EADFD8] p-2 text-[#7B6E67]">
@@ -190,13 +205,15 @@ export function ScreenshotBalanceModal({
               activeMode === "manual" ? "bg-white text-[#1A2B38] shadow-sm" : "text-[#7B6E67] hover:text-[#1A2B38]"
             }`}
           >
-            Input Manual
+            {lang === "id" ? "Input Manual" : "Manual Input"}
           </button>
         </div>
 
         {/* Wallet selector */}
         <div className="mb-4">
-          <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Wallet yang akan di-update</label>
+          <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">
+            {lang === "id" ? "Wallet yang akan di-update" : "Wallet to update"}
+          </label>
           <select
             className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm font-semibold text-[#1A2B38] outline-none"
             value={selectedWalletId}
@@ -211,16 +228,20 @@ export function ScreenshotBalanceModal({
         {activeMode === "manual" ? (
           <div className="space-y-4">
             <div>
-              <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Saldo Baru Wallet (Rp)</label>
+              <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">
+                {lang === "id" ? "Saldo Baru Wallet (Rp)" : "New Wallet Balance (Rp)"}
+              </label>
               <input
                 type="number"
-                placeholder="Masukkan nominal saldo terbaru"
+                placeholder={lang === "id" ? "Masukkan nominal saldo terbaru" : "Enter the latest balance amount"}
                 className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3.5 text-sm font-semibold text-[#1A2B38] outline-none focus:border-[#29B9AA]"
                 value={editedBalance}
                 onChange={(e) => setEditedBalance(e.target.value)}
               />
               <p className="mt-1.5 text-[10px] text-[#7B6E67]">
-                Saldo wallet akan diperbarui ke nominal ini secara instan. Selisih saldo akan otomatis dihitung dan disesuaikan.
+                {lang === "id" 
+                  ? "Saldo wallet akan diperbarui ke nominal ini secara instan. Selisih saldo akan otomatis dihitung dan disesuaikan." 
+                  : "The wallet balance will be updated instantly. The difference will be automatically adjusted."}
               </p>
             </div>
             
@@ -230,11 +251,11 @@ export function ScreenshotBalanceModal({
               className="mt-5 w-full rounded-2xl bg-[#29B9AA] hover:bg-[#229A8E] py-3.5 text-sm font-bold text-white disabled:opacity-50 flex items-center justify-center gap-1.5 active:scale-[0.98] transition-all"
             >
               {isSaving ? (
-                "Menyimpan..."
+                (lang === "id" ? "Menyimpan..." : "Saving...")
               ) : (
                 <>
                   <Check className="w-4 h-4" />
-                  Simpan Saldo Terkoreksi
+                  {lang === "id" ? "Simpan Saldo Terkoreksi" : "Save Corrected Balance"}
                 </>
               )}
             </button>
@@ -250,8 +271,12 @@ export function ScreenshotBalanceModal({
                 onClick={() => inputRef.current?.click()}
               >
                 <Upload className="h-8 w-8 text-[#29B9AA]" />
-                <p className="text-sm font-semibold text-[#1A2B38]">Drop screenshot di sini atau klik untuk pilih</p>
-                <p className="text-xs text-[#7B6E67]">JPG, PNG, WebP — screenshot langsung dari aplikasi</p>
+                <p className="text-sm font-semibold text-[#1A2B38]">
+                  {lang === "id" ? "Drop screenshot di sini atau klik untuk pilih" : "Drop screenshot here or click to upload"}
+                </p>
+                <p className="text-xs text-[#7B6E67]">
+                  {lang === "id" ? "JPG, PNG, WebP — screenshot langsung dari aplikasi" : "JPG, PNG, WebP — screenshot directly from your app"}
+                </p>
                 <input
                   ref={inputRef}
                   type="file"
@@ -278,18 +303,20 @@ export function ScreenshotBalanceModal({
 
                 {ocrResult && !isProcessing && (
                   <div className="rounded-2xl bg-[#EBF7F6] p-4">
-                    <p className="text-xs font-bold uppercase tracking-widest text-[#7B6E67]">Hasil OCR</p>
+                    <p className="text-xs font-bold uppercase tracking-widest text-[#7B6E67]">
+                      {lang === "id" ? "Hasil OCR" : "OCR Result"}
+                    </p>
                     <div className="mt-3 space-y-3">
                       {ocrResult.walletCandidate && (
                         <div className="flex items-center justify-between">
-                          <p className="text-xs text-[#7B6E67]">Wallet terdeteksi</p>
+                          <p className="text-xs text-[#7B6E67]">{lang === "id" ? "Wallet terdeteksi" : "Wallet detected"}</p>
                           <p className="text-sm font-semibold text-[#1A2B38]">{ocrResult.walletCandidate}</p>
                         </div>
                       )}
                       <div className="flex items-center justify-between">
-                        <p className="text-xs text-[#7B6E67]">Saldo yang ditemukan</p>
+                        <p className="text-xs text-[#7B6E67]">{lang === "id" ? "Saldo yang ditemukan" : "Found balance"}</p>
                         <p className="text-sm font-semibold text-[#1A2B38]">
-                          {ocrResult.balanceCandidate ? formatCurrency(ocrResult.balanceCandidate) : "Tidak terdeteksi"}
+                          {ocrResult.balanceCandidate ? formatCurrency(ocrResult.balanceCandidate) : (lang === "id" ? "Tidak terdeteksi" : "Not detected")}
                         </p>
                       </div>
                       <div className="flex items-center justify-between">
@@ -302,7 +329,9 @@ export function ScreenshotBalanceModal({
 
                 {ocrResult && !isProcessing && (
                   <div>
-                    <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Konfirmasi nominal saldo (Rp)</label>
+                    <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">
+                      {lang === "id" ? "Konfirmasi nominal saldo (Rp)" : "Confirm balance amount (Rp)"}
+                    </label>
                     <input
                       type="number"
                       className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm font-semibold text-[#1A2B38] outline-none focus:border-[#29B9AA]"
@@ -310,7 +339,9 @@ export function ScreenshotBalanceModal({
                       onChange={(e) => setEditedBalance(e.target.value)}
                     />
                     <p className="mt-1.5 text-[10px] text-[#7B6E67]">
-                      Review dulu sebelum simpan. Selisih akan dicatat sebagai untracked gap.
+                      {lang === "id" 
+                        ? "Review dulu sebelum simpan. Selisih akan dicatat sebagai untracked gap." 
+                        : "Review before saving. Difference will be logged as an untracked gap."}
                     </p>
                   </div>
                 )}
@@ -324,11 +355,11 @@ export function ScreenshotBalanceModal({
                 className="mt-5 w-full rounded-2xl bg-[#29B9AA] hover:bg-[#229A8E] py-3 text-sm font-bold text-white disabled:opacity-50 flex items-center justify-center gap-1.5"
               >
                 {isSaving ? (
-                  "Menyimpan..."
+                  (lang === "id" ? "Menyimpan..." : "Saving...")
                 ) : (
                   <>
                     <Check className="w-4 h-4" />
-                    Simpan sebagai saldo terkonfirmasi
+                    {lang === "id" ? "Simpan sebagai saldo terkonfirmasi" : "Save as confirmed balance"}
                   </>
                 )}
               </button>
@@ -349,6 +380,7 @@ export function ReceiptScanModal({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const { t, lang } = useLanguage();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [selectedWalletId, setSelectedWalletId] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -392,12 +424,12 @@ export function ReceiptScanModal({
       setEditedAmount(result.totalAmount?.toString() || "");
       setEditedMerchant(result.merchant || "");
     } catch (e: any) {
-      const errMsg = e?.message || e?.toString() || "Koneksi terputus atau file lokal Tesseract belum lengkap.";
-      toast.error("Gagal membaca struk: " + errMsg);
+      const errMsg = e?.message || e?.toString() || (lang === "id" ? "Koneksi terputus atau file lokal Tesseract belum lengkap." : "Connection lost or local Tesseract files are incomplete.");
+      toast.error((lang === "id" ? "Gagal membaca struk: " : "Failed to read receipt: ") + errMsg);
     } finally {
       setIsProcessing(false);
     }
-  }, []);
+  }, [lang]);
 
   const handleDrop = useCallback((e: React.DragEvent) => {
     e.preventDefault();
@@ -407,7 +439,7 @@ export function ReceiptScanModal({
 
   const handleSave = async () => {
     const amount = parseRawCurrencyInput(editedAmount);
-    if (isNaN(amount) || amount <= 0) return toast.error("Nominal tidak valid.");
+    if (isNaN(amount) || amount <= 0) return toast.error(lang === "id" ? "Nominal tidak valid." : "Invalid amount.");
 
     setIsSaving(true);
     try {
@@ -426,11 +458,11 @@ export function ReceiptScanModal({
           return new Date(`${dateStr}T${timeStr}`).toISOString();
         })(),
       });
-      toast.success("Transaksi dari struk berhasil disimpan.");
+      toast.success(lang === "id" ? "Transaksi dari struk berhasil disimpan." : "Transaction from receipt saved successfully.");
       onSaved();
       onClose();
     } catch (e: any) {
-      toast.error(e.message || "Gagal menyimpan.");
+      toast.error(e.message || (lang === "id" ? "Gagal menyimpan." : "Failed to save."));
     } finally {
       setIsSaving(false);
     }
@@ -450,8 +482,12 @@ export function ReceiptScanModal({
               <Camera className="w-4 h-4" />
               <span className="text-[10px] font-bold uppercase tracking-[0.28em] leading-none">Receipt OCR Scan</span>
             </div>
-            <h2 className="text-xl font-bold text-[#1A2B38]">Scan Struk</h2>
-            <p className="mt-1 text-xs text-[#7B6E67]">Foto struk → otomatis jadi transaksi.</p>
+            <h2 className="text-xl font-bold text-[#1A2B38]">
+              {lang === "id" ? "Scan Struk" : "Scan Receipt"}
+            </h2>
+            <p className="mt-1 text-xs text-[#7B6E67]">
+              {lang === "id" ? "Foto struk → otomatis jadi transaksi." : "Snap a receipt photo → automatically recorded."}
+            </p>
           </div>
           <button onClick={onClose} className="rounded-full bg-[#F3EDE8] hover:bg-[#EADFD8] p-2 text-[#7B6E67]">
             <X className="h-4 w-4" />
@@ -461,7 +497,9 @@ export function ReceiptScanModal({
         {/* Wallet selector */}
         {wallets.length > 0 && (
           <div className="mb-4">
-            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Bayar dari wallet</label>
+            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">
+              {lang === "id" ? "Bayar dari wallet" : "Pay from wallet"}
+            </label>
             <select
               className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm font-semibold text-[#1A2B38] outline-none"
               value={selectedWalletId}
@@ -482,8 +520,12 @@ export function ReceiptScanModal({
             onClick={() => inputRef.current?.click()}
           >
             <Camera className="h-8 w-8 text-[#FF6B58]" />
-            <p className="text-sm font-semibold text-[#1A2B38]">Foto struk atau pilih dari galeri</p>
-            <p className="text-xs text-[#7B6E67]">App akan mengekstrak total, merchant, dan tanggal.</p>
+            <p className="text-sm font-semibold text-[#1A2B38]">
+              {lang === "id" ? "Foto struk atau pilih dari galeri" : "Take a receipt photo or choose from gallery"}
+            </p>
+            <p className="text-xs text-[#7B6E67]">
+              {lang === "id" ? "App akan mengekstrak total, merchant, dan tanggal." : "The app will extract the total amount, merchant, and date."}
+            </p>
             <input
               ref={inputRef}
               type="file"
@@ -510,17 +552,27 @@ export function ReceiptScanModal({
             {ocrResult && !isProcessing && (
               <div className="space-y-3">
                 <div className="rounded-2xl bg-[#FEF9F4] p-4">
-                  <p className="text-xs font-bold uppercase tracking-widest text-[#7B6E67]">Hasil Scan</p>
+                  <p className="text-xs font-bold uppercase tracking-widest text-[#7B6E67]">
+                    {lang === "id" ? "Hasil Scan" : "Scan Result"}
+                  </p>
                   {ocrResult.paymentMethod && (
-                    <p className="mt-2 text-xs text-[#7B6E67]">Metode: <span className="font-semibold text-[#1A2B38]">{ocrResult.paymentMethod}</span></p>
+                    <p className="mt-2 text-xs text-[#7B6E67]">
+                      {lang === "id" ? "Metode: " : "Method: "}
+                      <span className="font-semibold text-[#1A2B38]">{ocrResult.paymentMethod}</span>
+                    </p>
                   )}
                   {ocrResult.transactionDate && (
-                    <p className="text-xs text-[#7B6E67]">Tanggal: <span className="font-semibold text-[#1A2B38]">{ocrResult.transactionDate}</span></p>
+                    <p className="text-xs text-[#7B6E67]">
+                      {lang === "id" ? "Tanggal: " : "Date: "}
+                      <span className="font-semibold text-[#1A2B38]">{ocrResult.transactionDate}</span>
+                    </p>
                   )}
                   <p className="text-xs text-[#7B6E67]">Confidence: <span className="font-semibold text-[#29B9AA]">{Math.round(ocrResult.confidence * 100)}%</span></p>
                   {ocrResult.items.length > 0 && (
                     <div className="mt-2">
-                      <p className="text-xs text-[#7B6E67]">Item ({ocrResult.items.length}):</p>
+                      <p className="text-xs text-[#7B6E67]">
+                        {lang === "id" ? `Item (${ocrResult.items.length}):` : `Items (${ocrResult.items.length}):`}
+                      </p>
                       <div className="mt-1 space-y-1">
                         {ocrResult.items.slice(0, 4).map((item, i) => (
                           <p key={i} className="text-xs text-[#1A2B38]">{item.name}{item.price ? ` — ${formatCurrency(item.price)}` : ""}</p>
@@ -536,7 +588,7 @@ export function ReceiptScanModal({
                     className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-2.5 text-sm text-[#1A2B38] outline-none focus:border-[#29B9AA]"
                     value={editedMerchant}
                     onChange={(e) => setEditedMerchant(e.target.value)}
-                    placeholder="Nama merchant"
+                    placeholder={lang === "id" ? "Nama merchant" : "Merchant name"}
                   />
                 </div>
                 <div>
@@ -560,11 +612,11 @@ export function ReceiptScanModal({
             className="mt-5 w-full rounded-2xl bg-[#FF6B58] hover:bg-[#E8503F] py-3 text-sm font-bold text-white disabled:opacity-50 flex items-center justify-center gap-1.5"
           >
             {isSaving ? (
-              "Menyimpan..."
+              (lang === "id" ? "Menyimpan..." : "Saving...")
             ) : (
               <>
                 <Check className="w-4 h-4" />
-                Simpan transaksi
+                {lang === "id" ? "Simpan transaksi" : "Save transaction"}
               </>
             )}
           </button>

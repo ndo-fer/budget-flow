@@ -386,9 +386,15 @@ export const parseReceiptImage = async (
   for (const line of lines) {
     if (RECEIPT_TOTAL_KEYWORDS.some((kw) => line.toLowerCase().includes(kw))) continue;
     const price = extractCurrencyAmount(line);
-    const nameMatch = /^([A-Za-z][A-Za-z\s\d]+)/.exec(line);
-    if (price && nameMatch && nameMatch[1].length > 2) {
-      items.push({ name: nameMatch[1].trim(), price });
+    if (price) {
+      // Clean up the item name by removing trailing currency markers and price digits
+      let itemName = line.replace(/\s*(?:Rp|IDR)?\s*[\d.,OoIi|lSsbBtZz]+$/gi, "").trim();
+      // Remove leading quantity (e.g., 1x, 2, etc.)
+      itemName = itemName.replace(/^(?:\d+x\s+|\d+\s+)/i, "").trim();
+      
+      if (itemName.length > 2) {
+        items.push({ name: itemName, price });
+      }
     }
   }
 

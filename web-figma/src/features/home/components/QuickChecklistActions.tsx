@@ -1,15 +1,18 @@
 import { Zap, Receipt, Smartphone, FileSpreadsheet, ChevronRight } from "lucide-react";
+import { useLanguage } from "../../../contexts/LanguageContext";
 
 interface QuickChecklistActionsProps {
   onNavigateTab: (tabId: any, options?: { replace?: boolean; search?: string }) => void;
 }
 
 export default function QuickChecklistActions({ onNavigateTab }: QuickChecklistActionsProps) {
+  const { t } = useLanguage();
+
   const actions = [
     {
       id: "struk",
-      title: "Upload Struk Transaksi",
-      description: "Catat pengeluaran lewat foto/scan struk belanjaan",
+      title: t("home.actionUploadReceiptTitle", "Upload Struk Transaksi"),
+      description: t("home.actionUploadReceiptDesc", "Catat pengeluaran lewat foto/scan struk belanjaan"),
       icon: Receipt,
       colorClass: "text-[#29B9AA] bg-[#29B9AA]/10 border-[#29B9AA]/20",
       hoverBorder: "hover:border-[#29B9AA]/30 hover:bg-[#29B9AA]/5",
@@ -17,8 +20,8 @@ export default function QuickChecklistActions({ onNavigateTab }: QuickChecklistA
     },
     {
       id: "screenshot",
-      title: "Update Saldo Screenshot",
-      description: "Koreksi nominal saldo e-wallet via gambar layar",
+      title: t("home.actionScreenshotBalanceTitle", "Update Saldo Screenshot"),
+      description: t("home.actionScreenshotBalanceDesc", "Koreksi nominal saldo e-wallet via gambar layar"),
       icon: Smartphone,
       colorClass: "text-[#FFB347] bg-[#FFB347]/10 border-[#FFB347]/20",
       hoverBorder: "hover:border-[#FFB347]/30 hover:bg-[#FFB347]/5",
@@ -26,8 +29,8 @@ export default function QuickChecklistActions({ onNavigateTab }: QuickChecklistA
     },
     {
       id: "csv",
-      title: "Import CSV Transaksi",
-      description: "Unggah berkas riwayat transaksi bank sekaligus",
+      title: t("home.actionImportCsvTitle", "Import CSV Transaksi"),
+      description: t("home.actionImportCsvDesc", "Unggah berkas riwayat transaksi bank sekaligus"),
       icon: FileSpreadsheet,
       colorClass: "text-[#5BAEE8] bg-[#5BAEE8]/10 border-[#5BAEE8]/20",
       hoverBorder: "hover:border-[#5BAEE8]/30 hover:bg-[#5BAEE8]/5",
@@ -44,8 +47,8 @@ export default function QuickChecklistActions({ onNavigateTab }: QuickChecklistA
               <Zap className="w-4 h-4 fill-[#FFB347]" />
             </div>
             <div>
-              <h3 className="text-xs font-bold uppercase tracking-wider text-[#1A2B38]">Aksi Cepat</h3>
-              <p className="text-[10px] text-[#7B6E67] font-semibold mt-0.5">Aksi cepat kelola catatan</p>
+              <h3 className="text-xs font-bold uppercase tracking-wider text-[#1A2B38]">{t("home.quickActionsTitle", "Aksi Cepat")}</h3>
+              <p className="text-[10px] text-[#7B6E67] font-semibold mt-0.5">{t("home.quickActionsSubtitle", "Aksi cepat kelola catatan")}</p>
             </div>
           </div>
         </div>

@@ -76,7 +76,19 @@ export const getWalletCashflow = async (month: string) => {
       dayMap.set(day, (dayMap.get(day) || 0) + t.amount);
     });
 
-  const avgDailySpend = spending / 30;
+  const [year, mon] = month.split("-").map(Number);
+  const today = new Date();
+  const isCurrentMonth = today.getFullYear() === year && (today.getMonth() + 1) === mon;
+  
+  let activeDays = 30;
+  if (isCurrentMonth) {
+    activeDays = today.getDate();
+  } else {
+    activeDays = new Date(year, mon, 0).getDate();
+  }
+  activeDays = Math.max(activeDays, 1);
+
+  const avgDailySpend = spending / activeDays;
   const overspendingDays = Array.from(dayMap.entries())
     .filter(([, amt]) => amt > avgDailySpend * 1.5)
     .map(([day]) => day);

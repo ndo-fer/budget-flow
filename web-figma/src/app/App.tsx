@@ -8,9 +8,11 @@ import AppShell from "../layouts/AppShell";
 import DesignPreviewScreen from "../features/design-preview/DesignPreviewScreen";
 import { initNativeUI } from "../services/capacitorService";
 import { registerServiceWorker, scheduleHourlyCheck, tryRegisterPeriodicSync, requestNotificationPermission } from "../services/notificationService";
+import { toast, navigateTo } from "../utils/toast";
 
 import { SpotlightTourProvider } from "../components/onboarding/SpotlightTourProvider";
 import SpotlightTourOverlay from "../components/onboarding/SpotlightTourOverlay";
+import { LanguageProvider } from "../contexts/LanguageContext";
 
 function RootNavigator() {
   const { user, isLoading } = useAuth();
@@ -46,6 +48,33 @@ function RootNavigator() {
     requestNotificationPermission().then(() => {
       stop = scheduleHourlyCheck();
     });
+
+    // Evaluate Daily Gamification
+    import("../services/gamificationService").then(({ evaluateDailyGamification }) => {
+      // Delay slightly to prevent UI thread blocking on initial render
+      setTimeout(() => {
+        evaluateDailyGamification().then((result) => {
+          if (result.updated) {
+            const { streakIncremented, coinsEarned, freezeUsed, state } = result;
+            if (streakIncremented && state.current_streak > 0) {
+              toast.success(`Streak hari ini menyala! 🔥 ${state.current_streak} hari berturut-turut.`, {
+                action: {
+                  label: "Lihat Streak",
+                  onClick: () => navigateTo("/settings"),
+                }
+              });
+            }
+            if (coinsEarned > 0) {
+              toast.success(`Hebat! Kamu berhasil hemat kemarin dan dapat +${coinsEarned} Koin! 🪙`);
+            }
+            if (freezeUsed) {
+              toast.warning(`Streak Freeze terpakai otomatis untuk menyelamatkan streak-mu! ❄️ (Sisa: ${state.streak_freezes})`);
+            }
+          }
+        }).catch((err) => console.error("Failed to run gamification evaluation:", err));
+      }, 1500);
+    });
+
     return () => stop?.();
   }, [user]);
 
@@ -87,14 +116,16 @@ function RootNavigator() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <OnboardingProvider>
-        <SpotlightTourProvider>
-          <RootNavigator />
-          <Toaster richColors position="top-right" />
-        </SpotlightTourProvider>
-      </OnboardingProvider>
-    </AuthProvider>
+    <LanguageProvider>
+      <AuthProvider>
+        <OnboardingProvider>
+          <SpotlightTourProvider>
+            <RootNavigator />
+            <Toaster richColors position="top-right" />
+          </SpotlightTourProvider>
+        </OnboardingProvider>
+      </AuthProvider>
+    </LanguageProvider>
   );
 }
 

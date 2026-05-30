@@ -5,6 +5,7 @@ import { createIncomeSource, updateIncomeSource } from "../../services/incomeSer
 import ModalShell from "./ModalShell";
 import Dropdown from "../Dropdown";
 import { Clock } from "lucide-react";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 export default function IncomeSourceModal({
   open,
@@ -17,6 +18,7 @@ export default function IncomeSourceModal({
   onClose: () => void;
   onSaved: () => Promise<void> | void;
 }) {
+  const { t, lang } = useLanguage();
   const [sourceName, setSourceName] = useState("");
   const [amount, setAmount] = useState("");
   const [frequency, setFrequency] = useState("monthly");
@@ -31,11 +33,11 @@ export default function IncomeSourceModal({
 
   const handleSubmit = async () => {
     if (!sourceName.trim()) {
-      toast.error("Nama source belum diisi.");
+      toast.error(lang === "id" ? "Nama source belum diisi." : "Source name is required.");
       return;
     }
     if (!amount || Number(amount) <= 0) {
-      toast.error("Nominal source belum valid.");
+      toast.error(lang === "id" ? "Nominal source belum valid." : "Invalid planned amount.");
       return;
     }
 
@@ -49,53 +51,53 @@ export default function IncomeSourceModal({
 
       if (source) {
         await updateIncomeSource(source.id, payload);
-        toast.success("Income source berhasil diperbarui.");
+        toast.success(lang === "id" ? "Income source berhasil diperbarui." : "Income source updated successfully.");
       } else {
         await createIncomeSource(payload);
-        toast.success("Income source berhasil ditambahkan.");
+        toast.success(lang === "id" ? "Income source berhasil ditambahkan." : "Income source added successfully.");
       }
 
       onClose();
       Promise.resolve(onSaved()).catch((err: any) => {
-        toast.error(err?.message || "Source tersimpan, tapi refresh data gagal.");
+        toast.error(err?.message || (lang === "id" ? "Source tersimpan, tapi refresh data gagal." : "Source saved, but refresh failed."));
       });
     } catch (err: any) {
-      toast.error(err.message || "Gagal menyimpan source.");
+      toast.error(err.message || (lang === "id" ? "Gagal menyimpan source." : "Failed to save income source."));
     } finally {
       setIsSaving(false);
     }
   };
 
   const frequencyOptions = [
-    { value: "monthly", label: "Monthly (Bulanan)" },
-    { value: "weekly", label: "Weekly (Mingguan)" },
-    { value: "one-time", label: "One-time (Sekali)" },
+    { value: "monthly", label: lang === "id" ? "Bulanan (Monthly)" : "Monthly" },
+    { value: "weekly", label: lang === "id" ? "Mingguan (Weekly)" : "Weekly" },
+    { value: "one-time", label: lang === "id" ? "Sekali Waktu (One-time)" : "One-time" },
   ];
 
   return (
     <ModalShell
       open={open}
-      title={source ? "Edit Income Source" : "Tambah Income Source"}
-      subtitle="Kelola sumber pemasukan utama, sampingan, atau investasi."
+      title={source ? (lang === "id" ? "Edit Sumber Pemasukan" : "Edit Income Source") : (lang === "id" ? "Tambah Sumber Pemasukan" : "Add Income Source")}
+      subtitle={lang === "id" ? "Kelola sumber pemasukan utama, sampingan, atau investasi." : "Manage primary, side-hustle, or investment income sources."}
       onClose={onClose}
       footer={
         <div className="flex gap-3">
           <button onClick={onClose} className="flex-1 rounded-2xl bg-[#F3EDE8] px-4 py-3 text-sm font-semibold text-[#7B6E67]">
-            Batal
+            {t("common.cancel")}
           </button>
           <button
             onClick={handleSubmit}
             disabled={isSaving}
             className="flex-1 rounded-2xl bg-[#29B9AA] px-4 py-3 text-sm font-semibold text-white disabled:opacity-60"
           >
-            {isSaving ? "Menyimpan..." : "Simpan Source"}
+            {isSaving ? (lang === "id" ? "Menyimpan..." : "Saving...") : (lang === "id" ? "Simpan Sumber" : "Save Source")}
           </button>
         </div>
       }
     >
       <div className="space-y-4">
         <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Nama Source</span>
+          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">{lang === "id" ? "Nama Sumber" : "Source Name"}</span>
           <input
             value={sourceName}
             onChange={(event) => setSourceName(event.target.value)}
@@ -103,7 +105,7 @@ export default function IncomeSourceModal({
           />
         </label>
         <label className="block">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Nominal Planned</span>
+          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">{lang === "id" ? "Nominal Rencana" : "Planned Amount"}</span>
           <input
             type="number"
             min="0"
@@ -113,12 +115,12 @@ export default function IncomeSourceModal({
           />
         </label>
         <div className="block">
-          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">Frekuensi</span>
+          <span className="mb-2 block text-sm font-semibold text-[#1A2B38]">{lang === "id" ? "Frekuensi" : "Frequency"}</span>
           <Dropdown
             options={frequencyOptions}
             value={frequency}
             onChange={setFrequency}
-            placeholder="Pilih Frekuensi"
+            placeholder={lang === "id" ? "Pilih Frekuensi" : "Select Frequency"}
             icon={<Clock className="h-4 w-4" />}
           />
         </div>

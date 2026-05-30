@@ -1,8 +1,68 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "../../utils/toast";
 import { useAuth } from "../../contexts/AuthContext";
 import { LogIn, UserPlus, ArrowRight } from "lucide-react";
 import supabase from "../../lib/supabase";
+
+const CURRENCIES = ["Rp", "$", "€", "¥", "£"];
+
+function FloatingCurrencyBlob({
+  className,
+  glowBg,
+  textColor,
+  animateClass,
+  delay = 0,
+  size = "large"
+}: {
+  className: string;
+  glowBg: string;
+  textColor: string;
+  animateClass: string;
+  delay?: number;
+  size?: "small" | "medium" | "large";
+}) {
+  const [index, setIndex] = useState(0);
+  const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setIndex((prev) => (prev + 1) % CURRENCIES.length);
+        setFade(true);
+      }, 500);
+    }, 4000 + delay);
+
+    return () => clearInterval(interval);
+  }, [delay]);
+
+  const sizeClasses = {
+    large: "w-28 h-28 md:w-36 md:h-36 text-3.5xl md:text-5xl",
+    medium: "w-20 h-20 md:w-24 md:h-24 text-2xl md:text-3.5xl",
+    small: "w-14 h-14 md:w-16 md:h-16 text-lg md:text-2xl"
+  };
+
+  const selectedSize = sizeClasses[size] || sizeClasses.large;
+  const [dimClass, textClass] = selectedSize.split(/(?=\btext-)/);
+
+  return (
+    <div className={`${className} ${animateClass} relative flex items-center justify-center`}>
+      {/* Ambient color backing glow */}
+      <div className={`absolute inset-0 rounded-full blur-2xl opacity-55 ${glowBg}`} />
+      
+      {/* Glass bubble outer container */}
+      <div className={`relative ${dimClass} rounded-full border border-white/30 bg-white/20 backdrop-blur-md shadow-[inset_0_4px_12px_rgba(255,255,255,0.2)] flex items-center justify-center`}>
+        <span
+          className={`font-black transition-all duration-500 select-none ${textClass} ${textColor} ${
+            fade ? "opacity-85 scale-100 rotate-0" : "opacity-0 scale-75 -rotate-12"
+          }`}
+        >
+          {CURRENCIES[index]}
+        </span>
+      </div>
+    </div>
+  );
+}
 
 export default function AuthScreen() {
   const { signIn, signUp, isLoading } = useAuth();
@@ -59,16 +119,98 @@ export default function AuthScreen() {
 
   return (
     <div className="min-h-screen bg-[#FEF9F4] px-6 py-8 relative overflow-hidden flex items-center justify-center">
-      {/* Background Blobs */}
+      {/* Background Floating Currency Bubbles */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden z-0">
-        {/* Coral Blob */}
-        <div className="absolute top-10 left-10 w-56 h-56 rounded-full bg-[#FF6B58]/60 animate-float-1" />
-        {/* Teal Blob */}
-        <div className="absolute bottom-10 right-10 w-64 h-64 rounded-full bg-[#29B9AA]/60 animate-float-2" />
-        {/* Orange Blob */}
-        <div className="absolute top-1/3 right-12 w-40 h-40 rounded-full bg-[#FFB347]/60 animate-float-3" />
-        {/* Blue Blob */}
-        <div className="absolute bottom-1/3 left-12 w-48 h-48 rounded-full bg-[#5BAEE8]/60 animate-float-4" />
+        {/* Coral Bubble - Top Left */}
+        <FloatingCurrencyBlob
+          className="absolute top-6 left-6"
+          glowBg="bg-[#FF6B58]"
+          textColor="text-[#FF6B58]"
+          animateClass="animate-float-1"
+          delay={0}
+          size="large"
+        />
+        {/* Orange Bubble - Top Right */}
+        <FloatingCurrencyBlob
+          className="absolute top-16 right-20"
+          glowBg="bg-[#FFB347]"
+          textColor="text-[#FFB347]"
+          animateClass="animate-float-5"
+          delay={1000}
+          size="medium"
+        />
+        {/* Teal Bubble - Bottom Right */}
+        <FloatingCurrencyBlob
+          className="absolute bottom-12 right-12"
+          glowBg="bg-[#29B9AA]"
+          textColor="text-[#29B9AA]"
+          animateClass="animate-float-2"
+          delay={500}
+          size="large"
+        />
+        {/* Blue Bubble - Bottom Left */}
+        <FloatingCurrencyBlob
+          className="absolute bottom-20 left-20"
+          glowBg="bg-[#5BAEE8]"
+          textColor="text-[#5BAEE8]"
+          animateClass="animate-float-4"
+          delay={1500}
+          size="medium"
+        />
+        {/* Orange Bubble - Middle Left */}
+        <FloatingCurrencyBlob
+          className="absolute top-1/2 left-8 -translate-y-1/2"
+          glowBg="bg-[#FFB347]"
+          textColor="text-[#FFB347]"
+          animateClass="animate-float-3"
+          delay={700}
+          size="small"
+        />
+        {/* Teal Bubble - Middle Right */}
+        <FloatingCurrencyBlob
+          className="absolute top-1/3 right-8"
+          glowBg="bg-[#29B9AA]"
+          textColor="text-[#29B9AA]"
+          animateClass="animate-float-6"
+          delay={1200}
+          size="small"
+        />
+        {/* Blue Bubble - Top Center */}
+        <FloatingCurrencyBlob
+          className="absolute top-8 left-1/3"
+          glowBg="bg-[#5BAEE8]"
+          textColor="text-[#5BAEE8]"
+          animateClass="animate-float-7"
+          delay={1800}
+          size="medium"
+        />
+        {/* Coral Bubble - Bottom Center */}
+        <FloatingCurrencyBlob
+          className="absolute bottom-8 right-1/3"
+          glowBg="bg-[#FF6B58]"
+          textColor="text-[#FF6B58]"
+          animateClass="animate-float-8"
+          delay={2200}
+          size="medium"
+        />
+        {/* Blue Bubble - Bottom Middle Right */}
+        <FloatingCurrencyBlob
+          className="absolute bottom-1/3 right-1/4"
+          glowBg="bg-[#5BAEE8]"
+          textColor="text-[#5BAEE8]"
+          animateClass="animate-float-3"
+          delay={900}
+          size="small"
+        />
+        {/* Teal Bubble - Top Middle Left */}
+        <FloatingCurrencyBlob
+          className="absolute top-1/4 left-1/4"
+          glowBg="bg-[#29B9AA]"
+          textColor="text-[#29B9AA]"
+          animateClass="animate-float-5"
+          delay={1400}
+          size="small"
+        />
       </div>
 
       <div className="relative z-10 w-full mx-auto grid min-h-0 lg:min-h-[calc(100vh-5rem)] max-w-6xl gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-stretch">

@@ -15,59 +15,90 @@ import { getCurrentUserId } from "./queryUtils";
 // ── CSV Parsing ───────────────────────────────────────────────
 
 export const parseRawCsv = (raw: string): { headers: string[]; rows: Record<string, string>[] } => {
-  const lines = raw.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n");
-  if (lines.length < 2) throw new Error("File CSV terlalu pendek atau kosong.");
+  if (!raw || raw.trim().length === 0) {
+    throw new Error("File CSV terlalu pendek atau kosong.");
+  }
 
-  // Detect separator (comma or semicolon)
-  const firstLine = lines[0];
-  const separator = firstLine.includes(";") ? ";" : ",";
-
-  const parseLine = (line: string): string[] => {
-    const result: string[] = [];
-    let current = "";
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-      if (char === '"') {
-        if (inQuotes && line[i + 1] === '"') {
-          current += '"';
-          i++;
-        } else {
-          inQuotes = !inQuotes;
-        }
-      } else if (char === separator && !inQuotes) {
-        result.push(current.trim());
-        current = "";
-      } else {
-        current += char;
-      }
+  // Detect separator based on first line
+  let separator = ",";
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw[i];
+    if (char === "\n" || char === "\r") {
+      break;
     }
-    result.push(current.trim());
-    return result;
-  };
+    if (char === ";") {
+      separator = ";";
+      break;
+    }
+  }
 
-  const headers = parseLine(lines[0])
-    .map((h) => h.replace(/^\uFEFF/, "").trim())
-    .filter(Boolean);
+  const rows: string[][] = [];
+  let currentRow: string[] = [];
+  let currentVal = "";
+  let inQuotes = false;
 
+  for (let i = 0; i < raw.length; i++) {
+    const char = raw[i];
+    const nextChar = raw[i + 1];
+
+    if (char === '"') {
+      if (inQuotes && nextChar === '"') {
+        currentVal += '"';
+        i++; // skip next quote
+      } else {
+        inQuotes = !inQuotes;
+      }
+    } else if (char === separator && !inQuotes) {
+      currentRow.push(currentVal.trim());
+      currentVal = "";
+    } else if ((char === "\r" || char === "\n") && !inQuotes) {
+      currentRow.push(currentVal.trim());
+      currentVal = "";
+      if (currentRow.length > 0 && (currentRow.length > 1 || currentRow[0] !== "")) {
+        rows.push(currentRow);
+      }
+      currentRow = [];
+      if (char === "\r" && nextChar === "\n") {
+        i++; // skip \n of CRLF
+      }
+    } else {
+      currentVal += char;
+    }
+  }
+
+  if (currentRow.length > 0 || currentVal !== "") {
+    currentRow.push(currentVal.trim());
+    if (currentRow.length > 0 && (currentRow.length > 1 || currentRow[0] !== "")) {
+      rows.push(currentRow);
+    }
+  }
+
+  if (rows.length < 2) {
+    throw new Error("File CSV terlalu pendek atau kosong.");
+  }
+
+  // Remove BOM if present from first element
+  if (rows[0] && rows[0][0]) {
+    rows[0][0] = rows[0][0].replace(/^\uFEFF/, "");
+  }
+
+  const headers = rows[0].map((h) => h.trim()).filter(Boolean);
   if (headers.length === 0) {
     throw new Error("File CSV tidak valid atau header kosong.");
   }
 
-  const rows: Record<string, string>[] = [];
-
-  for (let i = 1; i < lines.length; i++) {
-    const line = lines[i].trim();
-    if (!line) continue;
-    const values = parseLine(line);
-    const row: Record<string, string> = {};
+  const recordRows: Record<string, string>[] = [];
+  for (let i = 1; i < rows.length; i++) {
+    const rowValues = rows[i];
+    if (rowValues.length === 0 || (rowValues.length === 1 && rowValues[0] === "")) continue;
+    const rowRecord: Record<string, string> = {};
     headers.forEach((header, idx) => {
-      row[header] = (values[idx] || "").trim();
+      rowRecord[header] = (rowValues[idx] || "").trim();
     });
-    rows.push(row);
+    recordRows.push(rowRecord);
   }
 
-  return { headers, rows };
+  return { headers, rows: recordRows };
 };
 
 // ── Auto-detect column mapping ────────────────────────────────
@@ -117,20 +148,17 @@ const parseCsvAmount = (raw: string): number | null => {
       cleaned = cleaned.replace(/\./g, "").replace(",", ".");
     }
   } else if (lastComma !== -1) {
-    // Only comma present: could be 1,234 (English thousand) or 123,45 (Indonesian decimal)
+    // Only comma present
     const parts = cleaned.split(",");
     if (parts[parts.length - 1].length === 3) {
-      // Thousand separator
       cleaned = cleaned.replace(/,/g, "");
     } else {
-      // Decimal comma
       cleaned = cleaned.replace(",", ".");
     }
   } else if (lastDot !== -1) {
-    // Only dot present: could be 1.234 (Indonesian thousand) or 123.45 (English decimal)
+    // Only dot present
     const parts = cleaned.split(".");
     if (parts[parts.length - 1].length === 3) {
-      // Thousand separator
       cleaned = cleaned.replace(/\./g, "");
     }
   }
@@ -146,24 +174,61 @@ const parseCsvDirection = (raw: string): "in" | "out" | null => {
   const lower = raw.toLowerCase().trim();
   if (["d", "db", "debit", "dr", "out", "keluar", "expense"].includes(lower)) return "out";
   if (["c", "cr", "credit", "kredit", "in", "masuk", "income"].includes(lower)) return "in";
-  // Check if value is negative (some exports use negative for debit)
   if (raw.startsWith("-")) return "out";
   return null;
 };
 
-// ── Parse date ────────────────────────────────────────────────
+// ── Parse date with auto detected format ──────────────────────
 
-const parseCsvDate = (raw: string): string | null => {
-  if (!raw) return null;
-  // Try ISO format first
-  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) return raw.slice(0, 10);
-  // Indonesian format: DD/MM/YYYY or DD-MM-YYYY
-  const dmyMatch = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/.exec(raw);
-  if (dmyMatch) {
-    const [, d, m, y] = dmyMatch;
-    const year = y.length === 2 ? `20${y}` : y;
-    return `${year}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+export const detectDateFormat = (rows: Record<string, string>[], dateCol: string): "DMY" | "MDY" => {
+  let hasFirstPartGreaterThan12 = false;
+  let hasSecondPartGreaterThan12 = false;
+
+  for (const row of rows) {
+    const raw = (row[dateCol] || "").trim();
+    if (!raw) continue;
+
+    const match = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/.exec(raw);
+    if (match) {
+      const p1 = parseInt(match[1], 10);
+      const p2 = parseInt(match[2], 10);
+      if (p1 > 12) hasFirstPartGreaterThan12 = true;
+      if (p2 > 12) hasSecondPartGreaterThan12 = true;
+    }
   }
+
+  if (hasSecondPartGreaterThan12 && !hasFirstPartGreaterThan12) {
+    return "MDY";
+  }
+  return "DMY";
+};
+
+const parseCsvDate = (raw: string, format: "DMY" | "MDY"): string | null => {
+  if (!raw) return null;
+  raw = raw.trim();
+
+  if (/^\d{4}-\d{2}-\d{2}/.test(raw)) {
+    return raw.slice(0, 10);
+  }
+
+  const match = /^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/.exec(raw);
+  if (match) {
+    const [, p1, p2, y] = match;
+    const year = y.length === 2 ? `20${y}` : y;
+    
+    if (format === "MDY") {
+      return `${year}-${p1.padStart(2, "0")}-${p2.padStart(2, "0")}`;
+    } else {
+      return `${year}-${p2.padStart(2, "0")}-${p1.padStart(2, "0")}`;
+    }
+  }
+
+  const ymdMatch = /^(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/.exec(raw);
+  if (ymdMatch) {
+    const [, y, m, d] = ymdMatch;
+    return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+  }
+
   return null;
 };
 
@@ -174,15 +239,25 @@ export const buildTransactionCandidates = (
   mapping: CsvColumnMapping,
   walletId?: string,
 ): Partial<WalletTransaction>[] => {
+  const dateFormat = detectDateFormat(rows, mapping.date);
+  const isSingleColumnAmount = !mapping.direction || mapping.direction === mapping.amount;
+
   return rows
     .map((row) => {
-      const dateStr = parseCsvDate(row[mapping.date] || "");
+      const dateStr = parseCsvDate(row[mapping.date] || "", dateFormat);
       const rawAmount = row[mapping.amount] || "";
       const amount = parseCsvAmount(rawAmount);
       if (!amount || !dateStr) return null;
 
-      const rawDirection = mapping.direction ? row[mapping.direction] : undefined;
-      const direction: "in" | "out" = parseCsvDirection(rawDirection || "") || "out";
+      let direction: "in" | "out" = "out";
+
+      if (isSingleColumnAmount) {
+        const trimmedAmount = rawAmount.trim();
+        direction = trimmedAmount.startsWith("-") ? "out" : "in";
+      } else {
+        const rawDirection = mapping.direction ? row[mapping.direction] : undefined;
+        direction = parseCsvDirection(rawDirection || "") || "out";
+      }
 
       return {
         wallet_id: walletId,
@@ -222,7 +297,7 @@ export const buildImportPreview = async (
   try {
     const userId = await getCurrentUserId();
 
-    // 1. Calculate time bounds (min/max occurred_at)
+    // 1. Calculate time bounds
     let minTime = Infinity;
     let maxTime = -Infinity;
 
@@ -244,11 +319,10 @@ export const buildImportPreview = async (
       };
     }
 
-    // Add 5-minute buffer on both ends of the window (5 * 60 * 1000 = 300000ms)
     const windowStart = new Date(minTime - 300000).toISOString();
     const windowEnd = new Date(maxTime + 300000).toISOString();
 
-    // 2. Fetch existing transactions inside the window once
+    // 2. Fetch existing transactions in time window
     const { data: existing, error } = await supabase
       .from("wallet_transactions")
       .select("id, wallet_id, amount, direction, occurred_at")
@@ -259,21 +333,25 @@ export const buildImportPreview = async (
     if (error) throw error;
     const existingList = existing || [];
 
-    // Helper function for in-memory check
+    // 3. Build hash map for O(N) duplicate checking
+    const existingMap = new Map<string, Array<{ time: number }>>();
+    for (const ext of existingList) {
+      const key = `${ext.wallet_id || "null"}_${ext.amount}_${ext.direction}`;
+      const list = existingMap.get(key) || [];
+      list.push({ time: new Date(ext.occurred_at).getTime() });
+      existingMap.set(key, list);
+    }
+
     const isDuplicateLocal = (tx: Partial<WalletTransaction>): boolean => {
       if (!tx.amount || !tx.occurred_at) return false;
       const txTime = new Date(tx.occurred_at).getTime();
-
-      return existingList.some((ext) => {
-        if (tx.wallet_id !== ext.wallet_id) return false;
-        if (tx.amount !== ext.amount) return false;
-        if (tx.direction !== ext.direction) return false;
-        const extTime = new Date(ext.occurred_at).getTime();
-        return Math.abs(txTime - extTime) <= 300000;
-      });
+      const key = `${tx.wallet_id || "null"}_${tx.amount}_${tx.direction}`;
+      const matches = existingMap.get(key);
+      if (!matches) return false;
+      return matches.some((m) => Math.abs(txTime - m.time) <= 300000);
     };
 
-    // 3. Process candidates locally
+    // 4. Process candidates locally
     const processed = candidates.map((tx) => {
       if (!tx.amount || !tx.occurred_at) {
         reviewCount++;
@@ -308,3 +386,4 @@ export const buildImportPreview = async (
     };
   }
 };
+

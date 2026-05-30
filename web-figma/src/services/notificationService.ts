@@ -332,6 +332,7 @@ export const scheduleHourlyCheck = (): (() => void) => {
 // ── Service Worker registration ───────────────────────────────
 
 export const registerServiceWorker = async (): Promise<ServiceWorkerRegistration | null> => {
+  if (Capacitor.isNativePlatform()) return null;
   if (!("serviceWorker" in navigator)) return null;
 
   try {

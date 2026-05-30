@@ -2,6 +2,12 @@ import supabase from "../lib/supabase";
 import { getMonthDateRange, toLocalDateString } from "../utils/date";
 import { getCurrentUserId } from "./queryUtils";
 
+const parseLocalDate = (dateStr: string): Date => {
+  const cleanDate = dateStr.split("T")[0];
+  const [y, m, d] = cleanDate.split("-").map(Number);
+  return new Date(y, m - 1, d);
+};
+
 export const getRecurringExpenses = async () => {
   try {
     const userId = await getCurrentUserId();
@@ -119,17 +125,20 @@ export const generateMonthlyRecurringExpenses = async (month: string) => {
 
       // Weekly frequency
       if (recurring.frequency === "weekly") {
-        const startDate = new Date(recurring.start_date);
-        const firstDate = new Date(year, monthNum - 1, 1);
+        const startDate = parseLocalDate(recurring.start_date);
+        const targetDayOfWeek = startDate.getDay(); // 0 (Sunday) to 6 (Saturday)
 
-        for (
-          let d = new Date(firstDate);
-          d.getMonth() === monthNum - 1;
-          d.setDate(d.getDate() + 7)
-        ) {
+        // Find the first date in the target month that matches targetDayOfWeek
+        let d = new Date(year, monthNum - 1, 1);
+        while (d.getDay() !== targetDayOfWeek) {
+          d.setDate(d.getDate() + 1);
+        }
+
+        // Loop weekly until we move out of the target month
+        while (d.getMonth() === monthNum - 1) {
           if (
             d >= startDate &&
-            (!recurring.end_date || d <= new Date(recurring.end_date))
+            (!recurring.end_date || d <= parseLocalDate(recurring.end_date))
           ) {
             const dateStr = toLocalDateString(d);
             generatedExpenses.push({
@@ -141,18 +150,23 @@ export const generateMonthlyRecurringExpenses = async (month: string) => {
               recurring_expense_id: recurring.id,
             });
           }
+          d.setDate(d.getDate() + 7);
         }
       }
 
       // Daily frequency
       if (recurring.frequency === "daily") {
+        const startDate = parseLocalDate(recurring.start_date);
         const firstDate = new Date(year, monthNum - 1, 1);
         for (
           let d = new Date(firstDate);
           d.getMonth() === monthNum - 1;
           d.setDate(d.getDate() + 1)
         ) {
-          if (!recurring.end_date || d <= new Date(recurring.end_date)) {
+          if (
+            d >= startDate &&
+            (!recurring.end_date || d <= parseLocalDate(recurring.end_date))
+          ) {
             const dateStr = toLocalDateString(d);
             generatedExpenses.push({
               date: dateStr,

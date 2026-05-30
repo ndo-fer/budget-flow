@@ -20,8 +20,8 @@
       <div id="root"></div>
       <script type="module" src="/src/main.tsx"></script>
       <script>
-        // Register service worker for PWA + push notification support
-        if ('serviceWorker' in navigator) {
+        // Register service worker for PWA + push notification support (web only)
+        if ('serviceWorker' in navigator && !window.Capacitor) {
           window.addEventListener('load', () => {
             navigator.serviceWorker.register('/sw.js', { scope: '/' })
               .then(reg => console.log('[BudgetFlow] SW registered:', reg.scope))

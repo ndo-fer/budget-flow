@@ -217,7 +217,7 @@ BEGIN
       WHERE wallet_id = COALESCE(NEW.wallet_id, OLD.wallet_id)
         AND user_id = COALESCE(NEW.user_id, OLD.user_id)
         AND is_duplicate = false
-        AND occurred_at >= last_confirmed_at
+        AND (last_confirmed_at IS NULL OR occurred_at >= last_confirmed_at)
     ), 0),
     updated_at = now()
   WHERE id = COALESCE(NEW.wallet_id, OLD.wallet_id);

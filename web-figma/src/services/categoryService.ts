@@ -54,12 +54,12 @@ export const getCategoryCount = async () => {
   return count || 0;
 };
 
-export const createCategory = async (name: string, budgetAmount: number, color = "#FF6B6B", priority = 3) => {
+export const createCategory = async (name: string, budgetAmount: number, color = "#FF6B6B", priority = 3, excludeFromDailyStreak = false) => {
   const userId = await getCurrentUserId();
   await ensureUniqueCategoryName(userId, name);
   const { data, error } = await supabase
     .from("budget_categories")
-    .insert([{ user_id: userId, name, budget_amount: budgetAmount, color, priority }])
+    .insert([{ user_id: userId, name, budget_amount: budgetAmount, color, priority, exclude_from_daily_streak: excludeFromDailyStreak }])
     .select()
     .single();
 
@@ -72,7 +72,7 @@ export const createCategory = async (name: string, budgetAmount: number, color =
 
 export const updateCategory = async (
   categoryId: string,
-  updates: Partial<{ name: string; budget_amount: number; color: string; priority: number }>,
+  updates: Partial<{ name: string; budget_amount: number; color: string; priority: number; exclude_from_daily_streak: boolean }>,
 ) => {
   const userId = await getCurrentUserId();
 

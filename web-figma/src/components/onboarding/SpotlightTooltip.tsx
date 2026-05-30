@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import { TourStep } from "./tourSteps";
 import { X, ChevronLeft, ChevronRight, HelpCircle } from "lucide-react";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 interface SpotlightTooltipProps {
   step: TourStep;
@@ -39,53 +40,74 @@ const ADVANCED_SLIDES = [
       "Malas mencatat satu per satu? Ambil foto struk belanja untuk dipindai otomatis oleh AI OCR, atau import riwayat mutasi lewat file CSV dari Dompet → Impor.",
     mockupType: "receipt",
   },
+  {
+    id: "streak",
+    title: "Sistem Streak & Koin Harian",
+    description:
+      "Jaga streak Anda tetap menyala dengan rutin mencatat transaksi atau menandai Zero-Spend Day. Dapatkan +5 Koin jika pengeluaran harian Anda di bawah limit belanja aman. Tukarkan koin dengan Streak Freeze di Toko Settings sebagai pengaman di hari darurat!",
+    mockupType: "streak",
+  },
 ];
 
 function WidgetMockup() {
   return (
-    <div className="relative flex w-full h-full bg-white rounded-2xl border border-black/5 shadow-inner overflow-hidden">
+    <div className="relative flex w-full h-full bg-[#081A18] rounded-2xl border border-[#1B3A36] p-4 shadow-inner overflow-hidden">
       {/* Left: Info Panel */}
-      <div className="flex flex-col justify-center gap-2 px-3 py-3 w-[38%] shrink-0 border-r border-black/5">
-        <div className="flex items-center gap-1 mb-1">
-          <div className="h-3 w-3 rounded-sm bg-[#29B9AA]" />
-          <span className="text-[8px] font-black text-[#29B9AA]">Budget Flow</span>
+      <div className="flex flex-col justify-center gap-2 w-[38%] shrink-0">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-1">
+            <div className="h-2 w-2 rounded-sm bg-[#29B9AA]" />
+            <span className="text-[8px] font-black text-[#33D6C5]">Budget Flow</span>
+          </div>
+          <div className="flex items-center gap-0.5 bg-[#2C1A17] border border-[#FF6B58] px-1 py-0.5 rounded text-[6px] font-bold text-[#FF8F80]">
+            <span>🔥</span>
+            <span>5</span>
+          </div>
         </div>
         <div>
-          <p className="text-[7px] font-black uppercase tracking-wider text-[#7B6E67]">Dana Bersih</p>
-          <p className="text-[11px] font-extrabold text-[#1A2B38] leading-tight">Rp 248k</p>
+          <p className="text-[7px] font-black uppercase tracking-wider text-[#80A29E]">Dana Bersih</p>
+          <p className="text-[11px] font-extrabold text-white leading-tight">Rp 248k</p>
         </div>
         <div>
-          <p className="text-[7px] font-black uppercase tracking-wider text-[#7B6E67]">Batas Hari Ini</p>
-          <p className="text-[11px] font-extrabold text-[#FF6B58] leading-tight">Rp 45k</p>
+          <p className="text-[7px] font-black uppercase tracking-wider text-[#80A29E]">Batas Hari Ini</p>
+          <p className="text-[11px] font-extrabold text-[#33D6C5] leading-tight">Rp 45k</p>
         </div>
       </div>
       {/* Right: Keypad */}
-      <div className="flex flex-col flex-1 p-2 gap-1.5">
+      <div className="flex flex-col flex-1 ml-3 gap-1.5">
         {/* Display row */}
-        <div className="flex gap-1 items-center">
-          <div className="flex h-5 flex-1 items-center justify-center rounded-md bg-[#EBF7F6] text-[8px] font-bold text-[#1A2B38]">
+        <div className="flex gap-1.5 items-center">
+          <div className="flex h-5 flex-1 items-center justify-center rounded-[10px] bg-[#061211] border border-[#1C3633] text-[8px] font-bold text-white">
             Rp 7.000
           </div>
-          <div className="flex h-5 w-7 items-center justify-center rounded-md bg-red-50 text-[8px] font-bold text-red-500">Rst</div>
-          <div className="flex h-5 w-7 items-center justify-center rounded-md bg-[#29B9AA] text-[8px] font-bold text-white shadow-sm">OK</div>
+          <div className="flex h-5 w-7 items-center justify-center rounded-[10px] bg-[#241416] border border-[#4A1E22] text-[8px] font-bold text-[#FF8A91]">Rst</div>
+          <div className="flex h-5 w-7 items-center justify-center rounded-[10px] bg-[#29B9AA] text-[8px] font-bold text-white shadow-sm">OK</div>
         </div>
         {/* Row 1 */}
-        <div className="flex gap-1 flex-1">
-          {[{ l: "+1k", c: "bg-[#F5F5F0]" }, { l: "+2k", c: "bg-[#EFF5EF]" }, { l: "+5k", c: "bg-[#FDF5E8]" }].map(({ l, c }) => (
-            <div key={l} className={`flex flex-1 items-center justify-center rounded-md ${c} text-[8px] font-black text-[#1A2B38]`}>{l}</div>
+        <div className="flex gap-1.5 flex-1">
+          {[
+            { l: "+1k", c: "bg-[#122624] border border-[#1C3633] rounded-[10px]", tc: "text-[#A0A5A7]" },
+            { l: "+2k", c: "bg-[#122624] border border-[#1C3633] rounded-[10px]", tc: "text-[#A2BFA8]" },
+            { l: "+5k", c: "bg-[#122624] border border-[#1C3633] rounded-[10px]", tc: "text-[#FFD199]" }
+          ].map(({ l, c, tc }) => (
+            <div key={l} className={`flex flex-1 items-center justify-center ${c} ${tc} text-[8px] font-black`}>{l}</div>
           ))}
         </div>
         {/* Row 2 */}
-        <div className="flex gap-1 flex-1">
-          {[{ l: "+10k", c: "bg-[#EDE8F5]" }, { l: "+20k", c: "bg-[#E8F5EE]" }, { l: "+50k", c: "bg-[#E8F0F8]" }].map(({ l, c }) => (
-            <div key={l} className={`flex flex-1 items-center justify-center rounded-md ${c} text-[8px] font-black text-[#1A2B38]`}>{l}</div>
+        <div className="flex gap-1.5 flex-1">
+          {[
+            { l: "+10k", c: "bg-[#122624] border border-[#1C3633] rounded-[10px]", tc: "text-[#D7B3FF]" },
+            { l: "+20k", c: "bg-[#122624] border border-[#1C3633] rounded-[10px]", tc: "text-[#B5FFC8]" },
+            { l: "+50k", c: "bg-[#122624] border border-[#1C3633] rounded-[10px]", tc: "text-[#B5DFFF]" }
+          ].map(({ l, c, tc }) => (
+            <div key={l} className={`flex flex-1 items-center justify-center ${c} ${tc} text-[8px] font-black`}>{l}</div>
           ))}
         </div>
         {/* Row 3 */}
-        <div className="flex gap-1 flex-1">
-          <div className="flex flex-1 items-center justify-center rounded-md bg-[#FFF0EE] text-[8px] font-black text-[#1A2B38]">+100k</div>
-          <div className="flex flex-1 items-center justify-center rounded-md bg-[#F5F4F0] text-[8px] font-black text-[#1A2B38]">+200k</div>
-          <div className="flex flex-1 items-center justify-center rounded-md bg-[#29B9AA] text-[8px] font-black text-white">+Cust</div>
+        <div className="flex gap-1.5 flex-1">
+          <div className="flex flex-1 items-center justify-center bg-[#122624] border border-[#1C3633] rounded-[10px] text-[8px] font-black text-[#FFB5B5]">+100k</div>
+          <div className="flex flex-1 items-center justify-center bg-[#122624] border border-[#1C3633] rounded-[10px] text-[8px] font-black text-[#E1E4E7]">+200k</div>
+          <div className="flex flex-1 items-center justify-center bg-[#29B9AA] rounded-[10px] text-[8px] font-black text-white">+Cust</div>
         </div>
       </div>
     </div>
@@ -134,6 +156,36 @@ function ReceiptMockup() {
   );
 }
 
+function StreakMockup() {
+  return (
+    <div className="relative flex flex-col justify-center items-center w-full h-full bg-[#1E293B] rounded-2xl p-4 border border-black/10 overflow-hidden text-white">
+      <div className="absolute -left-12 -top-12 h-24 w-24 rounded-full bg-orange-500/20 blur-xl animate-pulse" />
+      <div className="absolute -right-12 -bottom-12 h-24 w-24 rounded-full bg-cyan-500/20 blur-xl animate-pulse" />
+      
+      <div className="flex items-center gap-6 z-10">
+        <div className="flex flex-col items-center gap-1 bg-white/5 border border-white/10 rounded-2xl p-3 px-4 shadow-lg backdrop-blur-sm animate-bounce duration-[2000ms]">
+          <span className="text-3xl filter drop-shadow-[0_4px_8px_rgba(249,115,22,0.4)]">🔥</span>
+          <span className="text-[10px] font-black tracking-wider text-orange-400">5 HARI</span>
+        </div>
+
+        <div className="flex flex-col items-center gap-1 bg-white/5 border border-white/10 rounded-2xl p-3 px-4 shadow-lg backdrop-blur-sm">
+          <span className="text-3xl filter drop-shadow-[0_4px_8px_rgba(234,179,8,0.4)]">🪙</span>
+          <span className="text-[10px] font-black tracking-wider text-yellow-400">125 KOIN</span>
+        </div>
+
+        <div className="flex flex-col items-center gap-1 bg-white/5 border border-white/10 rounded-2xl p-3 px-4 shadow-lg backdrop-blur-sm">
+          <span className="text-3xl filter drop-shadow-[0_4px_8px_rgba(6,182,212,0.4)]">❄️</span>
+          <span className="text-[10px] font-black tracking-wider text-sky-400">2 FREEZE</span>
+        </div>
+      </div>
+      
+      <p className="text-[9px] font-semibold text-slate-300 mt-4 tracking-wide uppercase bg-slate-800/80 px-3 py-1 rounded-full border border-slate-700/50">
+        Streak Hari Ini: <span className="text-emerald-400 font-bold">AMAN 🔥</span>
+      </p>
+    </div>
+  );
+}
+
 interface AdvancedFeaturesDialogProps {
   onNext: () => void;
   onBack: () => void;
@@ -141,6 +193,7 @@ interface AdvancedFeaturesDialogProps {
 }
 
 function AdvancedFeaturesDialog({ onNext, onBack, onSkip }: AdvancedFeaturesDialogProps) {
+  const { t } = useLanguage();
   const [activeSlide, setActiveSlide] = useState(0);
   const slide = ADVANCED_SLIDES[activeSlide];
 
@@ -160,6 +213,9 @@ function AdvancedFeaturesDialog({ onNext, onBack, onSkip }: AdvancedFeaturesDial
     }
   };
 
+  const slideTitle = t(`tour.advanced-features.slides.${slide.id}.title`, slide.title);
+  const slideDesc = t(`tour.advanced-features.slides.${slide.id}.description`, slide.description);
+
   return (
     <div
       className="fixed z-[10020] w-[90%] max-w-lg rounded-3xl border border-black/10 bg-white p-6 shadow-2xl shadow-[#1A2B38]/20"
@@ -168,12 +224,12 @@ function AdvancedFeaturesDialog({ onNext, onBack, onSkip }: AdvancedFeaturesDial
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <span className="text-[10px] font-black uppercase tracking-wider text-[#29B9AA] bg-[#29B9AA]/10 px-2.5 py-1 rounded-md">
-          Edukasi Otomatisasi
+          {t("tour.advanced-features.educationTitle", "Edukasi Otomatisasi")}
         </span>
         <button
           onClick={onSkip}
           className="rounded-full p-1.5 text-[#7B6E67] hover:bg-[#FEF9F4] hover:text-[#1A2B38] transition-colors"
-          title="Selesai"
+          title={t("common.done", "Selesai")}
         >
           <X className="h-5 w-5" />
         </button>
@@ -185,13 +241,19 @@ function AdvancedFeaturesDialog({ onNext, onBack, onSkip }: AdvancedFeaturesDial
           <button
             key={s.id}
             onClick={() => setActiveSlide(idx)}
-            className={`flex-1 py-2 px-1 text-xs font-bold rounded-xl transition-all ${
+            className={`flex-1 py-2 px-1 text-[10px] font-bold rounded-xl transition-all ${
               idx === activeSlide
                 ? "bg-[#29B9AA] text-white shadow-sm"
                 : "text-[#7B6E67] hover:bg-[#FEF9F4] hover:text-[#1A2B38]"
             }`}
           >
-            {idx === 0 ? "Widget HP" : idx === 1 ? "Auto-Notif" : "Pindai Struk"}
+            {s.id === "widget"
+              ? t("tour.advanced-features.tabWidget", "Widget HP")
+              : s.id === "notification"
+                ? t("tour.advanced-features.tabNotif", "Auto-Notif")
+                : s.id === "receipt"
+                  ? t("tour.advanced-features.tabReceipt", "Pindai Struk")
+                  : t("tour.advanced-features.tabStreak", "Streak & Koin")}
           </button>
         ))}
       </div>
@@ -201,12 +263,13 @@ function AdvancedFeaturesDialog({ onNext, onBack, onSkip }: AdvancedFeaturesDial
         {slide.mockupType === "widget" && <WidgetMockup />}
         {slide.mockupType === "notification" && <NotificationMockup />}
         {slide.mockupType === "receipt" && <ReceiptMockup />}
+        {slide.mockupType === "streak" && <StreakMockup />}
       </div>
 
       {/* Description */}
       <div className="mb-5">
-        <h3 className="text-base font-extrabold text-[#1A2B38]">{slide.title}</h3>
-        <p className="mt-2 text-xs text-[#7B6E67] leading-relaxed">{slide.description}</p>
+        <h3 className="text-base font-extrabold text-[#1A2B38]">{slideTitle}</h3>
+        <p className="mt-2 text-xs text-[#7B6E67] leading-relaxed">{slideDesc}</p>
       </div>
 
       {/* Footer */}
@@ -227,13 +290,13 @@ function AdvancedFeaturesDialog({ onNext, onBack, onSkip }: AdvancedFeaturesDial
             className="flex items-center gap-1 rounded-xl hover:bg-[#FEF9F4] px-3.5 py-2 text-xs font-bold text-[#7B6E67] transition-all"
           >
             <ChevronLeft className="h-4 w-4" />
-            Kembali
+            {t("common.back", "Kembali")}
           </button>
           <button
             onClick={handleSlideNext}
             className="flex items-center gap-1.5 rounded-xl bg-[#29B9AA] px-4 py-2 text-xs font-bold text-white hover:bg-[#229A8E] active:scale-[0.98] transition-all shadow-md shadow-teal-500/10"
           >
-            <span>{activeSlide === ADVANCED_SLIDES.length - 1 ? "Selesai" : "Lanjut"}</span>
+            <span>{activeSlide === ADVANCED_SLIDES.length - 1 ? t("common.done", "Selesai") : t("common.next", "Lanjut")}</span>
             <ChevronRight className="h-4 w-4" />
           </button>
         </div>
@@ -256,6 +319,7 @@ export default function SpotlightTooltip({
   onBack,
   onSkip,
 }: SpotlightTooltipProps) {
+  const { t } = useLanguage();
   const tooltipRef = useRef<HTMLDivElement>(null);
   const [coords, setCoords] = useState({ top: 0, left: 0, placement: "bottom" });
 
@@ -353,6 +417,10 @@ export default function SpotlightTooltip({
   // ── Regular spotlight tooltip ──
   const showNextCta = step.action === "observe-only";
 
+  const stepTitle = t(`tour.${step.id}.title`, step.title);
+  const stepBody = t(`tour.${step.id}.body`, step.body);
+  const primaryCtaText = step.primaryCta ? t(`tour.${step.id}.primaryCta`, step.primaryCta) : t("common.next", "Lanjut");
+
   return (
     <div
       ref={tooltipRef}
@@ -362,13 +430,13 @@ export default function SpotlightTooltip({
       {/* Header */}
       <div className="flex items-center justify-between">
         <span className="text-[10px] font-bold uppercase tracking-wider text-[#29B9AA] bg-[#29B9AA]/10 px-2 py-0.5 rounded-md">
-          {stepIndex + 1} dari {totalSteps}
+          {stepIndex + 1} {t("common.of", "dari")} {totalSteps}
         </span>
         {step.allowSkip && (
           <button
             onClick={onSkip}
             className="rounded-full p-1 text-[#7B6E67] hover:bg-[#FEF9F4] hover:text-[#1A2B38] transition-colors"
-            title="Lewati panduan"
+            title={t("tour.skipGuide", "Lewati panduan")}
           >
             <X className="h-4 w-4" />
           </button>
@@ -377,15 +445,15 @@ export default function SpotlightTooltip({
 
       {/* Body */}
       <div className="mt-3">
-        <h3 className="text-sm font-bold text-[#1A2B38]">{step.title}</h3>
-        <p className="mt-1.5 text-xs text-[#7B6E67] leading-relaxed">{step.body}</p>
+        <h3 className="text-sm font-bold text-[#1A2B38]">{stepTitle}</h3>
+        <p className="mt-1.5 text-xs text-[#7B6E67] leading-relaxed">{stepBody}</p>
       </div>
 
       {/* Action prompt for click steps */}
       {!showNextCta && (
         <div className="mt-3.5 flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-wider text-[#FF9F43] bg-[#FFF9F3] px-2.5 py-1.5 rounded-lg border border-[#FF9F43]/10">
           <HelpCircle className="w-3.5 h-3.5 text-[#FF9F43] shrink-0" />
-          <span>Lakukan aksi di atas untuk lanjut</span>
+          <span>{t("tour.actionPrompt", "Lakukan aksi di atas untuk lanjut")}</span>
         </div>
       )}
 
@@ -398,7 +466,7 @@ export default function SpotlightTooltip({
               className="flex items-center gap-1 rounded-xl hover:bg-[#FEF9F4] px-2.5 py-1.5 text-xs font-bold text-[#7B6E67] transition-all"
             >
               <ChevronLeft className="h-3.5 w-3.5" />
-              Kembali
+              {t("common.back", "Kembali")}
             </button>
           ) : (
             <div />
@@ -410,7 +478,7 @@ export default function SpotlightTooltip({
               onClick={onNext}
               className="flex items-center gap-1 rounded-xl bg-[#29B9AA] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#229A8E] active:scale-[0.98] transition-all shadow-sm"
             >
-              <span>{step.primaryCta || "Lanjut"}</span>
+              <span>{primaryCtaText}</span>
               <ChevronRight className="h-3.5 w-3.5" />
             </button>
           ) : step.allowSkip ? (
@@ -418,7 +486,7 @@ export default function SpotlightTooltip({
               onClick={onSkip}
               className="rounded-xl border border-black/5 hover:bg-[#FEF9F4] px-3 py-1.5 text-xs font-bold text-[#7B6E67] transition-all"
             >
-              Lewati
+              {t("common.skip", "Lewati")}
             </button>
           ) : null}
         </div>

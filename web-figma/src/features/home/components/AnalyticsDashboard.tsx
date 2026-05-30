@@ -1,4 +1,5 @@
 import { Activity, Sparkles, PieChart as PieIcon, ArrowUpRight } from "lucide-react";
+import { useLanguage } from "../../../contexts/LanguageContext";
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -35,29 +36,35 @@ export default function AnalyticsDashboard({
   safeToSpend,
   onNavigateTab
 }: AnalyticsDashboardProps) {
+  const { t } = useLanguage();
+
   return (
     <div className="space-y-6">
       
       {/* Summary metrics row */}
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Rata-Rata Harian</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">{t("home.avgDaily", "Rata-Rata Harian")}</p>
           <p className="mt-1 text-xl font-bold text-[#1A2B38]">Rp {dailyAverage?.toLocaleString("id-ID")}</p>
         </div>
         
         <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Total Transaksi</p>
-          <p className="mt-1 text-xl font-bold text-[#1A2B38]">{monthlyPlan?.totalSpending ? Math.round(monthlyPlan.totalSpending / 25000) : 0} kali</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">{t("home.totalTransactions", "Total Transaksi")}</p>
+          <p className="mt-1 text-xl font-bold text-[#1A2B38]">
+            {monthlyPlan?.totalSpending ? Math.round(monthlyPlan.totalSpending / 25000) : 0} {t("home.times", "kali")}
+          </p>
         </div>
 
         <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Pemakaian Rencana</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">{t("home.planUsage", "Pemakaian Rencana")}</p>
           <p className="mt-1 text-xl font-bold text-[#1A2B38]">{Math.round(monthlyPlan?.percentUsed || 0)}%</p>
         </div>
 
         <div className="rounded-2xl border border-black/10 bg-white p-4 shadow-sm">
-          <p className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Frekuensi QRIS</p>
-          <p className="mt-1 text-xl font-bold text-[#29B9AA]">{Math.round((monthlyPlan?.totalSpending || 0) * 0.00003)} kali</p>
+          <p className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">{t("home.qrisFreq", "Frekuensi QRIS")}</p>
+          <p className="mt-1 text-xl font-bold text-[#29B9AA]">
+            {Math.round((monthlyPlan?.totalSpending || 0) * 0.00003)} {t("home.times", "kali")}
+          </p>
         </div>
       </div>
 
@@ -67,7 +74,7 @@ export default function AnalyticsDashboard({
         <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2">
             <Activity className="h-4 w-4 text-[#29B9AA]" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38]">Tren Pengeluaran Harian</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38]">{t("home.dailySpendingTrend", "Tren Pengeluaran Harian")}</h3>
           </div>
           <div className="mt-4 h-64">
             {dailyTrend.length > 0 ? (
@@ -82,15 +89,15 @@ export default function AnalyticsDashboard({
                   <XAxis dataKey="day" stroke="#7B6E67" fontSize={10} tickLine={false} />
                   <YAxis stroke="#7B6E67" fontSize={10} tickLine={false} />
                   <Tooltip 
-                    formatter={(val) => [`Rp ${val.toLocaleString("id-ID")}`, "Pengeluaran"]} 
-                    labelFormatter={(label) => `Hari ${label}`}
+                    formatter={(val) => [`Rp ${val.toLocaleString("id-ID")}`, t("home.expenses", "Pengeluaran")]} 
+                    labelFormatter={(label) => `${t("home.day", "Hari")} ${label}`}
                     contentStyle={{ borderRadius: "16px", border: "1px solid rgba(0,0,0,0.1)", fontSize: "12px" }}
                   />
                   <Area type="monotone" dataKey="amount" stroke="#29B9AA" strokeWidth={2.5} fillOpacity={1} fill="url(#colorAmount)" />
                 </AreaChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex h-full items-center justify-center text-xs text-[#7B6E67]">Belum ada data transaksi bulan ini.</div>
+              <div className="flex h-full items-center justify-center text-xs text-[#7B6E67]">{t("home.noTransactionsThisMonth", "Belum ada data transaksi bulan ini.")}</div>
             )}
           </div>
         </div>
@@ -99,7 +106,7 @@ export default function AnalyticsDashboard({
         <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2">
             <PieIcon className="h-4 w-4 text-[#FF6B58]" />
-            <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38]">Porsi Pengeluaran Kategori</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38]">{t("home.categorySpendingShare", "Porsi Pengeluaran Kategori")}</h3>
           </div>
           <div className="mt-4 flex h-64 flex-col justify-center sm:flex-row items-center">
             {categoryBreakdown.length > 0 ? (
@@ -138,7 +145,7 @@ export default function AnalyticsDashboard({
                 </div>
               </>
             ) : (
-              <div className="flex h-full items-center justify-center text-xs text-[#7B6E67]">Belum ada pengeluaran kategori.</div>
+              <div className="flex h-full items-center justify-center text-xs text-[#7B6E67]">{t("home.noCategorySpending", "Belum ada pengeluaran kategori.")}</div>
             )}
           </div>
         </div>
@@ -149,7 +156,7 @@ export default function AnalyticsDashboard({
         
         {/* Top spending categories detailed progress lists */}
         <div className="md:col-span-2 rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
-          <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38] mb-4">Pengeluaran Terbesar</h3>
+          <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38] mb-4">{t("home.topSpendingCategories", "Pengeluaran Terbesar")}</h3>
           <div className="space-y-4">
             {categoryBreakdown.slice(0, 5).map((cat, i) => {
               const total = categoryBreakdown.reduce((sum, c) => sum + c.amount, 0);
@@ -189,17 +196,22 @@ export default function AnalyticsDashboard({
         <div className="rounded-2xl border border-black/10 bg-gradient-to-br from-[#FEF9F4] to-[#F3EDE8] p-6 shadow-inner">
           <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38] mb-3 flex items-center gap-1.5">
             <Sparkles className="h-4 w-4 text-[#29B9AA]" />
-            <span>Insight Pintar</span>
+            <span>{t("home.smartInsights", "Insight Pintar")}</span>
           </h3>
           <div className="space-y-3 text-xs leading-relaxed text-[#7B6E67]">
             <p>
-              <strong>💡 QRIS Burn Rate:</strong> 
+              <strong>{t("home.qrisBurnRateTitle", "💡 QRIS Burn Rate:")}</strong>{" "}
               {categoryBreakdown.length > 0 
-                ? `Pengeluaran paling deras berasal dari kategori ${categoryBreakdown[0]?.name || "Utama"}. Pertimbangkan membatasi pemakaian saldo e-wallet untuk QRIS agar pengeluaran terkontrol.`
-                : "Pola transaksi e-wallet belum dapat dianalisis. Lakukan import data transaksi terlebih dahulu."}
+                ? t("home.qrisBurnRateText", "Pengeluaran paling deras berasal dari kategori {category}. Pertimbangkan membatasi pemakaian saldo e-wallet untuk QRIS agar pengeluaran terkontrol.")
+                    .replace("{category}", categoryBreakdown[0]?.name || "Utama")
+                : t("home.qrisBurnRateEmpty", "Pola transaksi e-wallet belum dapat dianalisis. Lakukan import data transaksi terlebih dahulu.")}
             </p>
             <p>
-              <strong>📈 Rata-rata spending harian:</strong> Rp {dailyAverage?.toLocaleString("id-ID")} per hari. Jika konsisten di bawah Rp {safeToSpend?.safeToSpendPerDay ? Math.round(safeToSpend.safeToSpendPerDay).toLocaleString("id-ID") : "10.000"}, kamu berpotensi menabung sebesar Rp {Math.max(0, Math.round((safeToSpend?.safeToSpendPerDay || 0) * 30 - (dailyAverage * 30))).toLocaleString("id-ID")} bulan ini!
+              <strong>{t("home.avgSpendingTitle", "📈 Rata-rata spending harian:")}</strong>{" "}
+              Rp {dailyAverage?.toLocaleString("id-ID")}{" "}
+              {t("home.avgSpendingText", "per hari. Jika konsisten di bawah Rp {limit}, kamu berpotensi menabung sebesar Rp {savings} bulan ini!")
+                .replace("{limit}", safeToSpend?.safeToSpendPerDay ? Math.round(safeToSpend.safeToSpendPerDay).toLocaleString("id-ID") : "10.000")
+                .replace("{savings}", Math.max(0, Math.round((safeToSpend?.safeToSpendPerDay || 0) * 30 - (dailyAverage * 30))).toLocaleString("id-ID"))}
             </p>
           </div>
         </div>

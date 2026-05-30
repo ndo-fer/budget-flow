@@ -11,30 +11,28 @@ import {
   User,
   LogOut,
   X,
-  AlertCircle
+  AlertCircle,
+  Flame,
+  Coins,
+  Snowflake
 } from "lucide-react";
 import { toast } from "../utils/toast";
 import type { TabId } from "../types/models";
 import { useAuth } from "../contexts/AuthContext";
 import { useOnboarding } from "../contexts/OnboardingContext";
-import { LocalNotifications } from "@capacitor/local-notifications";
 import HomeScreen from "../features/home/HomeScreen";
 import WalletsScreen from "../features/wallets/WalletsScreen";
 import BudgetScreen from "../features/budget/BudgetScreen";
 import HistoryScreen from "../features/history/HistoryScreen";
 import SettingsScreen from "../features/settings/SettingsScreen";
-import { registerPlugin, Capacitor } from "@capacitor/core";
-import { parseNotification, getAppFriendlyName } from "../services/notificationParserService";
-import { addWalletTransaction } from "../services/walletTransactionService";
-import { getWallets, adjustWalletBalance, getWalletStatus, updateConfirmedBalance } from "../services/walletService";
+import { Capacitor } from "@capacitor/core";
+import { getWallets, adjustWalletBalance, getWalletStatus } from "../services/walletService";
+import { useNativeIntegration, processPendingNotifications } from "../hooks/useNativeIntegration";
 import ExpenseModal from "../components/modals/ExpenseModal";
 import IncomeTransactionModal from "../components/modals/IncomeTransactionModal";
 import RecordActionSheet from "../components/modals/RecordActionSheet";
 import BalanceGapModal from "../components/modals/BalanceGapModal";
 import { getUserSetupStatus, type UserSetupStatus } from "../services/guidanceService";
-
-const NotificationReceiver = registerPlugin<any>("NotificationReceiver");
-const WidgetData = registerPlugin<any>("WidgetData");
 
 const NAV_ITEMS: Array<{ id: TabId; label: string; icon: any }> = [
   { id: "home", label: "Beranda", icon: LayoutDashboard },
@@ -62,172 +60,51 @@ const resolveTabFromPath = (pathname: string): TabId | null => {
   return (match?.[0] as TabId | undefined) || null;
 };
 
-export const processPendingNotifications = async () => {
-  if (!Capacitor.isNativePlatform()) return;
 
-  try {
-    const access = await NotificationReceiver.checkNotificationAccess();
-    if (!access.enabled) return;
 
-    const res = await NotificationReceiver.getPendingNotifications();
-    const notifications = res.notifications || [];
-    if (notifications.length === 0) return;
-
-    console.log(`[NotificationReceiver] Processing ${notifications.length} pending notifications.`);
-    
-    // Wait for Supabase/wallets to load (retry loop to handle initialization timing)
-    let wallets = [];
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        wallets = await getWallets();
-        if (wallets && wallets.length > 0) {
-          break;
-        }
-      } catch (e) {
-        console.warn(`[NotificationReceiver] Wallet fetch attempt ${attempt + 1} failed, retrying...`, e);
-      }
-      await new Promise(resolve => setTimeout(resolve, 800));
-    }
-
-    for (const notif of notifications) {
-      // Check allowlist
-      const allowlistJson = localStorage.getItem("bf_notification_allowlist");
-      if (allowlistJson) {
-        const allowlist = JSON.parse(allowlistJson);
-        if (allowlist[notif.packageName] === false) {
-          continue;
-        }
-      }
-
-      const parsed = parseNotification(notif.text, notif.packageName);
-      if (!parsed) {
-        console.warn(`[NotificationReceiver] Gagal mem-parsing teks notifikasi dari package: ${notif.packageName} (panjang teks: ${notif.text ? notif.text.length : 0})`);
-        continue;
-      }
-
-      let walletId = undefined;
-      let walletName = getAppFriendlyName(notif.packageName);
-
-      if (parsed.walletCandidate) {
-        const matched = wallets.find(w => 
-          w.name.toLowerCase().includes(parsed.walletCandidate!.toLowerCase()) ||
-          parsed.walletCandidate!.toLowerCase().includes(w.name.toLowerCase())
-        );
-        if (matched) {
-          walletId = matched.id;
-          walletName = matched.name;
-        }
-      }
-
-      const actionTxt = parsed.direction === "out" ? "berkurang" : "masuk";
-      const formattedAmount = `Rp${parsed.amount.toLocaleString("id-ID")}`;
-      const summaryNote = `Saldo ${walletName} ${actionTxt} ${formattedAmount}`;
-
-      await addWalletTransaction({
-        wallet_id: walletId,
-        amount: parsed.amount,
-        direction: parsed.direction,
-        merchant: parsed.merchant || "Notifikasi Otomatis",
-        note: summaryNote,
-        source: "notification",
-        confidence: parsed.confidence,
-        raw_text: `${notif.packageName}|${notif.text}`,
-        occurred_at: new Date(notif.timestamp).toISOString()
-      });
-
-      // 🔄 Auto-sync gap reconciliation (Recommendation Only)
-      if (walletId && parsed.remainingBalance !== undefined) {
-        // Update only the confirmed balance to the actual balance parsed from notification.
-        // This preserves the gap (estimated_balance - confirmed_balance) as a recommendation
-        // for the user to optionally resolve, instead of forcing a transaction immediately.
-        await updateConfirmedBalance(walletId, parsed.remainingBalance);
-      }
-
-      toast.success(
-        `Catat otomatis: Rp ${parsed.amount.toLocaleString("id-ID")} (${parsed.walletCandidate || "Dompet"})`
-      );
-    }
-
-    if (notifications.length > 0) {
-      window.dispatchEvent(new CustomEvent("wallet-transaction-added"));
-    }
-  } catch (err) {
-    console.error("[NotificationReceiver] Error parsing queued notifications:", err);
-  }
-};
-
-export const processPendingWidgetTransactions = async () => {
-  if (!Capacitor.isNativePlatform()) return;
-
-  try {
-    const res = await WidgetData.getPendingWidgetTransactions();
-    const transactions = res.transactions || [];
-    if (transactions.length === 0) return;
-
-    console.log(`[WidgetData] Processing ${transactions.length} pending widget transactions.`);
-    
-    // Wait for Supabase/wallets to load (retry loop to handle initialization timing)
-    let wallets = [];
-    for (let attempt = 0; attempt < 5; attempt++) {
-      try {
-        wallets = await getWallets();
-        if (wallets && wallets.length > 0) {
-          break;
-        }
-      } catch (e) {
-        console.warn(`[WidgetData] Wallet fetch attempt ${attempt + 1} failed, retrying...`, e);
-      }
-      await new Promise(resolve => setTimeout(resolve, 800));
-    }
-
-    const defaultWallet = wallets && wallets.length > 0 ? wallets[0] : null;
-    const successfulTimestamps: number[] = [];
-
-    for (const tx of transactions) {
-      const formattedAmount = `Rp${tx.amount.toLocaleString("id-ID")}`;
-      const note = `Catat cepat dari widget: ${formattedAmount}`;
-
-      try {
-        await addWalletTransaction({
-          wallet_id: defaultWallet ? defaultWallet.id : undefined,
-          amount: tx.amount,
-          direction: "out",
-          merchant: "Widget Cepat",
-          note: note,
-          source: "manual",
-          confidence: 1.0,
-          raw_text: `widget|${tx.amount}`,
-          occurred_at: new Date(tx.timestamp).toISOString()
-        });
-
-        toast.success(
-          `Catat otomatis dari widget: Rp ${tx.amount.toLocaleString("id-ID")}`
-        );
-        successfulTimestamps.push(tx.timestamp);
-      } catch (txErr: any) {
-        console.error(`[WidgetData] Failed to record widget transaction for amount ${tx.amount}:`, txErr);
-        toast.error(txErr);
-      }
-    }
-
-    // Clear only successfully synced transactions from native memory
-    if (successfulTimestamps.length > 0) {
-      await WidgetData.clearPendingWidgetTransactions({ resolvedTimestamps: successfulTimestamps });
-      window.dispatchEvent(new CustomEvent("wallet-transaction-added"));
-    }
-  } catch (err: any) {
-    console.error("[WidgetData] Error parsing queued widget transactions:", err);
-    toast.error(err);
-  }
-};
+import { useLanguage } from "../contexts/LanguageContext";
 
 export default function AppShell() {
   const { user, signOut } = useAuth();
+  const { t, lang } = useLanguage();
   const { openOnboarding } = useOnboarding();
   const [activeTab, setActiveTab] = useState<TabId>(() => {
     if (typeof window === "undefined") return "home";
     return resolveTabFromPath(window.location.pathname) || "home";
   });
+
+  const [gamification, setGamification] = useState<any>(null);
+
+  const streakStatus = useMemo(() => {
+    if (!gamification) return { isActive: false, isFrozen: false };
+    const todayStr = new Date().toISOString().split("T")[0];
+    const isActive = gamification.last_streak_date === todayStr;
+    const isFrozen = !isActive && gamification.streak_freezes > 0;
+    return { isActive, isFrozen };
+  }, [gamification]);
+
+  const loadGamification = () => {
+    import("../services/gamificationService").then(({ getUserGamification }) => {
+      getUserGamification().then((data) => setGamification(data)).catch(() => {});
+    });
+  };
+
+  useEffect(() => {
+    if (user) {
+      loadGamification();
+    } else {
+      setGamification(null);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    window.addEventListener("gamification-updated", loadGamification);
+    window.addEventListener("wallet-transaction-added", loadGamification);
+    return () => {
+      window.removeEventListener("gamification-updated", loadGamification);
+      window.removeEventListener("wallet-transaction-added", loadGamification);
+    };
+  }, []);
   const [searchParams, setSearchParams] = useState(() => {
     if (typeof window === "undefined") return "";
     return window.location.search;
@@ -258,6 +135,12 @@ export default function AppShell() {
     getWallets().then(setWallets).catch(err => console.warn("Failed to load wallets for warning banner:", err));
   };
 
+  useNativeIntegration({
+    navigateToTab,
+    setIsExpenseModalOpen,
+    wallets,
+  });
+
   useEffect(() => {
     if (!user) return;
     const fetchStatus = () => {
@@ -273,89 +156,7 @@ export default function AppShell() {
     };
   }, [user]);
 
-  const walletWarnings = useMemo(() => {
-    return []; // Disabled for now to focus on Safe-to-Spend notifications
-  }, []);
 
-  // Listen to native system local notification clicks
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    let listener: any;
-    try {
-      listener = LocalNotifications.addListener(
-        "localNotificationActionPerformed",
-        (action: any) => {
-          console.log("[Notification] Native action performed:", action);
-          // Open target screen based on notification action payload
-          if (action.notification.id === 42001 || action.notification.extra?.action === "open_history") {
-            navigateToTab("history");
-            return;
-          }
-
-          // Legacy sticky wallet warning behavior
-          if (action.notification.id === 10101 || action.notification.extra?.action === "open_wallets") {
-            navigateToTab("wallets");
-          }
-        }
-      );
-    } catch (e) {
-      console.warn("[Notification] Action listener registry failed:", e);
-    }
-
-    return () => {
-      if (listener) {
-        listener.remove();
-      }
-    };
-  }, []);
-
-  // Synchronize persistent/ongoing native system notification
-  useEffect(() => {
-    if (!Capacitor.isNativePlatform()) return;
-
-    const syncSystemNotification = async () => {
-      try {
-        const redWarnings = walletWarnings.filter(w => w.status.isRed);
-        if (redWarnings.length > 0) {
-          // Check/Request permissions first
-          const perm = await LocalNotifications.checkPermissions();
-          if (perm.display !== "granted") {
-            const req = await LocalNotifications.requestPermissions();
-            if (req.display !== "granted") return;
-          }
-
-          // Build description for red wallets
-          const walletNames = redWarnings.map(w => w.wallet.name).join(", ");
-          const bodyText = `Penyesuaian saldo diperlukan untuk: ${walletNames}. Ketuk untuk menyelaraskan.`;
-
-          await LocalNotifications.schedule({
-            notifications: [
-              {
-                id: 10101,
-                title: "Budget Flow: Penyesuaian Saldo",
-                body: bodyText,
-                ongoing: true, // Native Android sticky notification (cannot be swiped away)
-                schedule: { at: new Date() },
-                extra: { action: "open_wallets" }
-              }
-            ]
-          });
-          console.log("[Notification] Sticky warning notification scheduled for:", walletNames);
-        } else {
-          // If no red wallets, dismiss the sticky notification
-          await LocalNotifications.cancel({
-            notifications: [{ id: 10101 }]
-          });
-          console.log("[Notification] Sticky warning notification cancelled (no red wallets).");
-        }
-      } catch (err) {
-        console.warn("[Notification] Failed to sync persistent notification:", err);
-      }
-    };
-
-    syncSystemNotification();
-  }, [walletWarnings]);
 
   const navigateToTab = (tab: TabId, options?: { replace?: boolean; search?: string }) => {
     setActiveTab(tab);
@@ -374,27 +175,35 @@ export default function AppShell() {
   };
 
   const activeTabLabel = useMemo(() => {
-    if (activeTab === "settings") return "Pengaturan";
+    if (activeTab === "settings") return t("settings.title", "Pengaturan");
     const found = NAV_ITEMS.find((item) => item.id === activeTab);
-    return found ? found.label : "Beranda";
-  }, [activeTab]);
+    if (!found) return t("common.home", "Beranda");
+    if (found.id === "budget") return t("common.plan", found.label);
+    if (found.id === "wallets") return t("common.wallet", found.label);
+    return t("common." + found.id, found.label);
+  }, [activeTab, t]);
 
   const clearSearchParams = () => {
     setSearchParams("");
   };
 
   useEffect(() => {
-    const syncTab = () => {
-      const tab = resolveTabFromPath(window.location.pathname);
-      if (tab) {
-        setActiveTab(tab);
-      }
+    const syncFromLocation = () => {
+      const nextTab = resolveTabFromPath(window.location.pathname) || "home";
+      setActiveTab(nextTab);
+      setSearchParams(window.location.search);
     };
-    window.addEventListener("popstate", syncTab);
-    window.addEventListener("bf-pathname-changed", syncTab);
+
+    if (!resolveTabFromPath(window.location.pathname)) {
+      window.history.replaceState({}, "", TAB_PATHS.home);
+    }
+
+    syncFromLocation();
+    window.addEventListener("popstate", syncFromLocation);
+    window.addEventListener("bf-pathname-changed", syncFromLocation);
     return () => {
-      window.removeEventListener("popstate", syncTab);
-      window.removeEventListener("bf-pathname-changed", syncTab);
+      window.removeEventListener("popstate", syncFromLocation);
+      window.removeEventListener("bf-pathname-changed", syncFromLocation);
     };
   }, []);
 
@@ -428,56 +237,6 @@ export default function AppShell() {
     return () => window.removeEventListener("bf-close-modals", handleCloseAll);
   }, []);
 
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    // Listen to deep links from Android Widget quick actions
-    const setupDeepLinks = async () => {
-      try {
-        const { App: CapApp } = await import("@capacitor/app");
-        CapApp.addListener("appUrlOpen", (event) => {
-          const urlStr = event.url;
-          if (urlStr.includes("add-expense")) {
-            setIsExpenseModalOpen(true);
-          } else if (urlStr.includes("ledger")) {
-            navigateToTab("history");
-          } else if (urlStr.includes("wallets")) {
-            navigateToTab("wallets");
-          }
-        });
-
-        // Pull notifications on start
-        processPendingNotifications();
-        processPendingWidgetTransactions();
-
-        // Pull notifications when returning to foreground
-        CapApp.addListener("appStateChange", ({ isActive }) => {
-          if (isActive) {
-            processPendingNotifications();
-            processPendingWidgetTransactions();
-          }
-        });
-      } catch (err) {
-        console.warn("Failed to listen to native app events:", err);
-      }
-    };
-
-    setupDeepLinks();
-
-    const syncFromLocation = () => {
-      const nextTab = resolveTabFromPath(window.location.pathname) || "home";
-      setActiveTab(nextTab);
-      setSearchParams(window.location.search);
-    };
-
-    if (!resolveTabFromPath(window.location.pathname)) {
-      window.history.replaceState({}, "", TAB_PATHS.home);
-    }
-
-    syncFromLocation();
-    window.addEventListener("popstate", syncFromLocation);
-    return () => window.removeEventListener("popstate", syncFromLocation);
-  }, []);
 
   const renderScreen = () => {
     if (activeTab === "home") return <HomeScreen onNavigateTab={navigateToTab} activeTab={activeTab} searchParams={searchParams} clearSearchParams={clearSearchParams} />;
@@ -504,9 +263,58 @@ export default function AppShell() {
     <div className="flex min-h-screen bg-[#FEF9F4]">
       {/* Sidebar for Desktop */}
       <aside className="sticky top-0 hidden h-screen w-64 flex-col border-r border-black/10 bg-white lg:flex">
-        <div className="border-b border-black/5 px-4 py-5">
+        <div className="border-b border-black/5 px-4 py-5 flex items-center justify-between">
           <img src="/logo-horizontal.png" alt="Budget Flow Logo" className="h-16 w-auto object-contain" />
         </div>
+
+        {/* Gamification widgets for Desktop */}
+        {gamification && (
+          <div className="px-4 py-3 border-b border-black/5 flex items-center justify-around gap-2 bg-[#FEF9F4]/40">
+            <button
+              onClick={() => navigateToTab("settings")}
+              className={`flex-grow flex items-center gap-2 border rounded-xl py-1.5 px-2.5 transition-all hover:shadow-sm ${
+                streakStatus.isActive
+                  ? "bg-orange-50 hover:bg-orange-100 border-orange-200/60"
+                  : streakStatus.isFrozen
+                    ? "bg-sky-50 hover:bg-sky-100 border-sky-200/60"
+                    : "bg-white hover:bg-[#FEF9F4] border-black/5"
+              }`}
+              title={streakStatus.isFrozen ? "Streak Frozen (Protected) ❄️" : "Daily Streak 🔥"}
+            >
+              {streakStatus.isFrozen ? (
+                <Snowflake className="w-4 h-4 shrink-0 text-sky-500 fill-sky-100 animate-pulse" />
+              ) : (
+                <Flame 
+                  className={`w-4 h-4 shrink-0 ${
+                    streakStatus.isActive 
+                      ? "text-orange-500 fill-orange-400 animate-bounce" 
+                      : "text-[#7B6E67]"
+                  }`} 
+                />
+              )}
+              <div className="text-left leading-none min-w-0">
+                <p className={`text-[8px] font-bold uppercase tracking-wider ${
+                  streakStatus.isActive ? "text-orange-600" : streakStatus.isFrozen ? "text-sky-600" : "text-[#7B6E67]"
+                }`}>Streak</p>
+                <p className={`text-xs font-extrabold mt-0.5 truncate ${
+                  streakStatus.isActive ? "text-orange-700" : streakStatus.isFrozen ? "text-sky-700" : "text-[#1A2B38]"
+                }`}>{gamification.current_streak} {lang === "id" ? "Hari" : "Days"}</p>
+              </div>
+            </button>
+
+            <button
+              onClick={() => navigateToTab("settings")}
+              className="flex-grow flex items-center gap-2 bg-amber-50/50 hover:bg-amber-100 border border-amber-200/60 rounded-xl py-1.5 px-2.5 transition-all hover:shadow-sm"
+              title="Coins"
+            >
+              <Coins className="w-4 h-4 text-yellow-500 fill-yellow-100 shrink-0" />
+              <div className="text-left leading-none min-w-0">
+                <p className="text-[8px] font-bold text-amber-600 uppercase tracking-wider">Koin</p>
+                <p className="text-xs font-extrabold text-amber-700 mt-0.5 truncate">{gamification.coins}</p>
+              </div>
+            </button>
+          </div>
+        )}
 
         {/* Unified "Catat Baru" FAB for Desktop */}
         <div className="px-4 py-4">
@@ -516,7 +324,7 @@ export default function AppShell() {
             className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#29B9AA] to-[#209F92] px-4 py-3 text-sm font-bold text-white shadow-md shadow-teal-500/10 hover:brightness-95 active:scale-[0.98] transition-all"
           >
             <Plus className="h-4.5 w-4.5 stroke-[2.5]" />
-            Catat Baru
+            {t("common.add", "Catat Baru")}
           </button>
         </div>
 
@@ -524,6 +332,7 @@ export default function AppShell() {
           {NAV_ITEMS.map((item) => {
             const Icon = item.icon;
             const isActive = activeTab === item.id || (item.id === "home" && activeTab === "analytics");
+            const label = item.id === "budget" ? t("common.plan", item.label) : item.id === "wallets" ? t("common.wallet", item.label) : t("common." + item.id, item.label);
             return (
               <button
                 key={item.id}
@@ -536,7 +345,7 @@ export default function AppShell() {
                 }`}
               >
                 <Icon className="h-4 w-4" />
-                {item.label}
+                {label}
               </button>
             );
           })}
@@ -554,25 +363,15 @@ export default function AppShell() {
                 className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-[#1A2B38] hover:bg-[#FEF9F4] transition-colors"
               >
                 <Settings className="h-4 w-4 text-[#7B6E67] flex-shrink-0" />
-                <span>Pengaturan</span>
+                <span>{t("settings.title", "Pengaturan")}</span>
               </button>
-              <button
-                onClick={() => {
-                  setShowProfileMenu(false);
-                  window.history.pushState({}, "", "/design-preview");
-                  window.dispatchEvent(new PopStateEvent("popstate"));
-                }}
-                className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-[#1c6cff] hover:bg-[#f0f7ff] transition-colors"
-              >
-                <LineChart className="h-4 w-4 flex-shrink-0" />
-                <span>Design Preview</span>
-              </button>
+
               <button 
                 onClick={handleLogout} 
                 className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-[#FF6B58] hover:bg-red-50 transition-colors"
               >
                 <LogOut className="h-4 w-4 flex-shrink-0" />
-                <span>Logout</span>
+                <span>{t("common.logout", "Logout")}</span>
               </button>
             </div>
           ) : null}
@@ -585,7 +384,7 @@ export default function AppShell() {
             </div>
             <div className="min-w-0 flex-1 text-left">
               <p className="truncate text-sm font-semibold text-[#1A2B38]">{user?.email}</p>
-              <p className="text-xs text-[#7B6E67]">Akun & Pengaturan</p>
+              <p className="text-xs text-[#7B6E67]">{t("common.account", "Akun & Pengaturan")}</p>
             </div>
             <ChevronDown className={`h-4 w-4 shrink-0 text-[#7B6E67] transition-transform ${showProfileMenu ? "rotate-180" : ""}`} />
           </button>
@@ -602,6 +401,47 @@ export default function AppShell() {
               <p className="mt-1 truncate text-xs font-semibold text-[#1A2B38] leading-none">{activeTabLabel}</p>
             </div>
           </button>
+
+          {gamification && (
+            <div className="flex items-center gap-1.5 shrink-0">
+              {/* Streak Indicator */}
+              <button
+                onClick={() => navigateToTab("settings")}
+                className={`flex items-center gap-1 border rounded-full px-2.5 py-1 transition-colors ${
+                  streakStatus.isActive
+                    ? "bg-orange-50 hover:bg-orange-100 border-orange-200/50 text-orange-700"
+                    : streakStatus.isFrozen
+                      ? "bg-sky-50 hover:bg-sky-100 border-sky-200/50 text-sky-700"
+                      : "bg-[#FEF9F4] hover:bg-[#F3EDE8] border-black/5 text-[#1A2B38]"
+                }`}
+                title={streakStatus.isFrozen ? "Streak Frozen (Protected) ❄️" : "Daily Streak 🔥"}
+              >
+                {streakStatus.isFrozen ? (
+                  <Snowflake className="w-3.5 h-3.5 text-sky-500 fill-sky-100 animate-pulse" />
+                ) : (
+                  <Flame 
+                    className={`w-3.5 h-3.5 ${
+                      streakStatus.isActive 
+                        ? "text-orange-500 fill-orange-500 animate-bounce" 
+                        : "text-[#7B6E67]"
+                    }`} 
+                  />
+                )}
+                <span className="text-xs font-bold">{gamification.current_streak}</span>
+              </button>
+
+              {/* Coin Indicator */}
+              <button
+                onClick={() => navigateToTab("settings")}
+                className="flex items-center gap-1 bg-amber-50/50 hover:bg-amber-100 border border-amber-200/50 rounded-full px-2.5 py-1 transition-colors text-amber-700"
+                title="Coins"
+              >
+                <Coins className="w-3.5 h-3.5 text-yellow-500 fill-yellow-100" />
+                <span className="text-xs font-bold">{gamification.coins}</span>
+              </button>
+            </div>
+          )}
+
           <button
             onClick={() => navigateToTab("settings")}
             className="relative inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-tr from-[#29B9AA] to-[#5BAEE8] text-sm font-extrabold text-white shadow-md active:scale-95 transition-transform"
@@ -732,7 +572,7 @@ export default function AppShell() {
               }`}
             >
               <LayoutDashboard className="mb-1 h-4.5 w-4.5" />
-              <span className="leading-none">Beranda</span>
+              <span className="leading-none">{t("common.home", "Beranda")}</span>
             </button>
 
             {/* Slot 2: Rencana */}
@@ -744,7 +584,7 @@ export default function AppShell() {
               }`}
             >
               <BarChart3 className="mb-1 h-4.5 w-4.5" />
-              <span className="leading-none">Rencana</span>
+              <span className="leading-none">{t("common.plan", "Rencana")}</span>
             </button>
 
             {/* Slot 3: Central Catat Hub Button */}
@@ -753,16 +593,16 @@ export default function AppShell() {
                 data-tour-id="nav-record"
                 onClick={() => setIsRecordSheetOpen(true)}
                 className="absolute -top-7.5 flex h-12 w-12 items-center justify-center rounded-full bg-[#29B9AA] text-white border-2 border-white shadow-sm active:scale-[0.98] transition-all"
-                aria-label="Catat Baru"
+                aria-label={t("common.add", "Catat Baru")}
               >
                 <Plus className="h-6 w-6 stroke-[3]" />
                 {setupStatus && !setupStatus.has_expense_transaction && (
                   <span className="absolute -top-1.5 -right-1.5 flex h-5 px-1.5 min-w-[20px] items-center justify-center rounded-full bg-[#FF6B58] text-[9px] font-black text-white border border-white">
-                    Mulai
+                    {t("common.back", "Mulai")}
                   </span>
                 )}
               </button>
-              <span className="leading-none text-[#29B9AA] uppercase tracking-wider mt-4">Catat</span>
+              <span className="leading-none text-[#29B9AA] uppercase tracking-wider mt-4">{t("common.record", "Catat")}</span>
             </div>
 
             {/* Slot 4: Riwayat */}
@@ -774,7 +614,7 @@ export default function AppShell() {
               }`}
             >
               <Clock className="mb-1 h-4.5 w-4.5" />
-              <span className="leading-none">Riwayat</span>
+              <span className="leading-none">{t("common.history", "Riwayat")}</span>
             </button>
 
             {/* Slot 5: Dompet */}
@@ -786,7 +626,7 @@ export default function AppShell() {
               }`}
             >
               <Wallet className="mb-1 h-4.5 w-4.5" />
-              <span className="leading-none">Dompet</span>
+              <span className="leading-none">{t("common.wallet", "Dompet")}</span>
             </button>
           </div>
         </div>

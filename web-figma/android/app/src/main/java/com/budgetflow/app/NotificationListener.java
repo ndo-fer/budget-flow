@@ -35,7 +35,15 @@ public class NotificationListener extends NotificationListenerService {
         "com.bri.brimo",
         "id.co.mandiri.mobile", // Livin Classic
         "id.co.mandiri.livin", // Livin New
-        "com.bni.mobilebanking"
+        "com.bni.mobilebanking",
+        // SMS Clients
+        "com.google.android.apps.messaging",
+        "com.samsung.android.messaging",
+        "com.android.mms",
+        // Email Clients
+        "com.google.android.gm",
+        "com.microsoft.office.outlook",
+        "com.samsung.android.email.provider"
     ));
 
     @Override

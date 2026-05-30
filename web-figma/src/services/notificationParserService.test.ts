@@ -77,6 +77,8 @@ describe("notificationParserService", () => {
     it("returns friendly names for known package IDs", () => {
       expect(getAppFriendlyName("com.gojek.app")).toBe("GoPay");
       expect(getAppFriendlyName("id.co.mandiri.livin")).toBe("Livin Mandiri");
+      expect(getAppFriendlyName("com.google.android.gm")).toBe("Gmail");
+      expect(getAppFriendlyName("com.google.android.apps.messaging")).toBe("SMS");
     });
 
     it("returns raw package name if not found in lookup mapping", () => {

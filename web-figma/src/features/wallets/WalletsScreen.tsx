@@ -29,7 +29,7 @@ import IncomeTransactionModal from "../../components/modals/IncomeTransactionMod
 import BalanceGapModal from "../../components/modals/BalanceGapModal";
 import FirstRunGuide from "../../components/FirstRunGuide";
 import EmptyState from "../../components/EmptyState";
-
+import { useLanguage } from "../../contexts/LanguageContext";
 
 const walletTypeIcon = {
   bank: Building2,
@@ -45,6 +45,7 @@ interface WalletsScreenProps {
 }
 
 export default function WalletsScreen({ activeTab, searchParams, clearSearchParams }: WalletsScreenProps) {
+  const { t, lang } = useLanguage();
   const [wallets, setWallets] = useState<Wallet[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -108,7 +109,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
       setWallets(ws.filter((w) => w.is_active));
     } catch (err) {
       console.error("Error fetching wallets:", err);
-      toast.error("Gagal memuat daftar dompet.");
+      toast.error(lang === "id" ? "Gagal memuat daftar dompet." : "Failed to load wallets.");
     } finally {
       if (!silent) setIsLoading(false);
     }
@@ -128,7 +129,9 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
 
   const handleCreateWallet = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newWalletName.trim()) return toast.error("Nama dompet wajib diisi.");
+    if (!newWalletName.trim()) {
+      return toast.error(lang === "id" ? "Nama dompet wajib diisi." : "Wallet name is required.");
+    }
     const balance = parseFloat(newWalletBalance.replace(/[^0-9]/g, "")) || 0;
 
     setIsCreatingWallet(true);
@@ -141,23 +144,17 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
         estimated_balance: balance,
         confidence: 1.0,
       });
-      toast.success("Dompet baru berhasil ditambahkan.");
+      toast.success(lang === "id" ? "Dompet baru berhasil ditambahkan." : "New wallet successfully added.");
       setNewWalletName("");
       setNewWalletProvider("");
       setNewWalletBalance("");
       setShowAddWallet(false);
       fetchWallets();
     } catch (err: any) {
-      toast.error(err.message || "Gagal membuat dompet.");
+      toast.error(err.message || (lang === "id" ? "Gagal membuat dompet." : "Failed to create wallet."));
     } finally {
       setIsCreatingWallet(false);
     }
-  };
-
-  const getConfidenceColor = (score: number) => {
-    if (score >= 0.9) return "bg-emerald-50 text-emerald-600 border-emerald-100";
-    if (score >= 0.7) return "bg-amber-50 text-amber-600 border-amber-100";
-    return "bg-rose-50 text-rose-600 border-rose-100";
   };
 
   if (isLoading) {
@@ -165,7 +162,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
       <div className="flex min-h-screen items-center justify-center bg-[#FEF9F4]">
         <div className="text-center space-y-3">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#29B9AA] border-t-transparent mx-auto"></div>
-          <p className="text-sm font-semibold text-[#7B6E67]">Memuat Daftar Dompet...</p>
+          <p className="text-sm font-semibold text-[#7B6E67]">{t("wallets.loadingWallets")}</p>
         </div>
       </div>
     );
@@ -176,8 +173,8 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
       
       <FirstRunGuide
         guideKey="wallet"
-        title="Kelola Dompet Keuangan Anda"
-        description="Di menu Dompet ini, Anda bisa melacak uang tunai, rekening bank, maupun e-wallet. Aplikasi membagi saldo Anda menjadi Saldo Terkonfirmasi (angka terakhir yang pasti) dan Saldo Estimasi (akumulasi pengeluaran setelah konfirmasi terakhir)."
+        title={t("wallets.firstRunWalletTitle")}
+        description={t("wallets.firstRunWalletDesc")}
       />
 
       {/* Header with ingestion actions */}
@@ -185,10 +182,10 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
         <div>
           <div className="flex items-center gap-2">
             <CreditCard className="h-4 w-4 text-[#29B9AA] flex-shrink-0" />
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">Keuangan</p>
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">{t("common.wallet")}</p>
           </div>
-          <h1 className="mt-2 text-3xl font-bold text-[#1A2B38]">Daftar Dompet</h1>
-          <p className="mt-1.5 text-xs text-[#7B6E67]">Kelola saldo terkonfirmasi vs estimasi dengan ingest otomatis.</p>
+          <h1 className="mt-2 text-3xl font-bold text-[#1A2B38]">{t("wallets.title")}</h1>
+          <p className="mt-1.5 text-xs text-[#7B6E67]">{t("wallets.subtitle")}</p>
         </div>
 
         {/* Quick Actions */}
@@ -201,7 +198,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
             className="flex items-center gap-1.5 rounded-2xl border border-black/5 bg-[#FEF9F4] px-4 py-2.5 text-xs font-bold text-[#1A2B38] hover:bg-[#F3EDE8] transition-colors"
           >
             <Smartphone className="h-4 w-4 text-[#29B9AA]" />
-            Screenshot Saldo
+            {t("home.actionScreenshotBalanceTitle")}
           </button>
           
           <button
@@ -209,7 +206,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
             className="flex items-center gap-1.5 rounded-2xl bg-[#29B9AA] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#229A8E] transition-colors shadow-md shadow-teal-500/10"
           >
             <Plus className="h-4 w-4" />
-            Tambah Dompet
+            {t("wallets.addWallet")}
           </button>
         </div>
       </div>
@@ -221,10 +218,10 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
         <div className="md:col-span-2 space-y-4">
           {wallets.length === 0 ? (
             <EmptyState
-              title="Belum Ada Dompet Terdaftar"
-              description="Tambahkan dompet, e-wallet, atau cash/tunai untuk mulai mengelola keuangan secara estimasi."
+              title={lang === "id" ? "Belum Ada Dompet Terdaftar" : "No Wallets Registered"}
+              description={lang === "id" ? "Tambahkan dompet, e-wallet, atau cash/tunai untuk mulai mengelola keuangan secara estimasi." : "Add bank accounts, digital wallets, or cash to start tracking your balances."}
               icon={CreditCard}
-              actionText="Tambah Dompet Pertama"
+              actionText={t("wallets.addWallet")}
               onAction={() => setShowAddWallet(true)}
               actionIcon={Plus}
             />
@@ -252,7 +249,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                   {/* Confidence score badge */}
                   <div className="absolute right-6 top-6 flex items-center gap-1.5 rounded-xl border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-white/80">
                     <Shield className={`w-3 h-3 flex-shrink-0 ${status.isRed ? "text-red-500" : status.isYellow ? "text-amber-500" : "text-[#29B9AA]"}`} />
-                    <span className="text-[#1A2B38]">Confidence: {Math.round(status.dynamicConfidence * 100)}%</span>
+                    <span className="text-[#1A2B38]">{lang === "id" ? "Keyakinan" : "Confidence"}: {Math.round(status.dynamicConfidence * 100)}%</span>
                   </div>
 
                   <div>
@@ -277,7 +274,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                       <div>
                         <div className="flex items-center gap-1 text-[#7B6E67]">
                           <Lock className="w-3.5 h-3.5 text-[#7B6E67] flex-shrink-0" />
-                          <p className="text-[10px] font-bold uppercase tracking-wider">Saldo Terkonfirmasi</p>
+                          <p className="text-[10px] font-bold uppercase tracking-wider">{t("wallets.confirmedBalance")}</p>
                         </div>
                         <p className="mt-1 text-lg font-bold text-[#7B6E67]">
                           Rp {wallet.confirmed_balance?.toLocaleString("id-ID")}
@@ -286,7 +283,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                       <div>
                         <div className="flex items-center gap-1 text-[#29B9AA]">
                           <Sparkles className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
-                          <p className="text-[10px] font-bold uppercase tracking-wider">Saldo Estimasi</p>
+                          <p className="text-[10px] font-bold uppercase tracking-wider">{t("wallets.estimatedBalance")}</p>
                         </div>
                         <p className="mt-1 text-xl font-black text-[#1A2B38]">
                           Rp {wallet.estimated_balance?.toLocaleString("id-ID")}
@@ -299,7 +296,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                     <div className="flex items-center justify-between">
                       <span className="text-[10px] text-[#7B6E67] font-semibold flex items-center gap-1">
                         <Clock className="w-3 h-3 text-[#7B6E67]" />
-                        Last confirmed: {wallet.last_confirmed_at ? new Date(wallet.last_confirmed_at).toLocaleDateString("id-ID", { day: "numeric", month: "long" }) : "Belum pernah"}
+                        {lang === "id" ? "Terakhir konfirmasi" : "Last confirmed"}: {wallet.last_confirmed_at ? new Date(wallet.last_confirmed_at).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", { day: "numeric", month: "long" }) : t("wallets.labelNeverConfirmed")}
                       </span>
                       
                       <div className="flex items-center gap-1.5">
@@ -314,7 +311,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                           }`}
                         >
                           <AlertCircle className={`h-2.5 w-2.5 ${status.isRed ? "text-red-600" : status.isYellow ? "text-amber-600" : "text-gray-500"}`} />
-                          Analisis Gap
+                          {t("wallets.btnGapAnalysis")}
                         </button>
                         <button
                           onClick={() => {
@@ -324,7 +321,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                           className="flex items-center gap-1.5 rounded-lg bg-[#FEF9F4] border border-[#29B9AA]/20 hover:border-[#29B9AA]/50 hover:bg-[#EBF7F6] px-2.5 py-1 text-[10px] font-bold text-[#29B9AA] transition-all active:scale-[0.96]"
                         >
                           <RefreshCw className="h-2.5 w-2.5 text-[#29B9AA]" />
-                          Koreksi Saldo
+                          {t("wallets.btnAdjustBalance")}
                         </button>
                       </div>
                     </div>
@@ -340,7 +337,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
           {showAddWallet ? (
             <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38]">Tambah Dompet</h3>
+                <h3 className="text-sm font-bold uppercase tracking-wider text-[#1A2B38]">{t("wallets.addWallet")}</h3>
                 <button 
                   onClick={() => setShowAddWallet(false)}
                   className="rounded-full p-1.5 hover:bg-[#FEF9F4] text-[#7B6E67]"
@@ -351,11 +348,11 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
 
               <form onSubmit={handleCreateWallet} className="space-y-3">
                 <div>
-                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Nama Dompet</label>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">{t("wallets.formWalletName")}</label>
                   <input
                     type="text"
                     required
-                    placeholder="BCA Sakuku, GoPay, dll."
+                    placeholder={t("wallets.formWalletNamePlaceholder")}
                     className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
                     value={newWalletName}
                     onChange={(e) => setNewWalletName(e.target.value)}
@@ -363,24 +360,24 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Tipe Dompet</label>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">{t("wallets.walletType")}</label>
                   <select
                     className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-3 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
                     value={newWalletType}
                     onChange={(e: any) => setNewWalletType(e.target.value)}
                   >
-                    <option value="bank">Rekening Bank</option>
-                    <option value="ewallet">Dompet Digital (E-Wallet)</option>
-                    <option value="cash">Cash / Tunai</option>
-                    <option value="other">Lainnya</option>
+                    <option value="bank">{t("wallets.walletTypeBank")}</option>
+                    <option value="ewallet">{t("wallets.walletTypeEWallet")}</option>
+                    <option value="cash">{t("wallets.walletTypeCash")}</option>
+                    <option value="other">{t("wallets.walletTypeOther")}</option>
                   </select>
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Provider (Opsional)</label>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">{t("wallets.formProvider")}</label>
                   <input
                     type="text"
-                    placeholder="BCA, Mandiri, GoPay, OVO"
+                    placeholder={t("wallets.formProviderPlaceholder")}
                     className="w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-2.5 text-xs font-semibold text-[#1A2B38] outline-none"
                     value={newWalletProvider}
                     onChange={(e) => setNewWalletProvider(e.target.value)}
@@ -388,7 +385,7 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Saldo Awal (Rp)</label>
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">{t("wallets.formInitialBalance")}</label>
                   <input
                     type="text"
                     placeholder="0"
@@ -407,11 +404,11 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
                   className="w-full rounded-2xl bg-[#29B9AA] py-3 text-xs font-bold text-white disabled:opacity-50 flex items-center justify-center gap-1.5"
                 >
                   {isCreatingWallet ? (
-                    "Menyimpan..."
+                    t("wallets.btnSaving")
                   ) : (
                     <>
                       <PlusCircle className="w-4 h-4" />
-                      Tambah Dompet
+                      {t("wallets.addWallet")}
                     </>
                   )}
                 </button>
@@ -423,8 +420,8 @@ export default function WalletsScreen({ activeTab, searchParams, clearSearchPara
               className="flex w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed border-black/10 bg-[#FEF9F4]/40 hover:bg-[#FEF9F4] px-6 py-12 text-center"
             >
               <Plus className="h-6 w-6 text-[#29B9AA]" />
-              <span className="text-xs font-bold text-[#1A2B38]">Registrasi Wallet Baru</span>
-              <span className="text-[10px] text-[#7B6E67]">Tambahkan bank atau e-wallet baru yang kamu miliki</span>
+              <span className="text-xs font-bold text-[#1A2B38]">{t("wallets.btnRegisterNew")}</span>
+              <span className="text-[10px] text-[#7B6E67]">{t("wallets.descRegisterNew")}</span>
             </button>
           )}
         </div>

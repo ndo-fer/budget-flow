@@ -18,8 +18,13 @@ import {
   BookOpen,
   Layers,
   Settings,
-  LogOut
+  LogOut,
+  Globe,
+  Flame,
+  Coins,
+  Snowflake
 } from "lucide-react";
+import { useLanguage } from "../../contexts/LanguageContext";
 import { useAuth } from "../../contexts/AuthContext";
 import { useOnboarding } from "../../contexts/OnboardingContext";
 import supabase from "../../lib/supabase";
@@ -48,11 +53,53 @@ export default function SettingsScreen({
   onOpenTutorial: () => void;
 }) {
   const { user, signOut } = useAuth();
+  const { lang, setLang, t } = useLanguage();
   const { showChecklist } = useOnboarding();
   const { resetTour } = useSpotlightTour();
   const [notifPermission, setNotifPermission] = useState<NotificationPermission | "unsupported">("default");
   const [isEnablingNotif, setIsEnablingNotif] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
+  const [gamification, setGamification] = useState<any>(null);
+
+  const loadStats = () => {
+    import("../../services/gamificationService").then(({ getUserGamification }) => {
+      getUserGamification().then((data) => setGamification(data)).catch(() => {});
+    });
+  };
+
+  useEffect(() => {
+    loadStats();
+    window.addEventListener("gamification-updated", loadStats);
+    window.addEventListener("wallet-transaction-added", loadStats);
+    return () => {
+      window.removeEventListener("gamification-updated", loadStats);
+      window.removeEventListener("wallet-transaction-added", loadStats);
+    };
+  }, []);
+
+  const handleBuyFreeze = async () => {
+    if (!gamification) return;
+    if (gamification.coins < 25) {
+      toast.warning(
+        lang === "id" 
+          ? "🪙 Koin Tidak Cukup! Kamu butuh 25 koin untuk membeli Streak Freeze. Kumpulkan koin dengan mencatat transaksi harian di bawah budget!"
+          : "🪙 Not Enough Coins! You need 25 coins to buy a Streak Freeze. Earn coins by logging daily transactions under your budget limit!",
+        {
+          duration: 6000,
+        }
+      );
+      return;
+    }
+    try {
+      const { buyStreakFreeze } = await import("../../services/gamificationService");
+      const updated = await buyStreakFreeze();
+      setGamification(updated);
+      toast.success(lang === "id" ? "Berhasil membeli 1 Streak Freeze! ❄️" : "Successfully purchased 1 Streak Freeze! ❄️");
+      window.dispatchEvent(new CustomEvent("gamification-updated"));
+    } catch (err: any) {
+      toast.error(err.message || "Gagal membeli Streak Freeze.");
+    }
+  };
 
   // Android Notification access state
   const [androidNotifEnabled, setAndroidNotifEnabled] = useState<boolean | null>(null);
@@ -258,63 +305,193 @@ export default function SettingsScreen({
         <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
           <div className="flex items-center gap-2">
             <Settings className="w-4 h-4 text-[#29B9AA] flex-shrink-0" />
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">Pengaturan</p>
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">{t("settings.title", "Pengaturan")}</p>
           </div>
-          <h1 className="mt-3 text-3xl font-bold text-[#1A2B38]">Biar app ini terasa makin pas dengan ritmemu.</h1>
+          <h1 className="mt-3 text-3xl font-bold text-[#1A2B38]">{t("settings.subtitle", "Biar app ini terasa makin pas dengan ritmemu.")}</h1>
           <p className="mt-3 text-sm text-[#7B6E67] flex items-center gap-1">
             <Sparkles className="w-3.5 h-3.5 text-[#FFB347]" />
-            <span>Atur preferensi akun, izin notifikasi, dan kelola ekspor data Anda di sini.</span>
+            <span>{t("settings.description", "Atur preferensi akun, izin notifikasi, dan kelola ekspor data Anda di sini.")}</span>
           </p>
+        </div>
+
+        {/* Gamification & Rewards Panel */}
+        <div className="rounded-3xl border border-black/10 bg-white p-6 shadow-md relative overflow-hidden transition-all duration-300 hover:shadow-lg">
+          {/* Sleek top indicator */}
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-orange-500 via-yellow-500 to-sky-400" />
+          
+          <div className="flex flex-col lg:flex-row lg:items-stretch justify-between gap-6">
+            {/* Left: Stats */}
+            <div className="flex-1 flex flex-col justify-between space-y-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-orange-100 text-orange-500 shadow-sm">
+                    <Flame className="w-5 h-5 animate-pulse" />
+                  </div>
+                  <div>
+                    <h2 className="text-base font-extrabold text-[#1A2B38]">{lang === "id" ? "Sistem Gamifikasi & Hadiah" : "Gamification & Rewards"}</h2>
+                    <p className="text-[11px] text-[#7B6E67]">{lang === "id" ? "Rutin mencatat & hemat budget untuk mengumpulkan koin" : "Log daily & spend smart to earn coins"}</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                {/* Streak Card */}
+                <div className="group rounded-2xl bg-gradient-to-br from-orange-50/40 via-white to-white p-4 border border-black/5 hover:border-orange-300 hover:shadow-md hover:shadow-orange-500/5 transition-all duration-300 relative overflow-hidden">
+                  <div className="absolute right-0 top-0 translate-x-2 -translate-y-2 text-2xl opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-300">🔥</div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-[#7B6E67]">{lang === "id" ? "Streak Harian" : "Daily Streak"}</p>
+                  <p className="mt-2.5 text-3xl font-black text-[#1A2B38] flex items-baseline gap-1">
+                    <span>{gamification?.current_streak || 0}</span>
+                    <span className="text-xs font-semibold text-[#7B6E67] lowercase">{lang === "id" ? "hari" : "days"}</span>
+                  </p>
+                  <div className="mt-2.5 inline-flex items-center gap-1 rounded-md bg-orange-100/50 px-2 py-0.5 text-[9px] font-bold text-orange-600">
+                    <span>🔥 {lang === "id" ? "Rekor" : "Best"}: {gamification?.longest_streak || 0} {lang === "id" ? "hari" : "days"}</span>
+                  </div>
+                </div>
+
+                {/* Coin Card */}
+                <div className="group rounded-2xl bg-gradient-to-br from-amber-50/40 via-white to-white p-4 border border-black/5 hover:border-amber-300 hover:shadow-md hover:shadow-amber-500/5 transition-all duration-300 relative overflow-hidden">
+                  <div className="absolute right-0 top-0 translate-x-2 -translate-y-2 text-2xl opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-300">🪙</div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-[#7B6E67]">{lang === "id" ? "Tabungan Koin" : "Coin Balance"}</p>
+                  <p className="mt-2.5 text-3xl font-black text-[#1A2B38] flex items-baseline gap-1.5">
+                    <span>{gamification?.coins || 0}</span>
+                    <span className="text-sm">🪙</span>
+                  </p>
+                  <p className="text-[10px] text-[#7B6E67] font-semibold mt-3.5">{lang === "id" ? "Siap ditukar Freeze" : "Ready to redeem"}</p>
+                </div>
+
+                {/* Freeze Card */}
+                <div className="group rounded-2xl bg-gradient-to-br from-sky-50/40 via-white to-white p-4 border border-black/5 hover:border-sky-300 hover:shadow-md hover:shadow-sky-500/5 transition-all duration-300 relative overflow-hidden">
+                  <div className="absolute right-0 top-0 translate-x-2 -translate-y-2 text-2xl opacity-10 group-hover:opacity-20 group-hover:scale-110 transition-all duration-300">❄️</div>
+                  <p className="text-[10px] font-black uppercase tracking-wider text-[#7B6E67]">{lang === "id" ? "Streak Freeze" : "Streak Freeze"}</p>
+                  <p className="mt-2.5 text-3xl font-black text-[#1A2B38] flex items-baseline gap-1.5">
+                    <span>{gamification?.streak_freezes || 0}</span>
+                    <span className="text-sm">❄️</span>
+                  </p>
+                  <div className="mt-2.5 inline-flex items-center gap-1 rounded-md bg-sky-100/50 px-2 py-0.5 text-[9px] font-bold text-sky-600">
+                    <span>❄️ {lang === "id" ? "Aktif otomatis" : "Auto active"}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right: Shop */}
+            <div className="w-full lg:w-80 bg-gradient-to-br from-[#FEF9F4]/70 to-[#FEF9F4] border border-black/5 rounded-2xl p-5 flex flex-col justify-between shadow-inner relative overflow-hidden">
+              <div className="absolute -right-8 -bottom-8 h-20 w-20 rounded-full bg-sky-200/20 blur-xl pointer-events-none" />
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-sky-100 text-sky-500 shadow-sm">
+                    <Snowflake className="w-4 h-4 text-sky-500" />
+                  </div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-[#1A2B38]">
+                    {lang === "id" ? "Toko Penyelamat" : "Protection Shop"}
+                  </h3>
+                </div>
+                <p className="text-[11px] text-[#7B6E67] mt-3 leading-relaxed">
+                  {lang === "id" 
+                    ? "Beli Streak Freeze untuk mengamankan streak Anda jika suatu hari lupa mencatat transaksi."
+                    : "Buy Streak Freeze to secure your streak if you forget to record transactions."}
+                </p>
+              </div>
+              <div className="mt-5">
+                <button
+                  onClick={handleBuyFreeze}
+                  className="w-full rounded-xl bg-gradient-to-r from-[#29B9AA] to-[#229A8E] hover:from-[#229A8E] hover:to-[#1C8277] active:scale-[0.98] text-white font-extrabold py-3 px-4 text-xs text-center transition-all shadow-md shadow-teal-500/10 cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <span>{lang === "id" ? "Beli 1 Freeze" : "Buy 1 Freeze"}</span>
+                  <span className="bg-white/20 px-2 py-0.5 rounded text-[10px] font-black">25 🪙</span>
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
           <div className="space-y-5">
             <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Akun</p>
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">{t("settings.accountSection", "Akun")}</p>
               <div className="mt-4 space-y-3">
                 <div className="rounded-2xl bg-[#FEF9F4] px-4 py-4 flex items-center gap-3">
                   <User className="w-5 h-5 text-[#29B9AA] flex-shrink-0" />
                   <div>
                     <p className="text-sm font-semibold text-[#1A2B38]">{user?.email || "Unknown user"}</p>
-                    <p className="text-xs text-[#7B6E67]">Akun Budget Flow</p>
+                    <p className="text-xs text-[#7B6E67]">{t("settings.accountDesc", "Akun Budget Flow")}</p>
                   </div>
                 </div>
                 <button onClick={handleOpenPasswordModal} className="flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left hover:bg-[#F3EDE8] transition-colors">
                   <div className="flex items-start gap-3">
                     <Lock className="w-5 h-5 text-[#7B6E67] flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-[#1A2B38]">Ganti Password</p>
-                      <p className="mt-1 text-xs text-[#7B6E67]">Ubah password Anda untuk keamanan tambahan.</p>
+                      <p className="text-sm font-semibold text-[#1A2B38]">{t("settings.changePassword", "Ganti Password")}</p>
+                      <p className="mt-1 text-xs text-[#7B6E67]">{t("settings.changePasswordDesc", "Ubah password Anda untuk keamanan tambahan.")}</p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-[#29B9AA] shrink-0">Buka</span>
+                  <span className="text-xs font-bold text-[#29B9AA] shrink-0">{t("settings.changePasswordButton", "Buka")}</span>
                 </button>
                 <button onClick={() => setShowLogoutModal(true)} className="flex w-full items-center justify-between rounded-2xl bg-red-50 px-4 py-4 text-left hover:bg-red-100 transition-colors">
                   <div className="flex items-start gap-3">
                     <LogOut className="w-5 h-5 text-[#FF6B58] flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-[#FF6B58]">Logout</p>
-                      <p className="mt-1 text-xs text-[#7B6E67]">Keluar dari akun ini kapan saja.</p>
+                      <p className="text-sm font-semibold text-[#FF6B58]">{t("common.logout", "Logout")}</p>
+                      <p className="mt-1 text-xs text-[#7B6E67]">{t("settings.logoutDesc", "Keluar dari akun ini kapan saja.")}</p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-[#FF6B58] shrink-0">Keluar</span>
+                  <span className="text-xs font-bold text-[#FF6B58] shrink-0">{t("settings.logoutButton", "Keluar")}</span>
                 </button>
                 <button onClick={() => setShowDeleteAccountModal(true)} className="flex w-full items-center justify-between rounded-2xl bg-red-50/50 border border-red-200/60 px-4 py-4 text-left hover:bg-red-100 transition-colors">
                   <div className="flex items-start gap-3">
                     <Trash2 className="w-5 h-5 text-[#FF6B58] flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-[#FF6B58]">Hapus Akun</p>
-                      <p className="mt-1 text-xs text-[#7B6E67]">Hapus permanen seluruh data dan akun Anda dari database.</p>
+                      <p className="text-sm font-semibold text-[#FF6B58]">{t("settings.deleteAccount", "Hapus Akun")}</p>
+                      <p className="mt-1 text-xs text-[#7B6E67]">{t("settings.deleteAccountDesc", "Hapus permanen seluruh data dan akun Anda dari database.")}</p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-[#FF6B58] shrink-0">Hapus</span>
+                  <span className="text-xs font-bold text-[#FF6B58] shrink-0">{t("settings.deleteAccountButton", "Hapus")}</span>
                 </button>
               </div>
             </div>
 
+
+
             <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Preferensi</p>
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">{t("settings.preferencesSection", "Preferensi")}</p>
               <div className="mt-4 space-y-3">
+                {/* Language preference */}
+                <div className="rounded-2xl bg-[#FEF9F4] px-4 py-4">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3">
+                      <div className="mt-0.5 flex h-8 w-8 items-center justify-center rounded-full bg-[#29B9AA]/20 text-[#29B9AA]">
+                        <Globe className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-[#1A2B38]">{t("settings.language", "Bahasa Aplikasi")}</p>
+                        <p className="mt-1 text-xs text-[#7B6E67]">{t("settings.languageDesc", "Ganti bahasa antarmuka aplikasi.")}</p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1 rounded-xl bg-black/5 p-1">
+                      <button
+                        onClick={() => setLang("id")}
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all ${
+                          lang === "id"
+                            ? "bg-white text-[#1A2B38] shadow-sm"
+                            : "text-[#7B6E67] hover:text-[#1A2B38]"
+                        }`}
+                      >
+                        ID
+                      </button>
+                      <button
+                        onClick={() => setLang("en")}
+                        className={`rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all ${
+                          lang === "en"
+                            ? "bg-white text-[#1A2B38] shadow-sm"
+                            : "text-[#7B6E67] hover:text-[#1A2B38]"
+                        }`}
+                      >
+                        EN
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
                 {/* Notification permission */}
                 <div className={`rounded-2xl px-4 py-4 ${
                   notifPermission === "granted" ? "bg-[#EBF7F6]" :
@@ -329,12 +506,12 @@ export default function SettingsScreen({
                         {notifPermission === "granted" ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-[#1A2B38]">Notifikasi Browser</p>
+                        <p className="text-sm font-semibold text-[#1A2B38]">{t("settings.browserNotifications", "Notifikasi Browser")}</p>
                         <p className="mt-1 text-xs text-[#7B6E67]">
-                          {notifPermission === "granted" && "Aktif – kamu akan dapat reminder budget & jatuh tempo."}
-                          {notifPermission === "denied" && "Diblokir – aktifkan di pengaturan browser (klik 🔒 di address bar)."}
-                          {notifPermission === "default" && "Izinkan agar dapat pengingat budget & recurring expense."}
-                          {notifPermission === "unsupported" && "Browser ini tidak mendukung notifikasi."}
+                          {notifPermission === "granted" && t("settings.browserNotificationsActive", "Aktif – kamu akan dapat reminder budget & jatuh tempo.")}
+                          {notifPermission === "denied" && t("settings.browserNotificationsBlocked", "Diblokir – aktifkan di pengaturan browser (klik 🔒 di address bar).")}
+                          {notifPermission === "default" && t("settings.browserNotificationsDefault", "Izinkan agar dapat pengingat budget & recurring expense.")}
+                          {notifPermission === "unsupported" && t("settings.browserNotificationsUnsupported", "Browser ini tidak mendukung notifikasi.")}
                         </p>
                       </div>
                     </div>
@@ -345,7 +522,7 @@ export default function SettingsScreen({
                         disabled={isEnablingNotif || notifPermission === "denied"}
                         className="shrink-0 rounded-full bg-[#29B9AA] px-4 py-2 text-xs font-semibold text-white disabled:opacity-50"
                       >
-                        {isEnablingNotif ? "..." : "Aktifkan"}
+                        {isEnablingNotif ? "..." : t("settings.browserNotificationsBtn", "Aktifkan")}
                       </button>
                     )}
                   </div>
@@ -364,11 +541,11 @@ export default function SettingsScreen({
                           <ShieldCheck className="h-4 w-4" />
                         </div>
                         <div>
-                          <p className="text-sm font-semibold text-[#1A2B38]">Pemantauan Transaksi Android</p>
+                          <p className="text-sm font-semibold text-[#1A2B38]">{t("settings.androidTracking", "Pemantauan Transaksi Android")}</p>
                           <p className="mt-1 text-xs text-[#7B6E67]">
                             {androidNotifEnabled 
-                              ? "Akses aktif – transaksi otomatis dipantau di background dari notifikasi/email."
-                              : "Akses dinonaktifkan – aktifkan agar app bisa mencatat otomatis dari GoPay, SeaBank, dan email Gmail."}
+                              ? t("settings.androidTrackingActive", "Akses aktif – transaksi otomatis dipantau di background dari notifikasi/email.")
+                              : t("settings.androidTrackingInactive", "Akses dinonaktifkan – aktifkan agar app bisa mencatat otomatis dari GoPay, SeaBank, dan email Gmail.")}
                           </p>
                         </div>
                       </div>
@@ -376,7 +553,7 @@ export default function SettingsScreen({
                         onClick={handleOpenAndroidNotifSettings}
                         className="shrink-0 rounded-full bg-[#29B9AA] px-4 py-2 text-xs font-semibold text-white"
                       >
-                        {androidNotifEnabled ? "Atur" : "Aktifkan"}
+                        {androidNotifEnabled ? t("settings.androidTrackingBtnActive", "Atur") : t("settings.androidTrackingBtnInactive", "Aktifkan")}
                       </button>
                     </div>
                   </div>
@@ -391,7 +568,7 @@ export default function SettingsScreen({
                           notifications: [
                             {
                               id: 99999,
-                              title: "🚨 Test Notifikasi Budget Flow",
+                              title: `🚨 ${t("settings.testNotification", "Test Kirim Notifikasi")}`,
                               body: "Jika Anda melihat notifikasi ini, maka perizinan dan saluran notifikasi Anda sudah berjalan dengan baik!",
                               channelId: "budget-flow-alerts",
                               schedule: { at: new Date(Date.now() + 2000) }
@@ -408,11 +585,11 @@ export default function SettingsScreen({
                     <div className="flex items-start gap-3">
                       <Bell className="w-5 h-5 text-[#29B9AA] flex-shrink-0 mt-0.5" />
                       <div>
-                        <p className="text-sm font-semibold text-[#1A2B38]">Test Kirim Notifikasi</p>
-                        <p className="mt-1 text-xs text-[#7B6E67]">Ketuk untuk menguji apakah notifikasi push sistem berfungsi.</p>
+                        <p className="text-sm font-semibold text-[#1A2B38]">{t("settings.testNotification", "Test Kirim Notifikasi")}</p>
+                        <p className="mt-1 text-xs text-[#7B6E67]">{t("settings.testNotificationDesc", "Ketuk untuk menguji apakah notifikasi push sistem berfungsi.")}</p>
                       </div>
                     </div>
-                    <span className="text-xs font-bold text-[#29B9AA] shrink-0">Tes</span>
+                    <span className="text-xs font-bold text-[#29B9AA] shrink-0">{t("settings.testNotificationBtn", "Tes")}</span>
                   </button>
                 )}
 
@@ -426,19 +603,19 @@ export default function SettingsScreen({
                   <div className="flex items-start gap-3">
                     <Layers className="w-5 h-5 text-indigo-400 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold">Design Preview (V2)</p>
-                      <p className="mt-1 text-xs text-white/70">Coba antarmuka baru dengan tema Dark Hybrid modern.</p>
+                      <p className="text-sm font-semibold">{t("settings.designPreview", "Design Preview (V2)")}</p>
+                      <p className="mt-1 text-xs text-white/70">{t("settings.designPreviewDesc", "Coba antarmuka baru dengan tema Dark Hybrid modern.")}</p>
                     </div>
                   </div>
-                  <span className="text-xs font-bold text-indigo-400 shrink-0">Buka V2</span>
+                  <span className="text-xs font-bold text-indigo-400 shrink-0">{t("settings.designPreviewBtn", "Buka V2")}</span>
                 </button>
 
                 <button onClick={handleOpenTutorial} className="flex w-full items-center justify-between rounded-2xl bg-[#29B9AA] px-4 py-4 text-left text-white shadow-sm">
                   <div>
-                    <p className="text-sm font-semibold">Lihat Tutorial Lagi</p>
-                    <p className="mt-1 text-xs text-white/80">Buka onboarding lagi dan munculkan starter checklist.</p>
+                    <p className="text-sm font-semibold">{t("settings.viewTutorial", "Lihat Tutorial Lagi")}</p>
+                    <p className="mt-1 text-xs text-white/80">{t("settings.viewTutorialDesc", "Buka onboarding lagi dan munculkan starter checklist.")}</p>
                   </div>
-                  <span className="text-xs font-bold text-white">Buka</span>
+                  <span className="text-xs font-bold text-white">{t("settings.viewTutorialBtn", "Buka")}</span>
                 </button>
               </div>
             </div>
@@ -451,19 +628,19 @@ export default function SettingsScreen({
                 <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#EBF7F6] text-[#29B9AA]">
                   <ShieldCheck className="h-4 w-4" />
                 </div>
-                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Daftar Izin Aplikasi</p>
+                <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">{t("settings.appPermissions", "Daftar Izin Aplikasi")}</p>
               </div>
               <p className="mt-3 text-xs text-[#7B6E67]">
-                Aplikasi keuangan yang dipantau notifikasinya. OTP dan kode verifikasi selalu difilter otomatis.
+                {t("settings.appPermissionsDesc", "Aplikasi keuangan yang dipantau notifikasinya. OTP dan kode verifikasi selalu difilter otomatis.")}
               </p>
-              <div className="mt-4 space-y-2">
+              <div className="mt-4 max-h-[280px] overflow-y-auto pr-1.5 space-y-2 scrollbar-thin scrollbar-thumb-teal-500">
                 {DEFAULT_ALLOWLIST_APPS.map((app) => {
                   const enabled = allowlist[app.package_name] !== false;
                   return (
                     <button
                       key={app.package_name}
                       onClick={() => toggleAllowlist(app.package_name)}
-                      className="flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-3 text-left"
+                      className="flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-3 text-left hover:bg-[#F3EDE8] transition-colors"
                     >
                       <div>
                         <p className="text-sm font-semibold text-[#1A2B38]">{app.app_name}</p>
@@ -477,29 +654,29 @@ export default function SettingsScreen({
                 })}
               </div>
               <p className="mt-3 text-[10px] text-[#7B6E67]">
-                Aktif saat Budget Flow berjalan sebagai APK Android.
+                {t("settings.appPermissionsFooter", "Aktif saat Budget Flow berjalan sebagai APK Android.")}
               </p>
             </div>
 
             <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Data Keuangan</p>
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">{t("settings.financialData", "Data Keuangan")}</p>
               <button
                 onClick={handleExport}
                 disabled={isExporting}
                 className="mt-4 flex w-full items-center justify-between rounded-2xl bg-[#FEF9F4] px-4 py-4 text-left disabled:opacity-60"
               >
                 <div>
-                  <p className="text-sm font-semibold text-[#1A2B38]">Ekspor Pengeluaran (CSV)</p>
-                  <p className="mt-1 text-xs text-[#7B6E67]">Unduh salinan transaksi untuk dibagikan atau dicek lagi.</p>
+                  <p className="text-sm font-semibold text-[#1A2B38]">{t("settings.exportCSV", "Ekspor Pengeluaran (CSV)")}</p>
+                  <p className="mt-1 text-xs text-[#7B6E67]">{t("settings.exportCSVDesc", "Unduh salinan transaksi untuk dibagikan atau dicek lagi.")}</p>
                 </div>
-                <span className="text-xs font-bold text-[#29B9AA]">{isExporting ? "Memproses..." : "Ekspor"}</span>
+                <span className="text-xs font-bold text-[#29B9AA]">{isExporting ? t("common.loading", "Memproses...") : t("settings.exportCSVBtn", "Ekspor")}</span>
               </button>
             </div>
 
             <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
-              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">Tentang Aplikasi</p>
+              <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#7B6E67]">{t("settings.aboutApp", "Tentang Aplikasi")}</p>
               <div className="mt-4 rounded-2xl bg-[#FEF9F4] px-4 py-4">
-                <p className="text-sm font-semibold text-[#1A2B38]">Versi Aplikasi</p>
+                <p className="text-sm font-semibold text-[#1A2B38]">{t("settings.appVersion", "Versi Aplikasi")}</p>
                 <p className="mt-1 text-xs text-[#7B6E67]">{APP_VERSION}</p>
               </div>
             </div>
@@ -510,8 +687,8 @@ export default function SettingsScreen({
       {/* Change Password Modal */}
       <ModalShell
         open={showPasswordModal}
-        title="Ganti Password"
-        subtitle="Buat password baru yang aman untuk akun Anda"
+        title={t("settings.modalChangePasswordTitle", "Ganti Password")}
+        subtitle={t("settings.modalChangePasswordSub", "Buat password baru yang aman untuk akun Anda")}
         onClose={() => setShowPasswordModal(false)}
         footer={
           <div className="flex justify-end gap-3">
@@ -519,34 +696,34 @@ export default function SettingsScreen({
               onClick={() => setShowPasswordModal(false)}
               className="rounded-2xl border border-black/10 px-5 py-3 text-sm font-semibold text-[#7B6E67]"
             >
-              Batal
+              {t("common.cancel", "Batal")}
             </button>
             <button
               onClick={handleConfirmPasswordChange}
               disabled={isChangingPassword}
               className="rounded-2xl bg-[#29B9AA] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {isChangingPassword ? "Memproses..." : "Ganti Password"}
+              {isChangingPassword ? t("common.loading", "Memproses...") : t("settings.changePassword", "Ganti Password")}
             </button>
           </div>
         }
       >
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-[#7B6E67]">Password Baru</label>
+            <label className="text-xs font-bold uppercase tracking-wider text-[#7B6E67]">{t("settings.modalNewPasswordLabel", "Password Baru")}</label>
             <input
               type="password"
-              placeholder="Minimal 6 karakter"
+              placeholder={t("settings.modalNewPasswordPlaceholder", "Minimal 6 karakter")}
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
               className="mt-2 w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#FF6B58]"
             />
           </div>
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-[#7B6E67]">Konfirmasi Password Baru</label>
+            <label className="text-xs font-bold uppercase tracking-wider text-[#7B6E67]">{t("settings.modalConfirmPasswordLabel", "Konfirmasi Password Baru")}</label>
             <input
               type="password"
-              placeholder="Ulangi password baru"
+              placeholder={t("settings.modalConfirmPasswordPlaceholder", "Ulangi password baru")}
               value={confirmNewPassword}
               onChange={(e) => setConfirmNewPassword(e.target.value)}
               className="mt-2 w-full rounded-2xl border border-black/10 bg-[#FEF9F4] px-4 py-3 text-sm text-[#1A2B38] outline-none focus:border-[#FF6B58]"
@@ -558,7 +735,7 @@ export default function SettingsScreen({
       {/* Logout Confirmation Modal */}
       <ModalShell
         open={showLogoutModal}
-        title="Keluar dari Akun?"
+        title={t("settings.modalLogoutTitle", "Keluar dari Akun?")}
         onClose={() => setShowLogoutModal(false)}
         footer={
           <div className="flex justify-end gap-3">
@@ -566,26 +743,26 @@ export default function SettingsScreen({
               onClick={() => setShowLogoutModal(false)}
               className="rounded-2xl border border-black/10 px-5 py-3 text-sm font-semibold text-[#7B6E67]"
             >
-              Batal
+              {t("common.cancel", "Batal")}
             </button>
             <button
               onClick={handleConfirmLogout}
               className="rounded-2xl bg-[#FF6B58] px-5 py-3 text-sm font-semibold text-white"
             >
-              Keluar Sekarang
+              {t("settings.modalLogoutConfirm", "Keluar Sekarang")}
             </button>
           </div>
         }
       >
         <p className="text-sm text-[#7B6E67] leading-relaxed">
-          Apakah Anda yakin ingin keluar dari akun Anda? Anda harus masuk kembali untuk mengakses data pencatatan transaksi Anda.
+          {t("settings.modalLogoutDesc", "Apakah Anda yakin ingin keluar dari akun Anda? Anda harus masuk kembali untuk mengakses data pencatatan transaksi Anda.")}
         </p>
       </ModalShell>
 
       {/* Delete Account Confirmation Modal */}
       <ModalShell
         open={showDeleteAccountModal}
-        title="Hapus Akun Permanen?"
+        title={t("settings.modalDeleteTitle", "Hapus Akun Permanen?")}
         onClose={() => setShowDeleteAccountModal(false)}
         footer={
           <div className="flex justify-end gap-3">
@@ -594,20 +771,20 @@ export default function SettingsScreen({
               disabled={isDeletingAccount}
               className="rounded-2xl border border-black/10 px-5 py-3 text-sm font-semibold text-[#7B6E67]"
             >
-              Batal
+              {t("common.cancel", "Batal")}
             </button>
             <button
               onClick={handleConfirmDeleteAccount}
               disabled={isDeletingAccount}
               className="rounded-2xl bg-[#FF6B58] px-5 py-3 text-sm font-semibold text-white disabled:opacity-60"
             >
-              {isDeletingAccount ? "Menghapus..." : "Hapus Permanen"}
+              {isDeletingAccount ? t("common.loading", "Menghapus...") : t("settings.modalDeleteConfirm", "Hapus Permanen")}
             </button>
           </div>
         }
       >
         <p className="text-sm text-[#7B6E67] leading-relaxed">
-          Apakah Anda yakin ingin menghapus akun Anda? Seluruh kategori, wallet, transaksi, dan data lainnya akan dihapus secara permanen dari database dan tidak dapat dipulihkan.
+          {t("settings.modalDeleteDesc", "Apakah Anda yakin ingin menghapus akun Anda? Seluruh kategori, wallet, transaksi, dan data lainnya akan dihapus secara permanen dari database dan tidak dapat dipulihkan.")}
         </p>
       </ModalShell>
     </>

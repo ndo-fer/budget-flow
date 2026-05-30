@@ -26,6 +26,7 @@ import { toast } from "../../utils/toast";
 import CategoryModal from "../../components/modals/CategoryModal";
 import IncomeSourceModal from "../../components/modals/IncomeSourceModal";
 import RecurringExpenseModal from "../../components/modals/RecurringExpenseModal";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 import { getBudgetVsActual, getBudgetVsActualSummary, getSpendingRecommendations } from "../../services/comparisonService";
 import { getIncomeSources } from "../../services/incomeService";
@@ -39,16 +40,17 @@ import { formatCompactCurrency, formatCurrency } from "../../utils/format";
 import FirstRunGuide from "../../components/FirstRunGuide";
 import EmptyState from "../../components/EmptyState";
 
-const formatFrequencySubtitle = (freq: string) => {
+const formatFrequencySubtitle = (freq: string, lang: string) => {
   if (!freq) return "";
   const f = freq.toLowerCase().replace("-", "_");
-  if (f === "monthly") return "Pemasukan Bulanan";
-  if (f === "weekly") return "Pemasukan Mingguan";
-  if (f === "one_time" || f === "one-time") return "Pemasukan Sekali (Non-rutin)";
+  if (f === "monthly") return lang === "id" ? "Pemasukan Bulanan" : "Monthly Income";
+  if (f === "weekly") return lang === "id" ? "Pemasukan Mingguan" : "Weekly Income";
+  if (f === "one_time" || f === "one-time") return lang === "id" ? "Pemasukan Sekali (Non-rutin)" : "One-time Income";
   return freq;
 };
 
 export default function BudgetScreen() {
+  const { t, lang } = useLanguage();
   const [month, setMonth] = useState(getCurrentMonth());
   const [activeSubTab, setActiveSubTab] = useState<"categories" | "income" | "recurring">("categories");
 
@@ -91,7 +93,7 @@ export default function BudgetScreen() {
       setRecurringExpenses(recsData);
       setCategories(catsData.filter((c) => c.is_active));
     } catch (err: any) {
-      toast.error(err.message || "Gagal memuat data budget.");
+      toast.error(err.message || (lang === "id" ? "Gagal memuat data budget." : "Failed to load budget data."));
     }
   };
 
@@ -103,30 +105,49 @@ export default function BudgetScreen() {
     setIsSyncing(true);
     try {
       const count = await syncRecurringExpensesForMonth(month);
-      toast.success(`${count} tagihan rutin berhasil diproses.`);
+      toast.success(
+        lang === "id"
+          ? `${count} tagihan rutin berhasil diproses.`
+          : `${count} recurring bills successfully processed.`
+      );
       loadData();
     } catch (err: any) {
-      toast.error(err.message || "Gagal sinkronisasi tagihan rutin.");
+      toast.error(err.message || (lang === "id" ? "Gagal sinkronisasi tagihan rutin." : "Failed to sync recurring bills."));
     } finally {
       setIsSyncing(false);
     }
   };
 
   const handleDeleteRecurring = async (id: string | number) => {
-    if (!window.confirm("Apakah Anda yakin ingin menonaktifkan tagihan rutin ini?")) return;
+    if (
+      !window.confirm(
+        lang === "id"
+          ? "Yakin mau menonaktifkan tagihan rutin ini?"
+          : "Are you sure you want to disable this recurring bill?"
+      )
+    )
+      return;
     try {
       await deleteRecurringExpense(id);
-      toast.success("Tagihan rutin dinonaktifkan.");
+      toast.success(lang === "id" ? "Tagihan rutin dinonaktifkan." : "Recurring bill disabled.");
       loadData();
     } catch (err: any) {
-      toast.error(err.message || "Gagal menonaktifkan.");
+      toast.error(err.message || (lang === "id" ? "Gagal menonaktifkan." : "Failed to disable."));
     }
   };
 
   const handleExportICS = () => {
-    if (recurringExpenses.length === 0) return toast.error("Tidak ada tagihan rutin untuk diexport.");
+    if (recurringExpenses.length === 0) {
+      return toast.error(
+        lang === "id" ? "Tidak ada tagihan rutin untuk diekspor." : "No recurring bills to export."
+      );
+    }
     const count = exportAllRecurringToICS(recurringExpenses);
-    toast.success(`${count} event tagihan diexport ke file .ics`);
+    toast.success(
+      lang === "id"
+        ? `${count} tagihan berhasil diekspor ke file .ics`
+        : `${count} bills exported to .ics file`
+    );
   };
 
   const handleGoogleCalendarUrl = (item: any) => {
@@ -147,10 +168,10 @@ export default function BudgetScreen() {
         <div>
           <div className="flex items-center gap-2">
             <Target className="h-4 w-4 text-[#29B9AA] flex-shrink-0" />
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">Rencana Keuangan</p>
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">{t("budget.headerTag")}</p>
           </div>
-          <h1 className="mt-2 text-3xl font-bold text-[#1A2B38]">Rencana & Kategori</h1>
-          <p className="mt-1.5 text-xs text-[#7B6E67]">Susun alokasi budget belanja, sumber pendapatan, dan tagihan wajib Anda.</p>
+          <h1 className="mt-2 text-3xl font-bold text-[#1A2B38]">{t("budget.title")}</h1>
+          <p className="mt-1.5 text-xs text-[#7B6E67]">{t("budget.subtitle")}</p>
         </div>
 
         <div className="flex w-full rounded-2xl bg-[#F3EDE8] p-1 shadow-inner md:w-auto">
@@ -162,8 +183,8 @@ export default function BudgetScreen() {
             }`}
           >
             <BarChart3 className="w-3.5 h-3.5 shrink-0 hidden sm:inline" />
-            <span className="hidden sm:inline">Anggaran Kategori</span>
-            <span className="inline sm:hidden">Kategori</span>
+            <span className="hidden sm:inline">{t("budget.tabCategory")}</span>
+            <span className="inline sm:hidden">{t("budget.tabCategoryMobile")}</span>
           </button>
           <button
             data-tour-id="plan-income-tab"
@@ -173,8 +194,8 @@ export default function BudgetScreen() {
             }`}
           >
             <TrendingUp className="w-3.5 h-3.5 text-[#29B9AA] shrink-0 hidden sm:inline" />
-            <span className="hidden sm:inline">Sumber Pemasukan</span>
-            <span className="inline sm:hidden">Pemasukan</span>
+            <span className="hidden sm:inline">{t("budget.tabIncome")}</span>
+            <span className="inline sm:hidden">{t("budget.tabIncomeMobile")}</span>
           </button>
           <button
             data-tour-id="plan-recurring-tab"
@@ -184,8 +205,8 @@ export default function BudgetScreen() {
             }`}
           >
             <Clock className="w-3.5 h-3.5 text-[#FFB347] shrink-0 hidden sm:inline" />
-            <span className="hidden sm:inline">Tagihan Rutin</span>
-            <span className="inline sm:hidden">Tagihan</span>
+            <span className="hidden sm:inline">{t("budget.tabRecurring")}</span>
+            <span className="inline sm:hidden">{t("budget.tabRecurringMobile")}</span>
           </button>
         </div>
       </div>
@@ -216,8 +237,8 @@ export default function BudgetScreen() {
         <div className="space-y-6">
           <FirstRunGuide
             guideKey="plan"
-            title="Kelola Anggaran Kategori Belanja"
-            description="Di sini Anda membandingkan alokasi anggaran belanja bulanan dengan total realisasi pengeluaran riil per kategori. Anda juga akan mendapatkan rekomendasi jika terjadi pengeluaran yang tidak sesuai dengan target."
+            title={t("budget.firstRunPlanTitle")}
+            description={t("budget.firstRunPlanDesc")}
           />
 
           {summary ? (
@@ -226,14 +247,14 @@ export default function BudgetScreen() {
                 <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
                   <div className="flex items-center gap-1.5 text-[#7B6E67]">
                     <PiggyBank className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
-                    <p className="text-xs">Total Budget</p>
+                    <p className="text-xs">{t("budget.totalPlanned")}</p>
                   </div>
                   <p className="mt-1.5 text-2xl font-bold text-[#1A2B38]">{formatCompactCurrency(summary.totalBudget)}</p>
                 </div>
                 <div className="rounded-2xl border border-black/10 bg-white p-5 shadow-sm">
                   <div className="flex items-center gap-1.5 text-[#7B6E67]">
                     <ArrowDownCircle className="w-3.5 h-3.5 text-[#FF6B58] flex-shrink-0" />
-                    <p className="text-xs">Total Realisasi</p>
+                    <p className="text-xs">{t("budget.totalSpent")}</p>
                   </div>
                   <p className="mt-1.5 text-2xl font-bold text-[#FF6B58]">{formatCompactCurrency(summary.totalActual)}</p>
                 </div>
@@ -243,7 +264,7 @@ export default function BudgetScreen() {
                   <div>
                     <div className="flex items-center gap-1.5 text-[#7B6E67]">
                       <Target className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
-                      <p className="text-xs font-bold uppercase tracking-[0.28em]">Utilisasi Total</p>
+                      <p className="text-xs font-bold uppercase tracking-[0.28em]">{t("budget.utilization")}</p>
                     </div>
                     <h2 className="mt-2 text-3xl font-bold text-[#1A2B38]">{Math.round(summary.utilizationPercent)}%</h2>
                   </div>
@@ -264,21 +285,21 @@ export default function BudgetScreen() {
                   <div className="rounded-2xl bg-[#FEF9F4] p-4">
                     <div className="flex items-center gap-1 text-[#7B6E67]">
                       <CheckCircle2 className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
-                      <p className="text-xs">Sesuai Rencana</p>
+                      <p className="text-xs">{t("budget.statusOnTrack")}</p>
                     </div>
                     <p className="mt-1 text-lg font-bold text-[#1A2B38]">{summary.onTrackCount}</p>
                   </div>
                   <div className="rounded-2xl bg-[#FEF9F4] p-4">
                     <div className="flex items-center gap-1 text-[#7B6E67]">
                       <TrendingDown className="w-3.5 h-3.5 text-[#29B9AA] flex-shrink-0" />
-                      <p className="text-xs">Di Bawah Budget</p>
+                      <p className="text-xs">{t("budget.statusUnder")}</p>
                     </div>
                     <p className="mt-1 text-lg font-bold text-[#29B9AA]">{summary.underBudgetCount}</p>
                   </div>
                   <div className="rounded-2xl bg-[#FEF9F4] p-4">
                     <div className="flex items-center gap-1 text-[#7B6E67]">
                       <AlertTriangle className="w-3.5 h-3.5 text-[#FF6B58] flex-shrink-0" />
-                      <p className="text-xs">Melebihi Budget</p>
+                      <p className="text-xs">{t("budget.statusOver")}</p>
                     </div>
                     <p className="mt-1 text-lg font-bold text-[#FF6B58]">{summary.overBudgetCount}</p>
                   </div>
@@ -292,7 +313,7 @@ export default function BudgetScreen() {
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-1.5 text-amber-700">
                   <Lightbulb className="w-4 h-4 text-amber-500 flex-shrink-0" />
-                  <p className="text-xs font-bold uppercase tracking-[0.28em]">Rekomendasi</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.28em]">{t("budget.recsTitle")}</p>
                 </div>
                 {recommendations.length > 4 ? (
                   <button
@@ -300,7 +321,7 @@ export default function BudgetScreen() {
                     className="inline-flex items-center gap-1 rounded-full bg-white px-3 py-2 text-xs font-semibold text-amber-700"
                   >
                     {showAllRecommendations ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
-                    {showAllRecommendations ? "Ringkas" : "Lihat semua"}
+                    {showAllRecommendations ? t("budget.recsCollapse") : t("budget.recsExpand")}
                   </button>
                 ) : null}
               </div>
@@ -319,19 +340,23 @@ export default function BudgetScreen() {
               <div>
                 <div className="flex items-center gap-1.5 text-[#7B6E67]">
                   <BarChart3 className="w-4 h-4 text-[#29B9AA] flex-shrink-0" />
-                  <p className="text-xs font-bold uppercase tracking-[0.28em]">Detail Kategori</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.28em]">{t("budget.detailsTitle")}</p>
                 </div>
-                <p className="mt-2 text-sm text-[#7B6E67]">Bandingkan budget alokasi per kategori belanja bulanan Anda.</p>
+                <p className="mt-2 text-sm text-[#7B6E67]">{t("budget.detailsDesc")}</p>
               </div>
-              <p className="text-xs font-semibold text-[#7B6E67]">{comparison.length} kategori aktif</p>
+              <p className="text-xs font-semibold text-[#7B6E67]">
+                {comparison.length === 1
+                  ? (lang === "id" ? "1 kategori aktif" : "1 active category")
+                  : t("budget.activeCategories").replace("{count}", String(comparison.length))}
+              </p>
             </div>
             <div className="mt-4 grid gap-4 xl:grid-cols-2">
               {comparison.length === 0 ? (
                 <EmptyState
-                  title="Belum Ada Kategori Budget"
-                  description="Tambahkan kategori pengeluaran belanja bulanan (makanan, bulanan, hiburan) beserta alokasi anggarannya."
+                  title={t("budget.emptyCategoriesTitle")}
+                  description={t("budget.emptyCategoriesDesc")}
                   icon={BarChart3}
-                  actionText="Tambah Kategori Pertama"
+                  actionText={t("budget.emptyCategoriesBtn")}
                   onAction={() => {
                     setSelectedCategory(null);
                     setShowCategoryModal(true);
@@ -361,12 +386,16 @@ export default function BudgetScreen() {
                                 setShowCategoryModal(true);
                               }}
                               className="rounded-full p-1 text-[#7B6E67] hover:bg-[#F3EDE8] hover:text-[#1A2B38] transition-colors"
-                              title="Edit Budget"
+                              title={lang === "id" ? "Edit Budget" : "Edit Budget"}
                             >
                               <Pencil className="h-3 w-3" />
                             </button>
                           </div>
-                          <p className="mt-1 text-xs text-[#7B6E67] font-medium">{item.transactionCount} transaksi</p>
+                          <p className="mt-1 text-xs text-[#7B6E67] font-medium">
+                            {item.transactionCount === 1
+                              ? (lang === "id" ? "1 transaksi" : "1 transaction")
+                              : t("budget.labelTransactionsCount").replace("{count}", String(item.transactionCount))}
+                          </p>
                         </div>
                         <p className={`text-sm font-bold ${item.status === "over" ? "text-[#FF6B58]" : item.status === "under" ? "text-[#29B9AA]" : "text-[#5BAEE8]"}`}>
                           {Math.round(item.utilization)}%
@@ -383,15 +412,15 @@ export default function BudgetScreen() {
                       </div>
                       <div className="mt-4 grid gap-3 sm:grid-cols-3">
                         <div>
-                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7B6E67]">Anggaran</p>
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7B6E67]">{t("budget.labelBudget")}</p>
                           <p className="mt-1 text-xs font-bold text-[#1A2B38]">{formatCurrency(item.budget)}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7B6E67]">Realisasi</p>
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7B6E67]">{t("budget.labelSpent")}</p>
                           <p className="mt-1 text-xs font-bold text-[#1A2B38]">{formatCurrency(item.actual)}</p>
                         </div>
                         <div>
-                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7B6E67]">{item.variance >= 0 ? "Sisa" : "Lebih"}</p>
+                          <p className="text-[10px] font-extrabold uppercase tracking-wider text-[#7B6E67]">{item.variance >= 0 ? t("budget.labelRemaining") : t("budget.labelOver")}</p>
                           <p className={`mt-1 text-xs font-bold ${item.variance >= 0 ? "text-[#29B9AA]" : "text-[#FF6B58]"}`}>{item.variance >= 0 ? formatCurrency(item.variance) : formatCurrency(Math.abs(item.variance))}</p>
                         </div>
                       </div>
@@ -409,8 +438,8 @@ export default function BudgetScreen() {
         <div className="space-y-6">
           <FirstRunGuide
             guideKey="income"
-            title="Rencana Pemasukan Rutin"
-            description="Di sini Anda dapat merencanakan estimasi pemasukan bulanan, mingguan, atau sekali waktu. Sumber pemasukan ini digunakan untuk menghitung sisa dana belanja aman (Safe-To-Spend) di Beranda secara dinamis."
+            title={t("budget.firstRunIncomeTitle")}
+            description={t("budget.firstRunIncomeDesc")}
           />
 
           <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
@@ -418,9 +447,9 @@ export default function BudgetScreen() {
               <div>
                 <div className="flex items-center gap-1.5 text-[#7B6E67]">
                   <TrendingUp className="w-4 h-4 text-[#29B9AA] flex-shrink-0" />
-                  <p className="text-xs font-bold uppercase tracking-[0.28em]">Sumber Pemasukan</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.28em]">{t("budget.incomeTitle")}</p>
                 </div>
-                <p className="mt-2 text-sm text-[#7B6E67]">Kelola daftar sumber pendapatan bulanan atau mingguan Anda.</p>
+                <p className="mt-2 text-sm text-[#7B6E67]">{t("budget.incomeDesc")}</p>
               </div>
               <button
                 onClick={() => {
@@ -430,16 +459,16 @@ export default function BudgetScreen() {
                 className="rounded-2xl bg-[#29B9AA] hover:bg-[#229A8E] transition-colors px-5 py-3 text-sm font-semibold text-white flex items-center gap-1.5 shadow-sm shadow-teal-500/10 active:scale-[0.98]"
               >
                 <PlusCircle className="w-4 h-4" />
-                Tambah Sumber Pemasukan
+                {t("budget.incomeAddBtn")}
               </button>
             </div>
 
             {incomeSources.length === 0 ? (
               <EmptyState
-                title="Belum Ada Rencana Pemasukan"
-                description="Tambahkan sumber pemasukan bulanan (gaji, bisnis, dll.) untuk menghitung Safe-To-Spend secara akurat."
+                title={t("budget.incomeEmptyTitle")}
+                description={t("budget.incomeEmptyDesc")}
                 icon={TrendingUp}
-                actionText="Tambah Pemasukan Pertama"
+                actionText={t("budget.incomeEmptyBtn")}
                 onAction={() => {
                   setSelectedIncomeSource(null);
                   setShowIncomeSourceModal(true);
@@ -453,7 +482,7 @@ export default function BudgetScreen() {
                   <div key={source.id} className="flex items-center justify-between gap-4 rounded-2xl bg-[#FEF9F4] p-5 border border-black/5 hover:border-black/10 transition-colors">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-[#1A2B38]">{source.source_name}</p>
-                      <p className="mt-1 text-xs text-[#7B6E67] font-medium">{formatFrequencySubtitle(source.frequency)}</p>
+                      <p className="mt-1 text-xs text-[#7B6E67] font-medium">{formatFrequencySubtitle(source.frequency, lang)}</p>
                     </div>
                     <div className="text-right flex flex-col items-end">
                       <p className="text-sm font-bold text-[#29B9AA]">{formatCurrency(source.amount)}</p>
@@ -465,7 +494,7 @@ export default function BudgetScreen() {
                         className="mt-3 inline-flex items-center gap-1 rounded-lg bg-white border border-[#29B9AA]/20 px-2.5 py-1 text-[10px] font-bold text-[#29B9AA] hover:bg-[#EBF7F6] transition-colors"
                       >
                         <Pencil className="h-3 w-3" />
-                        Edit
+                        {t("common.edit")}
                       </button>
                     </div>
                   </div>
@@ -481,8 +510,8 @@ export default function BudgetScreen() {
         <div className="space-y-6">
           <FirstRunGuide
             guideKey="recurring"
-            title="Daftar Tagihan Rutin"
-            description="Di sini Anda dapat melacak tagihan bulanan atau mingguan tetap (seperti sewa kost, langganan internet, listrik). Anda dapat menyinkronkan tagihan ini ke pengeluaran bulanan secara langsung dengan tombol Sinkronisasi."
+            title={t("budget.firstRunRecurringTitle")}
+            description={t("budget.firstRunRecurringDesc")}
           />
 
           <div className="rounded-2xl border border-black/10 bg-white p-6 shadow-sm">
@@ -490,9 +519,13 @@ export default function BudgetScreen() {
               <div>
                 <div className="flex items-center gap-1.5 text-[#7B6E67]">
                   <Clock className="w-4 h-4 text-[#FFB347] flex-shrink-0" />
-                  <p className="text-xs font-bold uppercase tracking-[0.28em]">Tagihan Rutin</p>
+                  <p className="text-xs font-bold uppercase tracking-[0.28em]">{t("budget.recurringTitle")}</p>
                 </div>
-                <p className="mt-2 text-sm text-[#7B6E67]">{recurringExpenses.length} tagihan rutin terdaftar.</p>
+                <p className="mt-2 text-sm text-[#7B6E67]">
+                  {recurringExpenses.length === 1
+                    ? (lang === "id" ? "1 tagihan rutin terdaftar." : "1 recurring bill registered.")
+                    : t("budget.recurringDesc").replace("{count}", String(recurringExpenses.length))}
+                </p>
               </div>
               
               <div className="flex flex-wrap gap-2">
@@ -502,7 +535,7 @@ export default function BudgetScreen() {
                   className="flex items-center gap-1.5 rounded-2xl border border-black/5 bg-[#FEF9F4] px-4 py-2.5 text-xs font-bold text-[#1A2B38] hover:bg-[#F3EDE8] transition-colors active:scale-[0.98]"
                 >
                   <RefreshCw className={`h-3.5 w-3.5 ${isSyncing ? "animate-spin" : ""}`} />
-                  Sinkronisasi
+                  {t("budget.recurringSyncBtn")}
                 </button>
 
                 <button
@@ -510,7 +543,7 @@ export default function BudgetScreen() {
                   className="flex items-center gap-1.5 rounded-2xl border border-black/5 bg-[#FEF9F4] px-4 py-2.5 text-xs font-bold text-[#1A2B38] hover:bg-[#F3EDE8] transition-colors active:scale-[0.98]"
                 >
                   <Download className="h-3.5 w-3.5" />
-                  Export .ics
+                  {t("budget.recurringExportBtn")}
                 </button>
 
                 <button
@@ -521,17 +554,17 @@ export default function BudgetScreen() {
                   className="rounded-2xl bg-[#FF6B58] hover:bg-[#E8503F] transition-colors px-5 py-3 text-sm font-semibold text-white flex items-center gap-1.5 shadow-sm shadow-[#FF6B58]/10 active:scale-[0.98]"
                 >
                   <Plus className="w-4 h-4 stroke-[2.5]" />
-                  Tambah Tagihan
+                  {t("budget.recurringAddBtn")}
                 </button>
               </div>
             </div>
 
             {recurringExpenses.length === 0 ? (
               <EmptyState
-                title="Belum Ada Tagihan Rutin"
-                description="Tambahkan tagihan rutin bulanan (sewa, listrik, wifi) untuk menyederhanakan pelacakan pengeluaran wajib Anda."
+                title={t("budget.recurringEmptyTitle")}
+                description={t("budget.recurringEmptyDesc")}
                 icon={Clock}
-                actionText="Tambah Tagihan Pertama"
+                actionText={t("budget.recurringEmptyBtn")}
                 onAction={() => {
                   setSelectedRecurring(null);
                   setShowRecurringModal(true);
@@ -548,9 +581,11 @@ export default function BudgetScreen() {
                         <Clock className="h-5 w-5" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-[#1A2B38]">{item.budget_categories?.name || "Tagihan"}</p>
+                        <p className="text-sm font-bold text-[#1A2B38]">{item.budget_categories?.name || (lang === "id" ? "Tagihan" : "Bill")}</p>
                         <p className="mt-1 text-xs text-[#7B6E67] font-semibold capitalize leading-relaxed">
-                          Setiap {item.frequency === "monthly" ? `Tanggal ${item.day_of_month}` : item.frequency}
+                          {item.frequency === "monthly"
+                            ? t("budget.recurringEveryDate").replace("{day}", String(item.day_of_month))
+                            : t("budget.recurringEveryFreq").replace("{freq}", item.frequency)}
                         </p>
                         {item.note && <p className="mt-1.5 text-[11px] text-[#7B6E67] italic font-medium leading-relaxed">"{item.note}"</p>}
                       </div>
@@ -561,7 +596,7 @@ export default function BudgetScreen() {
                         <button
                           onClick={() => handleGoogleCalendarUrl(item)}
                           className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-black/5 hover:bg-[#F3EDE8] px-2 py-1 text-[10px] font-bold text-[#7B6E67] transition-all"
-                          title="Add to Google Calendar"
+                          title={lang === "id" ? "Tambah ke Google Calendar" : "Add to Google Calendar"}
                         >
                           <ExternalLink className="h-2.5 w-2.5" />
                           GCal
@@ -574,7 +609,7 @@ export default function BudgetScreen() {
                           className="inline-flex items-center gap-1.5 rounded-lg bg-white border border-[#29B9AA]/20 px-2.5 py-1 text-[10px] font-bold text-[#29B9AA] hover:bg-[#EBF7F6] transition-colors"
                         >
                           <Pencil className="h-3 w-3" />
-                          Edit
+                          {t("common.edit")}
                         </button>
                         <button
                           onClick={() => handleDeleteRecurring(item.id)}

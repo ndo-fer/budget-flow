@@ -6,6 +6,11 @@ export interface TargetMeasurement {
   notFound: boolean;
 }
 
+function isElementVisible(el: Element): boolean {
+  const rect = el.getBoundingClientRect();
+  return rect.width > 0 && rect.height > 0;
+}
+
 export function useSpotlightTarget(
   targetId: string | null,
   fallbackId?: string | null,
@@ -55,11 +60,29 @@ export function useSpotlightTarget(
       };
     };
 
+    // Helper to query element while verifying visibility
+    const findTargetElement = () => {
+      const el = document.querySelector(`[data-tour-id="${targetId}"]`);
+      if (el && isElementVisible(el)) {
+        return el;
+      }
+      if (fallbackId) {
+        const fEl = document.querySelector(`[data-tour-id="${fallbackId}"]`);
+        if (fEl && isElementVisible(fEl)) {
+          return fEl;
+        }
+      }
+      // Last resort fallback (even if invisible) so it doesn't break
+      if (el) return el;
+      if (fallbackId) {
+        const fEl = document.querySelector(`[data-tour-id="${fallbackId}"]`);
+        if (fEl) return fEl;
+      }
+      return null;
+    };
+
     // Try finding immediately
-    let currentEl = document.querySelector(`[data-tour-id="${targetId}"]`);
-    if (!currentEl && fallbackId) {
-      currentEl = document.querySelector(`[data-tour-id="${fallbackId}"]`);
-    }
+    const currentEl = findTargetElement();
 
     if (currentEl) {
       return setupMeasurement(currentEl);
@@ -69,10 +92,7 @@ export function useSpotlightTarget(
     let cleanUpListeners: (() => void) | null = null;
     
     const observer = new MutationObserver(() => {
-      let foundEl = document.querySelector(`[data-tour-id="${targetId}"]`);
-      if (!foundEl && fallbackId) {
-        foundEl = document.querySelector(`[data-tour-id="${fallbackId}"]`);
-      }
+      const foundEl = findTargetElement();
 
       if (foundEl) {
         cleanUpListeners = setupMeasurement(foundEl);
@@ -85,10 +105,7 @@ export function useSpotlightTarget(
     // Polling backup only to mark as not found if it fails to appear after 4 seconds
     const timeoutId = setTimeout(() => {
       observer.disconnect();
-      let finalEl = document.querySelector(`[data-tour-id="${targetId}"]`);
-      if (!finalEl && fallbackId) {
-        finalEl = document.querySelector(`[data-tour-id="${fallbackId}"]`);
-      }
+      const finalEl = findTargetElement();
       if (!finalEl) {
         setMeasurement({ rect: null, element: null, notFound: true });
       }

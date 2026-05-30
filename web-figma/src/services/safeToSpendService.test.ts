@@ -53,7 +53,15 @@ const localStorageMock = {
 };
 global.localStorage = localStorageMock as any;
 
-import { getDaysUntilNextIncome } from "./safeToSpendService";
+import { getDaysUntilNextIncome, getUpcomingBillsThisMonth } from "./safeToSpendService";
+import { getRecurringExpenses } from "./recurringService";
+
+// Mock recurringService
+vi.mock("./recurringService", () => {
+  return {
+    getRecurringExpenses: vi.fn(() => Promise.resolve([])),
+  };
+});
 
 describe("safeToSpendService", () => {
   describe("getDaysUntilNextIncome", () => {
@@ -76,12 +84,13 @@ describe("safeToSpendService", () => {
       expect(getDaysUntilNextIncome("2026-05")).toBe(5);
     });
 
-    it("returns 1 day if today is exactly the payday", () => {
+    it("rolls over and returns days until next payday if today is exactly the payday", () => {
       // Set local system time to May 25, 2026
       const mockDate = new Date("2026-05-25T14:00:00");
       vi.setSystemTime(mockDate);
 
-      expect(getDaysUntilNextIncome("2026-05")).toBe(1);
+      // Payday rolls over to June 25, 2026. May 25 to June 25 is 31 days.
+      expect(getDaysUntilNextIncome("2026-05")).toBe(31);
     });
 
     it("rolls over to next month's payday if today is past the current month's payday", () => {
@@ -102,6 +111,92 @@ describe("safeToSpendService", () => {
 
       // Custom payday is May 10, 2026. Remaining: 5 -> 10 is 5 days.
       expect(getDaysUntilNextIncome("2026-05")).toBe(5);
+    });
+  });
+
+  describe("getUpcomingBillsThisMonth", () => {
+    beforeEach(() => {
+      vi.useFakeTimers();
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    });
+
+    it("correctly evaluates monthly, weekly, and daily upcoming bills based on date bounds", async () => {
+      // Mock system time to May 20, 2026 (Wednesday)
+      const mockDate = new Date("2026-05-20T10:00:00");
+      vi.setSystemTime(mockDate);
+
+      const mockRecurring = [
+        // Monthly bill - due on 25th (upcoming)
+        {
+          id: 1,
+          amount: 100000,
+          frequency: "monthly",
+          day_of_month: 25,
+          start_date: "2026-05-01",
+          is_active: true,
+        },
+        // Monthly bill - due on 15th (already passed)
+        {
+          id: 2,
+          amount: 50000,
+          frequency: "monthly",
+          day_of_month: 15,
+          start_date: "2026-05-01",
+          is_active: true,
+        },
+        // Weekly bill - starts May 1 (Friday), occurrences left in May: May 22, May 29 (2 occurrences left)
+        {
+          id: 3,
+          amount: 30000,
+          frequency: "weekly",
+          start_date: "2026-05-01",
+          is_active: true,
+        },
+        // Daily bill - 11 remaining days (May 21 to May 31)
+        {
+          id: 4,
+          amount: 1000,
+          frequency: "daily",
+          start_date: "2026-05-01",
+          is_active: true,
+        },
+        // Future bill - starts next month, should be ignored
+        {
+          id: 5,
+          amount: 99000,
+          frequency: "monthly",
+          day_of_month: 28,
+          start_date: "2026-06-01",
+          is_active: true,
+        },
+        // Ended bill - ended May 10, should be ignored
+        {
+          id: 6,
+          amount: 45000,
+          frequency: "daily",
+          start_date: "2026-05-01",
+          end_date: "2026-05-10",
+          is_active: true,
+        }
+      ];
+
+      (getRecurringExpenses as any).mockResolvedValue(mockRecurring);
+
+      const total = await getUpcomingBillsThisMonth();
+      
+      // Expected total:
+      // Monthly 1: 100,000
+      // Monthly 2: 0 (passed)
+      // Weekly 3: 2 * 30,000 = 60,000
+      // Daily 4: 11 * 1,000 = 11,000
+      // Future 5: 0
+      // Ended 6: 0
+      // Total = 171,000
+      expect(total).toBe(171000);
     });
   });
 });

@@ -20,10 +20,12 @@ import {
   updateWalletTransaction
 } from "../../services/walletTransactionService";
 import { getCategories } from "../../services/categoryService";
+import { getWallets } from "../../services/walletService";
 import { formatCurrency } from "../../utils/format";
 import { getAppFriendlyName } from "../../services/notificationParserService";
 import { toast } from "../../utils/toast";
-import type { WalletTransaction, BudgetCategory } from "../../types/models";
+import type { WalletTransaction, BudgetCategory, Wallet } from "../../types/models";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 import FirstRunGuide from "../../components/FirstRunGuide";
 import EmptyState from "../../components/EmptyState";
@@ -36,6 +38,7 @@ interface HistoryScreenProps {
 }
 
 export default function HistoryScreen({ onNavigateTab, searchParams, clearSearchParams }: HistoryScreenProps) {
+  const { t, lang } = useLanguage();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState("");
   const [showCategoryFilterDropdown, setShowCategoryFilterDropdown] = useState(false);
@@ -43,11 +46,13 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
   
   const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [categories, setCategories] = useState<BudgetCategory[]>([]);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
   
   const [isLoading, setIsLoading] = useState(true);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
   const [tempNote, setTempNote] = useState("");
   const [openCategoryTxId, setOpenCategoryTxId] = useState<string | null>(null);
+  const [openWalletTxId, setOpenWalletTxId] = useState<string | null>(null);
 
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -76,15 +81,17 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
   const loadData = async (silent = false) => {
     if (!silent) setIsLoading(true);
     try {
-      const [txs, cats] = await Promise.all([
+      const [txs, cats, ws] = await Promise.all([
         getWalletTransactions(undefined, 100),
-        getCategories()
+        getCategories(),
+        getWallets()
       ]);
       setTransactions(txs);
       setCategories(cats.filter((c) => c.is_active));
+      setWallets(ws.filter((w) => w.is_active));
     } catch (err) {
       console.error("Error loading history screen data:", err);
-      toast.error("Gagal memuat data transaksi.");
+      toast.error(lang === "id" ? "Gagal memuat data transaksi." : "Failed to load transactions.");
     } finally {
       if (!silent) setIsLoading(false);
     }
@@ -103,13 +110,13 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
   }, []);
 
   const handleDeleteTx = async (id: string) => {
-    if (!window.confirm("Apakah Anda yakin ingin menghapus transaksi ini?")) return;
+    if (!window.confirm(t("history.deleteTransactionConfirm"))) return;
     try {
       await deleteWalletTransaction(id);
-      toast.success("Transaksi berhasil dihapus.");
+      toast.success(lang === "id" ? "Transaksi berhasil dihapus." : "Transaction deleted successfully.");
       setTransactions((prev) => prev.filter((t) => t.id !== id));
     } catch (err: any) {
-      toast.error(err.message || "Gagal menghapus transaksi.");
+      toast.error(err.message || (lang === "id" ? "Gagal menghapus transaksi." : "Failed to delete transaction."));
     }
   };
 
@@ -176,10 +183,10 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
     const todayStr = getLocalDateStr(new Date());
     const yesterdayStr = getLocalDateStr(new Date(Date.now() - 24 * 60 * 60 * 1000));
     
-    if (dateStr === todayStr) return "Hari Ini";
-    if (dateStr === yesterdayStr) return "Kemarin";
+    if (dateStr === todayStr) return t("history.dateToday");
+    if (dateStr === yesterdayStr) return t("history.dateYesterday");
     
-    return d.toLocaleDateString("id-ID", {
+    return d.toLocaleDateString(lang === "id" ? "id-ID" : "en-US", {
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -192,7 +199,7 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
       <div className="flex min-h-screen items-center justify-center bg-[#FEF9F4]">
         <div className="text-center space-y-3">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#29B9AA] border-t-transparent mx-auto"></div>
-          <p className="text-sm font-semibold text-[#7B6E67]">Memuat Ledger...</p>
+          <p className="text-sm font-semibold text-[#7B6E67]">{t("history.loadingLedger")}</p>
         </div>
       </div>
     );
@@ -206,17 +213,17 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
         <div>
           <div className="flex items-center gap-2">
             <Clock className="h-4 w-4 text-[#29B9AA] flex-shrink-0" />
-            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">Buku Kas</p>
+            <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA] leading-none">{t("history.headerTag")}</p>
           </div>
-          <h1 className="mt-2 text-3xl font-bold text-[#1A2B38]">Riwayat Transaksi</h1>
-          <p className="mt-1.5 text-xs text-[#7B6E67]">Tinjau dan sesuaikan seluruh riwayat pengeluaran dan pemasukan Anda.</p>
+          <h1 className="mt-2 text-3xl font-bold text-[#1A2B38]">{t("history.title")}</h1>
+          <p className="mt-1.5 text-xs text-[#7B6E67]">{t("history.subtitle")}</p>
         </div>
       </div>
 
       <FirstRunGuide
         guideKey="history"
-        title="Tinjau Riwayat Transaksi Anda"
-        description="Menu Riwayat ini difokuskan penuh untuk memantau pengeluaran/pemasukan yang telah terjadi. Di sini Anda dapat mencari transaksi, memberikan catatan tambahan, serta mengatur ulang kategori anggaran transaksi."
+        title={t("history.firstRunHistoryTitle")}
+        description={t("history.firstRunHistoryDesc")}
       />
 
       {/* Filters & Search */}
@@ -225,7 +232,7 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
           <Search className="h-4 w-4 text-[#7B6E67] shrink-0" />
           <input
             type="text"
-            placeholder="Cari transaksi..."
+            placeholder={t("history.searchPlaceholder")}
             className="flex-1 bg-transparent text-sm font-medium text-[#1A2B38] outline-none min-w-0"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
@@ -252,7 +259,7 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
                   ? "bg-[#29B9AA] text-white shadow-sm" 
                   : "bg-white text-[#7B6E67] border border-black/5 hover:bg-[#FEF9F4]"
               }`}
-              title={selectedCategoryFilter ? `Filter Kategori: ${selectedCategoryFilter}` : "Filter Kategori"}
+              title={selectedCategoryFilter ? `${t("history.filterCategory")}: ${selectedCategoryFilter}` : t("history.filterCategory")}
             >
               <SlidersHorizontal className="h-4 w-4" />
             </button>
@@ -269,7 +276,7 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
                     selectedCategoryFilter === "" ? "bg-[#29B9AA] text-white" : "text-[#1A2B38] hover:bg-[#FEF9F4]"
                   }`}
                 >
-                  Semua Kategori
+                  {t("history.filterCategory")}
                 </button>
                 {categories.map((c) => (
                   <button
@@ -295,10 +302,10 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
       {/* Grouped lists */}
       {sortedDates.length === 0 ? (
         <EmptyState
-          title="Tidak Ada Transaksi"
-          description="Mulai catat pengeluaran atau pemasukan pertama Anda untuk melihat riwayat di sini."
+          title={t("history.emptyTitle")}
+          description={t("history.emptyDesc")}
           icon={Clock}
-          actionText="Catat Transaksi Pertama"
+          actionText={t("history.emptyBtn")}
           onAction={() => window.dispatchEvent(new CustomEvent("bf-open-record-sheet"))}
         />
       ) : (
@@ -353,8 +360,8 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
                           <div className="min-w-0">
                             <h4 className="text-sm font-bold text-[#1A2B38] truncate">
                               {tx.source === "notification" 
-                                ? (tx.merchant || "Notifikasi Otomatis")
-                                : (tx.note || "Transaksi Manual")
+                                ? (tx.merchant || t("history.txAutoNotif"))
+                                : (tx.note || t("history.txManual"))
                               }
                             </h4>
                             <p className="text-[10px] text-[#7B6E67] font-semibold uppercase tracking-wider mt-0.5">
@@ -373,7 +380,7 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
                       {/* Middle Row: Raw notification text preview */}
                       {tx.source === "notification" && displayRawText && (
                         <div className="rounded-xl bg-[#FEF9F4] p-3 text-xs border border-black/5">
-                          <p className="font-semibold text-[#7B6E67] mb-1 text-[10px] uppercase tracking-wider">Detail Notifikasi:</p>
+                          <p className="font-semibold text-[#7B6E67] mb-1 text-[10px] uppercase tracking-wider">{t("history.labelNotifDetail")}</p>
                           <p className="text-[#1A2B38] leading-relaxed italic">
                             "{displayRawText}"
                           </p>
@@ -389,40 +396,40 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
                               className="flex-1 rounded-xl border border-black/10 px-3 py-1.5 text-xs text-[#1A2B38] outline-none focus:border-[#29B9AA] bg-white font-medium"
                               value={tempNote}
                               onChange={(e) => setTempNote(e.target.value)}
-                              placeholder="Tambahkan catatan..."
+                              placeholder={lang === "id" ? "Tambahkan catatan..." : "Add a note..."}
                               autoFocus
                             />
                             <button
                               onClick={async () => {
                                 try {
                                   await updateWalletTransaction(tx.id, { note: tempNote || null });
-                                  toast.success("Catatan berhasil diperbarui.");
+                                  toast.success(lang === "id" ? "Catatan berhasil diperbarui." : "Note updated successfully.");
                                   setTransactions((prev) => 
                                     prev.map((t) => t.id === tx.id ? { ...t, note: tempNote || null } : t)
                                   );
                                   setEditingNoteId(null);
                                 } catch (err) {
-                                  toast.error("Gagal menyimpan catatan.");
+                                  toast.error(lang === "id" ? "Gagal menyimpan catatan." : "Failed to save note.");
                                 }
                               }}
                               className="rounded-xl bg-[#29B9AA] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#229A8E] flex items-center gap-1"
                             >
                               <Check className="w-3.5 h-3.5" />
-                              Simpan
+                              {t("common.save")}
                             </button>
                             <button
                               onClick={() => setEditingNoteId(null)}
                               className="rounded-xl border border-black/5 bg-[#FEF9F4] px-3 py-1.5 text-xs font-bold text-[#7B6E67] hover:bg-[#F3EDE8] flex items-center gap-1"
                             >
                               <X className="w-3.5 h-3.5" />
-                              Batal
+                              {t("common.cancel")}
                             </button>
                           </div>
                         ) : (
                           <div className="flex items-center gap-1.5 mt-0.5">
-                            <span className="font-semibold text-[10px] uppercase tracking-wider">Catatan:</span>
+                            <span className="font-semibold text-[10px] uppercase tracking-wider">{t("history.labelNote")}</span>
                             <span className="text-[#1A2B38] font-medium">
-                              {tx.note || <span className="text-gray-400 italic">Tidak ada catatan</span>}
+                              {tx.note || <span className="text-gray-400 italic">{t("history.noNote")}</span>}
                             </span>
                             <button
                               onClick={() => {
@@ -432,87 +439,173 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
                               className="inline-flex items-center gap-1 rounded-lg bg-[#FEF9F4] border border-[#29B9AA]/20 hover:bg-[#29B9AA]/10 px-2 py-0.5 text-[10px] font-bold text-[#29B9AA] transition-colors ml-2"
                             >
                               <Pencil className="w-2.5 h-2.5" />
-                              Ubah
+                              {t("history.btnEditNote")}
                             </button>
                           </div>
                         )}
                       </div>
 
-                      {/* Bottom Row: Category Selector & Actions */}
-                      <div className="flex items-center justify-between border-t border-black/5 pt-2.5 mt-1">
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">Kategori:</span>
-                          <div className="relative">
-                            <button
-                              type="button"
-                              onClick={() => setOpenCategoryTxId(openCategoryTxId === tx.id ? null : tx.id)}
-                              className={`rounded-full px-3 py-1 text-xs font-bold transition-all flex items-center gap-1 focus:outline-none ${
-                                tx.category 
-                                  ? "bg-[#29B9AA]/10 text-[#29B9AA] hover:bg-[#29B9AA]/20" 
-                                  : "bg-amber-50 text-amber-600 hover:bg-amber-100 border border-dashed border-amber-300"
-                              }`}
-                            >
-                              <span>{tx.category || "+ Pilih Kategori"}</span>
-                              <svg className={`h-3 w-3 fill-current transition-transform duration-200 ${openCategoryTxId === tx.id ? "rotate-180" : ""}`} viewBox="0 0 20 20">
-                                <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
-                              </svg>
-                            </button>
+                      {/* Bottom Row: Category Selector & Wallet Selector & Actions */}
+                      <div className="flex flex-wrap items-center justify-between gap-3 border-t border-black/5 pt-2.5 mt-1">
+                        <div className="flex flex-wrap items-center gap-4">
+                          {/* Category Selector */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">{t("history.labelCategory")}</span>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={() => setOpenCategoryTxId(openCategoryTxId === tx.id ? null : tx.id)}
+                                className={`rounded-full px-3 py-1 text-xs font-bold transition-all flex items-center gap-1 focus:outline-none ${
+                                  tx.category 
+                                    ? "bg-[#29B9AA]/10 text-[#29B9AA] hover:bg-[#29B9AA]/20" 
+                                    : "bg-amber-50 text-amber-600 hover:bg-amber-100 border border-dashed border-amber-300"
+                                }`}
+                              >
+                                <span>{tx.category || t("history.btnSelectCategory")}</span>
+                                <svg className={`h-3 w-3 fill-current transition-transform duration-200 ${openCategoryTxId === tx.id ? "rotate-180" : ""}`} viewBox="0 0 20 20">
+                                  <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                </svg>
+                              </button>
 
-                            {openCategoryTxId === tx.id && (
-                              <>
-                                <div 
-                                  className="fixed inset-0 z-40" 
-                                  onClick={() => setOpenCategoryTxId(null)}
-                                />
-                                <div className="absolute left-0 z-50 mt-1 w-44 max-h-48 overflow-y-auto rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl animate-in fade-in slide-in-from-top-1 duration-150">
-                                  <button
-                                    type="button"
-                                    onClick={async () => {
-                                      try {
-                                        await updateWalletTransaction(tx.id, { category: null });
-                                        toast.success("Kategori transaksi dikosongkan.");
-                                        setTransactions((prev) => 
-                                          prev.map((t) => t.id === tx.id ? { ...t, category: null } : t)
-                                        );
-                                      } catch (err: any) {
-                                        toast.error("Gagal mengubah kategori.");
-                                      } finally {
-                                        setOpenCategoryTxId(null);
-                                      }
-                                    }}
-                                    className={`w-full rounded-xl px-3 py-1.5 text-left text-xs font-bold whitespace-nowrap transition-colors ${
-                                      !tx.category ? "bg-[#29B9AA] text-white" : "text-[#7B6E67] hover:bg-[#FEF9F4]"
-                                    }`}
-                                  >
-                                    — Tanpa Kategori —
-                                  </button>
-                                  {categories.map((c) => (
+                              {openCategoryTxId === tx.id && (
+                                <>
+                                  <div 
+                                    className="fixed inset-0 z-40" 
+                                    onClick={() => setOpenCategoryTxId(null)}
+                                  />
+                                  <div className="absolute left-0 z-50 mt-1 w-44 max-h-48 overflow-y-auto rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl animate-in fade-in slide-in-from-top-1 duration-150">
                                     <button
-                                      key={c.id}
                                       type="button"
                                       onClick={async () => {
                                         try {
-                                          await updateWalletTransaction(tx.id, { category: c.name });
-                                          toast.success("Kategori transaksi berhasil diubah.");
+                                          await updateWalletTransaction(tx.id, { category: null });
+                                          toast.success(lang === "id" ? "Kategori transaksi dikosongkan." : "Transaction category cleared.");
                                           setTransactions((prev) => 
-                                            prev.map((t) => t.id === tx.id ? { ...t, category: c.name } : t)
+                                            prev.map((t) => t.id === tx.id ? { ...t, category: null } : t)
                                           );
                                         } catch (err: any) {
-                                          toast.error("Gagal mengubah kategori.");
+                                          toast.error(lang === "id" ? "Gagal mengubah kategori." : "Failed to update category.");
                                         } finally {
                                           setOpenCategoryTxId(null);
                                         }
                                       }}
                                       className={`w-full rounded-xl px-3 py-1.5 text-left text-xs font-bold whitespace-nowrap transition-colors ${
-                                        tx.category === c.name ? "bg-[#29B9AA] text-white" : "text-[#1A2B38] hover:bg-[#FEF9F4]"
+                                        !tx.category ? "bg-[#29B9AA] text-white" : "text-[#7B6E67] hover:bg-[#FEF9F4]"
                                       }`}
                                     >
-                                      {c.name}
+                                      {t("history.btnNoCategory")}
                                     </button>
-                                  ))}
-                                </div>
-                              </>
-                            )}
+                                    {categories.map((c) => (
+                                      <button
+                                        key={c.id}
+                                        type="button"
+                                        onClick={async () => {
+                                          try {
+                                            await updateWalletTransaction(tx.id, { category: c.name });
+                                            toast.success(lang === "id" ? "Kategori transaksi berhasil diubah." : "Transaction category updated.");
+                                            setTransactions((prev) => 
+                                              prev.map((t) => t.id === tx.id ? { ...t, category: c.name } : t)
+                                            );
+                                          } catch (err: any) {
+                                            toast.error(lang === "id" ? "Gagal mengubah kategori." : "Failed to update category.");
+                                          } finally {
+                                            setOpenCategoryTxId(null);
+                                          }
+                                        }}
+                                        className={`w-full rounded-xl px-3 py-1.5 text-left text-xs font-bold whitespace-nowrap transition-colors ${
+                                          tx.category === c.name ? "bg-[#29B9AA] text-white" : "text-[#1A2B38] hover:bg-[#FEF9F4]"
+                                        }`}
+                                      >
+                                        {c.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Wallet Selector */}
+                          <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#7B6E67]">{lang === "id" ? "Dompet" : "Wallet"}</span>
+                            <div className="relative">
+                              <button
+                                type="button"
+                                onClick={() => setOpenWalletTxId(openWalletTxId === tx.id ? null : tx.id)}
+                                className={`rounded-full px-3 py-1 text-xs font-bold transition-all flex items-center gap-1 focus:outline-none ${
+                                  tx.wallet_id 
+                                    ? "bg-[#5BAEE8]/10 text-[#5BAEE8] hover:bg-[#5BAEE8]/20" 
+                                    : "bg-gray-50 text-gray-500 hover:bg-gray-100 border border-dashed border-gray-300"
+                                }`}
+                              >
+                                <span>
+                                  {(() => {
+                                    if (!tx.wallet_id) return lang === "id" ? "Tanpa Wallet / Cash" : "No Wallet / Cash";
+                                    const match = wallets.find((w) => w.id === tx.wallet_id);
+                                    return match ? match.name : (lang === "id" ? "Dompet Tidak Dikenal" : "Unknown Wallet");
+                                  })()}
+                                </span>
+                                <svg className={`h-3 w-3 fill-current transition-transform duration-200 ${openWalletTxId === tx.id ? "rotate-180" : ""}`} viewBox="0 0 20 20">
+                                  <path d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" />
+                                </svg>
+                              </button>
+
+                              {openWalletTxId === tx.id && (
+                                <>
+                                  <div 
+                                    className="fixed inset-0 z-40" 
+                                    onClick={() => setOpenWalletTxId(null)}
+                                  />
+                                  <div className="absolute left-0 z-50 mt-1 w-48 max-h-48 overflow-y-auto rounded-2xl border border-black/10 bg-white p-1.5 shadow-xl animate-in fade-in slide-in-from-top-1 duration-150">
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        try {
+                                          await updateWalletTransaction(tx.id, { wallet_id: null });
+                                          toast.success(lang === "id" ? "Wallet transaksi dikosongkan." : "Transaction wallet cleared.");
+                                          setTransactions((prev) => 
+                                            prev.map((t) => t.id === tx.id ? { ...t, wallet_id: null } : t)
+                                          );
+                                        } catch (err: any) {
+                                          toast.error(lang === "id" ? "Gagal mengosongkan wallet." : "Failed to clear wallet.");
+                                        } finally {
+                                          setOpenWalletTxId(null);
+                                        }
+                                      }}
+                                      className={`w-full rounded-xl px-3 py-1.5 text-left text-xs font-bold transition-colors ${
+                                        !tx.wallet_id ? "bg-[#5BAEE8] text-white" : "text-[#7B6E67] hover:bg-[#FEF9F4]"
+                                      }`}
+                                    >
+                                      {lang === "id" ? "Tanpa Wallet / Cash" : "No Wallet / Cash"}
+                                    </button>
+                                    {wallets.map((w) => (
+                                      <button
+                                        key={w.id}
+                                        type="button"
+                                        onClick={async () => {
+                                          try {
+                                            await updateWalletTransaction(tx.id, { wallet_id: w.id });
+                                            toast.success(lang === "id" ? `Wallet diubah ke ${w.name}.` : `Wallet updated to ${w.name}.`);
+                                            setTransactions((prev) => 
+                                              prev.map((t) => t.id === tx.id ? { ...t, wallet_id: w.id } : t)
+                                            );
+                                          } catch (err: any) {
+                                            toast.error(lang === "id" ? "Gagal mengubah wallet." : "Failed to update wallet.");
+                                          } finally {
+                                            setOpenWalletTxId(null);
+                                          }
+                                        }}
+                                        className={`w-full rounded-xl px-3 py-1.5 text-left text-xs font-bold transition-colors ${
+                                          tx.wallet_id === w.id ? "bg-[#5BAEE8] text-white" : "text-[#1A2B38] hover:bg-[#FEF9F4]"
+                                        }`}
+                                      >
+                                        {w.name}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
 
@@ -522,7 +615,7 @@ export default function HistoryScreen({ onNavigateTab, searchParams, clearSearch
                           className="flex items-center gap-1 rounded-xl p-1.5 text-[#7B6E67]/50 hover:bg-rose-50 hover:text-[#FF6B58] transition-colors text-xs font-bold"
                         >
                           <Trash2 className="h-4 w-4" />
-                          <span>Hapus</span>
+                          <span>{t("common.delete")}</span>
                         </button>
                       </div>
                     </div>

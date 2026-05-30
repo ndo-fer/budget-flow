@@ -20,9 +20,11 @@ import SafeToSpendCard from "./components/SafeToSpendCard";
 import DailyBudgetLimitCard from "./components/DailyBudgetLimitCard";
 import ProgressRencanaCard from "./components/ProgressRencanaCard";
 import AnalyticsDashboard from "./components/AnalyticsDashboard";
+import GamificationStreakCard from "./components/GamificationStreakCard";
 import ModalShell from "../../components/modals/ModalShell";
 import StarterChecklist from "./components/StarterChecklist";
 import { useSpotlightTour } from "../../components/onboarding/SpotlightTourProvider";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 interface HomeScreenProps {
   onNavigateTab: (tabId: any, options?: { replace?: boolean; search?: string }) => void;
@@ -37,6 +39,7 @@ export default function HomeScreen({
   searchParams, 
   clearSearchParams 
 }: HomeScreenProps) {
+  const { t } = useLanguage();
   const [activeSubTab, setActiveSubTab] = useState<"overview" | "analytics">("overview");
   const [month] = useState(getCurrentMonth());
   const { isActive: isTourActive } = useSpotlightTour();
@@ -74,11 +77,11 @@ export default function HomeScreen({
   const handleSavePayday = () => {
     let day = parseInt(paydayInput, 10);
     if (isNaN(day) || day < 1 || day > 31) {
-      toast.error("Tanggal gajian harus bernilai 1 - 31.");
+      toast.error(t("home.paydayError", "Tanggal gajian harus bernilai 1 - 31."));
       return;
     }
     localStorage.setItem("bf_payday_day_of_month", String(day));
-    toast.success(`Tanggal gajian berhasil diubah ke tanggal ${day} setiap bulan.`);
+    toast.success(t("home.paydaySuccess", "Tanggal gajian berhasil diubah ke tanggal {day} setiap bulan.").replace("{day}", String(day)));
     setShowPaydayModal(false);
     loadData(true); // silent reload
   };
@@ -137,7 +140,7 @@ export default function HomeScreen({
       syncDailyLimitPersistentNotification(stsData.isOverDailyLimit, stsData.overAmount);
     } catch (err) {
       console.error("Error loading home dashboard data:", err);
-      toast.error("Gagal memuat data dashboard.");
+      toast.error(t("home.dashboardError", "Gagal memuat data dashboard."));
     } finally {
       if (!silent) setIsLoading(false);
     }
@@ -193,7 +196,7 @@ export default function HomeScreen({
       <div className="flex min-h-screen items-center justify-center bg-[#FEF9F4]">
         <div className="text-center space-y-3">
           <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#29B9AA] border-t-transparent mx-auto"></div>
-          <p className="text-sm font-semibold text-[#7B6E67]">Memuat Dashboard...</p>
+          <p className="text-sm font-semibold text-[#7B6E67]">{t("home.loadingDashboard", "Memuat Dashboard...")}</p>
         </div>
       </div>
     );
@@ -203,7 +206,6 @@ export default function HomeScreen({
     <div className="mx-auto max-w-5xl space-y-6 px-4 py-6 md:px-8">
       <NativePermissionAlert 
         androidNotifEnabled={androidNotifEnabled} 
-        setAndroidNotifEnabled={setAndroidNotifEnabled} 
       />
 
       {!isTourActive && (
@@ -216,9 +218,9 @@ export default function HomeScreen({
       {/* Upper Title and SubTabs */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Beranda</p>
-          <h1 className="mt-1 text-3xl font-bold text-[#1A2B38]">Ringkasan Keuangan</h1>
-          <p className="text-xs text-[#7B6E67] mt-1">Pantau estimasi kondisi keuangan harian (Safe-To-Spend) dan anggaran belanja bulanan Anda.</p>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">{t("common.home", "Beranda")}</p>
+          <h1 className="mt-1 text-3xl font-bold text-[#1A2B38]">{t("home.dailySpending", "Ringkasan Keuangan")}</h1>
+          <p className="text-xs text-[#7B6E67] mt-1">{t("settings.subtitle", "Pantau estimasi kondisi keuangan harian (Safe-To-Spend) dan anggaran belanja bulanan Anda.")}</p>
         </div>
         <div className="flex w-full sm:w-auto sm:inline-flex rounded-2xl bg-[#F3EDE8] p-1 shadow-inner self-start sm:self-center">
           <button
@@ -228,7 +230,7 @@ export default function HomeScreen({
             }`}
           >
             <LayoutGrid className="w-3.5 h-3.5" />
-            Ringkasan
+            {t("home.overview", "Ringkasan")}
           </button>
           <button
             onClick={() => setActiveSubTab("analytics")}
@@ -237,7 +239,7 @@ export default function HomeScreen({
             }`}
           >
             <BarChart2 className="w-3.5 h-3.5" />
-            Analisis
+            {t("home.analytics", "Analisis")}
           </button>
         </div>
       </div>
@@ -256,6 +258,7 @@ export default function HomeScreen({
           />
           <DailyBudgetLimitCard safeToSpend={safeToSpend} onNavigateTab={onNavigateTab} />
           <ProgressRencanaCard month={month} monthlyPlan={monthlyPlan} />
+          <GamificationStreakCard />
         </div>
       ) : (
         <AnalyticsDashboard 
@@ -270,8 +273,8 @@ export default function HomeScreen({
 
       <ModalShell
         open={showPaydayModal}
-        title="Ubah Tanggal Gajian"
-        subtitle="Sesuaikan siklus perhitungan Safe-To-Spend harian Anda."
+        title={t("home.paydayModalTitle", "Ubah Tanggal Gajian")}
+        subtitle={t("home.paydayModalSub", "Sesuaikan siklus perhitungan Safe-To-Spend harian Anda.")}
         onClose={() => setShowPaydayModal(false)}
         footer={
           <div className="flex justify-end gap-3">
@@ -279,21 +282,21 @@ export default function HomeScreen({
               onClick={() => setShowPaydayModal(false)}
               className="rounded-2xl border border-black/10 px-5 py-3 text-sm font-semibold text-[#7B6E67]"
             >
-              Batal
+              {t("common.cancel", "Batal")}
             </button>
             <button
               onClick={handleSavePayday}
               className="rounded-2xl bg-[#29B9AA] px-5 py-3 text-sm font-semibold text-white"
             >
-              Simpan
+              {t("common.save", "Simpan")}
             </button>
           </div>
         }
       >
         <div className="space-y-4">
           <div>
-            <label className="text-xs font-bold uppercase tracking-wider text-[#7B6E67]">Tanggal Gajian (1 - 31)</label>
-            <p className="text-xs text-[#7B6E67] mt-1 mb-2">Siklus belanja aman harian (Safe-to-Spend) Anda akan dihitung ulang berdasarkan sisa hari menuju tanggal gajian ini.</p>
+            <label className="text-xs font-bold uppercase tracking-wider text-[#7B6E67]">{t("home.paydayLabel", "Tanggal Gajian (1 - 31)")}</label>
+            <p className="text-xs text-[#7B6E67] mt-1 mb-2">{t("home.paydayDesc", "Siklus belanja aman harian (Safe-to-Spend) Anda akan dihitung ulang berdasarkan sisa hari menuju tanggal gajian ini.")}</p>
             <input
               type="number"
               min="1"

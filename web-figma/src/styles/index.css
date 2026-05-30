@@ -54,5 +54,55 @@
   will-change: transform;
 }
 
+@keyframes float-5 {
+  0% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  25% { transform: translate(-120px, -80px) rotate(120deg) scale(1.1); }
+  50% { transform: translate(80px, 120px) rotate(240deg) scale(0.95); }
+  75% { transform: translate(-100px, 60px) rotate(180deg) scale(1.05); }
+  100% { transform: translate(0px, 0px) rotate(360deg) scale(1); }
+}
+
+@keyframes float-6 {
+  0% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  33% { transform: translate(150px, -120px) rotate(-180deg) scale(0.9); }
+  66% { transform: translate(-120px, -90px) rotate(-90deg) scale(1.1); }
+  100% { transform: translate(0px, 0px) rotate(-360deg) scale(1); }
+}
+
+@keyframes float-7 {
+  0% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  20% { transform: translate(100px, 100px) rotate(72deg) scale(1.05); }
+  40% { transform: translate(-110px, -110px) rotate(144deg) scale(0.9); }
+  60% { transform: translate(90px, -90px) rotate(216deg) scale(1.1); }
+  80% { transform: translate(-80px, 80px) rotate(288deg) scale(0.95); }
+  100% { transform: translate(0px, 0px) rotate(360deg) scale(1); }
+}
+
+@keyframes float-8 {
+  0% { transform: translate(0px, 0px) rotate(0deg) scale(1); }
+  50% { transform: translate(-160px, 40px) rotate(-180deg) scale(1.08); }
+  100% { transform: translate(0px, 0px) rotate(-360deg) scale(1); }
+}
+
+.animate-float-5 {
+  animation: float-5 20s infinite ease-in-out;
+  will-change: transform;
+}
+
+.animate-float-6 {
+  animation: float-6 22s infinite ease-in-out;
+  will-change: transform;
+}
+
+.animate-float-7 {
+  animation: float-7 24s infinite ease-in-out;
+  will-change: transform;
+}
+
+.animate-float-8 {
+  animation: float-8 26s infinite ease-in-out;
+  will-change: transform;
+}
+
 
 

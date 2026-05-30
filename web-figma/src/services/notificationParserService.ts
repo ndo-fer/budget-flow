@@ -292,6 +292,14 @@ export const DEFAULT_ALLOWLIST_APPS = [
   { package_name: "id.co.mandiri.mobile", app_name: "Livin' Mandiri (Classic)" },
   { package_name: "id.co.mandiri.livin", app_name: "Livin' Mandiri (New)" },
   { package_name: "com.bni.mobilebanking", app_name: "BNI Mobile Banking" },
+  // Email Clients
+  { package_name: "com.google.android.gm", app_name: "Gmail" },
+  { package_name: "com.microsoft.office.outlook", app_name: "Outlook" },
+  { package_name: "com.samsung.android.email.provider", app_name: "Samsung Email" },
+  // SMS Clients
+  { package_name: "com.google.android.apps.messaging", app_name: "Google Messages (SMS)" },
+  { package_name: "com.samsung.android.messaging", app_name: "Samsung Messages (SMS)" },
+  { package_name: "com.android.mms", app_name: "Stock SMS (MMS)" }
 ];
 
 export const getAppFriendlyName = (packageName: string): string => {
@@ -316,7 +324,10 @@ export const getAppFriendlyName = (packageName: string): string => {
     "com.bni.mobilebanking": "BNI Mobile",
     "com.google.android.gm": "Gmail",
     "com.microsoft.office.outlook": "Outlook",
-    "com.samsung.android.email.provider": "Email"
+    "com.samsung.android.email.provider": "Email",
+    "com.google.android.apps.messaging": "SMS",
+    "com.samsung.android.messaging": "SMS",
+    "com.android.mms": "SMS"
   };
   return mapping[packageName] || packageName;
 };

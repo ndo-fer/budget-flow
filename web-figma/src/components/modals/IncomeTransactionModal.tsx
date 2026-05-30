@@ -6,6 +6,7 @@ import { toast } from "../../utils/toast";
 import type { IncomeSource, Wallet } from "../../types/models";
 import { getToday } from "../../utils/date";
 import Dropdown from "../Dropdown";
+import { useLanguage } from "../../contexts/LanguageContext";
 
 interface IncomeTransactionModalProps {
   isOpen?: boolean;
@@ -28,6 +29,7 @@ export default function IncomeTransactionModal({
   transaction,
   selectedSourceId
 }: IncomeTransactionModalProps) {
+  const { t, lang } = useLanguage();
   const isCurrentlyOpen = !!(isOpen || open);
   const handleSuccess = onSuccess || onSaved;
 
@@ -110,10 +112,10 @@ export default function IncomeTransactionModal({
     e.preventDefault();
     const numAmount = parseFloat(amount.replace(/[^0-9]/g, ""));
     if (isNaN(numAmount) || numAmount <= 0) {
-      return toast.error("Nominal pemasukan tidak valid.");
+      return toast.error(lang === "id" ? "Nominal pemasukan tidak valid." : "Invalid income amount.");
     }
     if (!incomeSourceId || incomeSourceId === "null" || incomeSourceId === "undefined") {
-      return toast.error("Pilih sumber pemasukan.");
+      return toast.error(lang === "id" ? "Pilih sumber pemasukan." : "Please select an income source.");
     }
 
     setIsSubmitting(true);
@@ -126,7 +128,7 @@ export default function IncomeTransactionModal({
           note,
           wallet_id: walletId || null,
         });
-        toast.success("Pemasukan berhasil diperbarui.");
+        toast.success(lang === "id" ? "Pemasukan berhasil diperbarui." : "Income successfully updated.");
       } else {
         await recordIncomeTransaction({
           income_source_id: incomeSourceId,
@@ -136,13 +138,13 @@ export default function IncomeTransactionModal({
           wallet_id: walletId || null,
         });
         localStorage.removeItem("bf_income_draft");
-        toast.success("Pemasukan berhasil direkam.");
+        toast.success(lang === "id" ? "Pemasukan berhasil direkam." : "Income successfully recorded.");
       }
       window.dispatchEvent(new CustomEvent("wallet-transaction-added"));
       if (handleSuccess) handleSuccess();
       onClose();
     } catch (err: any) {
-      toast.error(err.message || "Gagal menyimpan transaksi pemasukan.");
+      toast.error(err.message || (lang === "id" ? "Gagal menyimpan transaksi pemasukan." : "Failed to save income transaction."));
     } finally {
       setIsSubmitting(false);
     }
@@ -156,7 +158,7 @@ export default function IncomeTransactionModal({
   }));
 
   const walletOptions = [
-    { value: "", label: "— Cash / Manual (Tanpa Wallet) —" },
+    { value: "", label: t("transactionModal.manualCashNoWallet") },
     ...wallets.map((w) => ({
       value: w.id,
       label: `${w.name} (Rp ${w.estimated_balance?.toLocaleString("id-ID")})`,
@@ -182,15 +184,15 @@ export default function IncomeTransactionModal({
         </button>
 
         <div className="mb-5">
-          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">Transaksi Baru</p>
-          <h2 className="mt-2 text-2xl font-bold text-[#1A2B38]">{transaction ? "Edit Pemasukan" : "Tambah Pemasukan"}</h2>
+          <p className="text-xs font-bold uppercase tracking-[0.28em] text-[#29B9AA]">{t("transactionModal.newTransaction")}</p>
+          <h2 className="mt-2 text-2xl font-bold text-[#1A2B38]">{transaction ? (lang === "id" ? "Edit Pemasukan" : "Edit Income") : t("transactionModal.addIncomeTitle")}</h2>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           
           {/* Amount input */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Nominal (Rp)</label>
+            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">{t("transactionModal.labelAmount")}</label>
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-lg font-bold text-[#7B6E67]">Rp</span>
               <input
@@ -209,38 +211,38 @@ export default function IncomeTransactionModal({
 
           {/* Income Source */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Sumber Pemasukan</label>
+            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">{t("transactionModal.labelIncomeSource")}</label>
             <Dropdown
               options={sourceOptions}
               value={incomeSourceId}
               onChange={setIncomeSourceId}
-              placeholder="Pilih Sumber"
+              placeholder={t("transactionModal.selectSourcePlaceholder")}
               icon={<ArrowUpRight className="h-4 w-4" />}
             />
           </div>
 
           {/* Wallet Selection (Optional) */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Dompet / Wallet (Penyimpanan)</label>
+            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">{t("transactionModal.labelWalletDeposit")}</label>
             <Dropdown
               options={walletOptions}
               value={walletId}
               onChange={setWalletId}
-              placeholder="— Cash / Manual (Tanpa Wallet) —"
+              placeholder={t("transactionModal.manualCashNoWallet")}
               icon={<CreditCard className="h-4 w-4" />}
             />
           </div>
 
           {/* Date */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Tanggal</label>
+            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">{t("transactionModal.labelDate")}</label>
             <div className="relative w-full">
               <div className="flex w-full items-center justify-between rounded-2xl border border-black/10 bg-[#FEF9F4] py-3.5 pl-11 pr-4 text-sm font-semibold text-[#1A2B38] transition-colors text-left relative cursor-pointer hover:bg-[#F3EDE8]">
                 <div className="absolute left-4 top-1/2 -translate-y-1/2 text-[#7B6E67]">
                   <Calendar className="h-4 w-4" />
                 </div>
                 <span>
-                  {date ? new Date(date).toLocaleDateString("id-ID", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : "Pilih Tanggal"}
+                  {date ? new Date(date).toLocaleDateString(lang === "id" ? "id-ID" : "en-US", { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }) : t("transactionModal.selectDatePlaceholder")}
                 </span>
                 <ChevronDown className="h-4 w-4 text-[#7B6E67]" />
               </div>
@@ -261,11 +263,11 @@ export default function IncomeTransactionModal({
 
           {/* Note */}
           <div>
-            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">Catatan / Note</label>
+            <label className="mb-1 block text-xs font-semibold text-[#7B6E67]">{t("transactionModal.labelNote")}</label>
             <div className="relative">
               <AlignLeft className="absolute left-4 top-4.5 h-4 w-4 text-[#7B6E67]" />
               <textarea
-                placeholder="Gaji pokok bulan Mei..."
+                placeholder={t("transactionModal.notePlaceholderIncome")}
                 className="w-full min-h-[80px] rounded-2xl border border-black/10 bg-[#FEF9F4] py-3 pl-11 pr-4 text-sm font-semibold text-[#1A2B38] outline-none"
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
@@ -279,7 +281,7 @@ export default function IncomeTransactionModal({
             disabled={isSubmitting}
             className="w-full rounded-2xl bg-[#29B9AA] py-3.5 text-sm font-bold text-white shadow-lg shadow-teal-500/10 hover:shadow-teal-500/20 disabled:opacity-50"
           >
-            {isSubmitting ? "Menyimpan..." : transaction ? "Simpan Perubahan" : "Simpan Pemasukan"}
+            {isSubmitting ? t("transactionModal.btnSaving") : transaction ? (lang === "id" ? "Simpan Perubahan" : "Save Changes") : t("transactionModal.btnSaveIncome")}
           </button>
         </form>
       </div>
